@@ -1,0 +1,22 @@
+{% extends "admin/base.html" %}
+{% load cms_tags %}
+
+{% block title %}{{ title }} | {% site_name %}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{% site_name %}</a></h1>
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style type="text/css">
+    .vForeignKeyRawIdAdminField, .inline-group .tabular td.original p {
+        display: none;
+    }
+    .inline-group .tabular tr.has_original td {
+        padding-top: 1em !important;
+    }
+</style>
+{% endblock %}

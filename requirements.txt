@@ -1,0 +1,4 @@
+Django==1.11
+pytz
+tweepy
+django-admin-tools

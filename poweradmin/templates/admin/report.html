@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 1cm;
+            margin-top: 4cm;
+            margin-bottom: 2cm;
+            @frame footer {
+                -pdf-frame-content: footer;
+                bottom: 1cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+                height: 1cm;
+            }
+            @frame header {
+                -pdf-frame-content: header;
+                top: 1cm;
+                margin-left: 1cm;
+                margin-right: 1cm;
+            }
+        }
+        body{
+            font-size: 11px;
+            font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+        }
+        #header {margin-bottom: 10px; text-align: center;}
+        #footer {border-top: 1px solid #000; }
+        table, tr, td, th {
+            margin: 0;
+            padding: 0.05cm;
+            padding-top: 0.15cm;
+            font-size: 12px;
+            padding-bottom: -0.05cm;
+        }
+        .row1 td{background: #f0f0f0;}
+        .border-top{border-top: 1px #000 solid;}
+        .border-bottom{border-bottom: 1px #000 solid;}
+        .center{text-align: center;}
+        .left{text-align: left;}
+        .right{text-align: right;}
+    </style>
+</head>
+<body>
+    <div id="header">
+        <table width="100%">
+            <tr>
+                <td>
+                    {{ header|safe }}
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="wrapper">
+        <table width="100%">
+            <thead>
+                <tr>
+                    {% for field in results.header %}
+                    <td class="border-top border-bottom"><b>{{ field }}</b></td>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results.results %}
+                <tr class="{% cycle 'row0' 'row1' %}">
+                    {% for field in result %}
+                    <td>{{ field }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div id="footer">
+        <table width="100%">
+            <tr>
+                <td class="left">
+                    Pag. <pdf:pagenumber> de <pdf:pagecount>
+                </td>
+                <td class="right">
+                    {% now "d/m/Y H:i:s" %}
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

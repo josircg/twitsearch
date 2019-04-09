@@ -1,0 +1,12 @@
+.DS_Store
+.idea
+*.pyc
+*.swp
+*.sqlite3
+*.fuse_hidden*
+.ipynb_checkpoints
+data/*
+twitsearch/local.py
+twitsearch/test.py
+twitsearch/media/*
+twitsearch/static/*

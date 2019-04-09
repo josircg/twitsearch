@@ -1,0 +1,188 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls admin_static admin_modify %}
+
+{% block extrahead %}{{ block.super }}
+<script type="text/javascript" src="{% url 'admin:jsi18n' %}"></script>
+{{ media }}
+<script type="text/javascript">
+    (function($) {
+        $(document).ready(function(){
+            $('.submit-row input').click(function(){
+                $('.submit-row input').hide();
+                $('.submit-row').append('Processando...');
+            });
+        });
+    })(django.jQuery);
+</script>
+<script type="text/javascript">
+    (function($) {
+        $(function() {
+          /* Save on press key F10 */
+          document.addEventListener('keydown', function(e){
+            e.stopPropagation(); // **put this line in your code**
+            if(e.keyCode == '121'){
+              $('.submit-row input[name="_continue"]').click();
+            }
+          }, false);
+        });
+    })(django.jQuery)
+</script>
+<script type="text/javascript">
+    (function($) {
+        $(function() {
+          var getlookup = function(vfk){
+            var ant = $(vfk).val();
+            var url = $(vfk).parent().find('.related-lookup').attr('href').split('?')[0]+'lookup/related/';
+            var interval = setInterval(function(){
+              if($(vfk).val() != ant){
+                $.ajax({
+                  dataType: "json",
+                  url: url,
+                  data: {'object_id': $(vfk).val()},
+                  success: function(data){
+                      if(data.value){
+                        if($(vfk).parent().find('strong').length > 0){
+                          $(vfk).parent().find('strong').html(data.label);
+                        }else{
+                          $(vfk).parent().append('<strong>'+data.label+'</strong>');
+                        }
+                        clearInterval(interval);
+                      }
+                  }
+                });
+              }
+            },500);
+          };
+          if($(".vForeignKeyRawIdAdminField").length){
+
+            $(".related-lookup").click(function(event) {
+              getlookup($(this).parent().find('.vForeignKeyRawIdAdminField'));
+            });
+            $(".vForeignKeyRawIdAdminField").change(function(event) {
+              getlookup($(this));
+            });
+          }
+        });
+    })(django.jQuery)
+</script>
+{% endblock %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />{% endblock %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-form{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; {% if has_change_permission %}<a href="{% url opts|admin_urlname:'changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>{% else %}{{ opts.verbose_name_plural|capfirst }}{% endif %}
+&rsaquo; {% if add %}{% trans 'Add' %} {{ opts.verbose_name }}{% else %}{{ original|truncatewords:"18" }}{% endif %}
+</div>
+{% endblock %}
+{% endif %}
+
+{% block content %}
+<div id="content-main">
+    {% block object-tools %}
+        <ul class="object-tools">
+            {% if not is_popup %}
+                {% block object-tools-items %}
+                    {% if change %}
+                        <li>
+                            {% url opts|admin_urlname:'history' original.pk|admin_urlquote as history_url %}
+                            <a href="{% add_preserved_filters history_url %}" class="historylink">{% trans "History" %}</a>
+                        </li>
+                        {% if has_absolute_url %}<li><a href="{{ absolute_url }}" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif%}
+                    {% endif %}
+                    {% for button in buttons %}
+                        <li><a href="{{ button.get_url }}" {% for key,val in button.attrs.items %}{{ key }}="{{ val }}"{% endfor %}>{{ button.label }}</a></li>
+                    {% endfor %}
+                {% endblock %}
+            {% endif %}
+        </ul>
+    {% endblock %}
+
+    <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.model_name }}_form" novalidate>{% csrf_token %}{% block form_top %}{% endblock %}
+        <div>
+            {% if is_popup %}<input type="hidden" name="{{ is_popup_var }}" value="1" />{% endif %}
+            {% if to_field %}<input type="hidden" name="{{ to_field_var }}" value="{{ to_field }}" />{% endif %}
+
+            {% if save_on_top %}
+                {% block submit_buttons_top %}
+                    {% if not readonly %}
+                        {% submit_row %}
+                    {% else %}
+                        <div class="submit-row" {% if is_popup %}style="overflow: auto;"{% endif %}>
+                            <a href="javascript: window.history.back()">
+                               <input type="button" value="{% trans 'Voltar' %}" class="default" />
+                            </a>
+                        </div>
+                    {% endif %}
+                {% endblock %}
+            {% endif %}
+
+            {% if errors %}
+                <p class="errornote">
+                {% if errors|length == 1 %}{% trans "Please correct the error below." %}{% else %}{% trans "Please correct the errors below." %}{% endif %}
+                </p>
+                {{ adminform.form.non_field_errors }}
+            {% endif %}
+
+            {% block field_sets %}
+            {% for fieldset in adminform %}
+              {% include "admin/includes/fieldset.html" %}
+            {% endfor %}
+            {% endblock %}
+
+            {% block after_field_sets %}{% endblock %}
+
+            {% block inline_field_sets %}
+            {% for inline_admin_formset in inline_admin_formsets %}
+                {% include inline_admin_formset.opts.template %}
+            {% endfor %}
+            {% endblock %}
+
+            {% block after_related_objects %}{% endblock %}
+
+            {% block submit_buttons_bottom %}
+                {% if not readonly %}
+                    {% submit_row %}
+                {% else %}
+                    <div class="submit-row" {% if is_popup %}style="overflow: auto;"{% endif %}>
+                        <a href="javascript: window.history.back()">
+                           <input type="button" value="{% trans 'Voltar' %}" class="default" />
+                        </a>
+                    </div>
+                {% endif %}
+            {% endblock %}
+
+            {% block admin_change_form_document_ready %}
+                <script type="text/javascript">
+                    (function($) {
+                        $(document).ready(function() {
+                            $('.add-another').click(function(e) {
+                                e.preventDefault();
+                                showAddAnotherPopup(this);
+                            });
+                            $('.related-lookup').click(function(e) {
+                                e.preventDefault();
+                                showRelatedObjectLookupPopup(this);
+                            });
+                        {% if adminform and add %}
+                            $('form#{{ opts.model_name }}_form :input:visible:enabled:first').focus()
+                        {% endif %}
+                        });
+                    })(django.jQuery);
+                </script>
+            {% endblock %}
+
+            {# JavaScript for prepopulated fields #}
+            {% prepopulated_fields_js %}
+
+        </div>
+    </form>
+</div>
+{% endblock %}

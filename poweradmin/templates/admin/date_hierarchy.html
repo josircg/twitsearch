@@ -1,0 +1,23 @@
+{% load poweradmin %}
+
+{% if show %}
+<div class="changelist-date_hierarchy">
+  <form id="date_hierarchy-form" action="" method="GET">
+      {% for key, val in request.GET.items %}
+      {% if key != field_name__gte and key != field_name__lte %}
+      <input type="hidden" name="{{ key }}" value="{{ val }}">
+      {% endif %}
+      {% endfor %}
+      <label class="field-box">
+          <label for="input-date_hierarchy-init"><b>({{ field.verbose_name }})</b> De</label>:
+      <input id="input-date_hierarchy-init" type="text" class="vDateField" name="{{ field_name__gte }}" size="10" {% if value__gte %}value="{{ value__gte|date:"d/m/Y" }}"{% endif %} />
+      </label>
+      <label class="field-box">
+          <label for="input-date_hierarchy-end">Até</label>:
+      <input id="input-date_hierarchy-end" type="text" class="vDateField" name="{{ field_name__lte }}" size="10" {% if value__lte %}value="{{ value__lte|date:"d/m/Y" }}"{% endif %} />
+      </label>
+      <input type="submit" value="Ok" />
+      <br class="clear" />
+  </form>
+</div>
+{% endif %}
