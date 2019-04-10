@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
-from typing import Dict, Any
-
 from django.core.management.base import BaseCommand
 import json
 
 from os import scandir, rename, makedirs
 from os.path import isfile, join, exists
 
-
 from twitsearch.settings import BASE_DIR
 from core.models import *
+from django.db.transaction import set_autocommit, commit
 
-COUNTER: Dict[Any, Any] = {}
+# from typing import Dict, Any - só python 3.6
+# COUNTER: Dict[Any, Any] = {}
+COUNTER = {}
 
 
 def process_twitter(src):
@@ -93,6 +93,7 @@ class Command(BaseCommand):
 
         tot_files = 0
         dest_dir = BASE_DIR + '/data'
+        set_autocommit(False)
         if options['twit'] != 'data':
             filename = join(dest_dir, options['twit'])
             if isfile(filename):
@@ -100,6 +101,7 @@ class Command(BaseCommand):
                     texto = file.read()
                     twit = json.loads(texto)
                 process_twitter(twit)
+                commit()
                 tot_files = 1
             else:
                 print('Arquivo %s não encontrado' % filename)
@@ -114,6 +116,7 @@ class Command(BaseCommand):
                         texto = file.read()
                         twit = json.loads(texto)
                     process_twitter(twit)
+                    commit()
                     rename(filename, join(cached_dir, arquivo.name))
                     tot_files += 1
 

@@ -11,6 +11,7 @@ import tweepy
 
 from twitsearch.settings import TIME_ZONE
 from core.models import Termo, Processamento, convert_date
+from django.db.transaction import set_autocommit, commit
 
 
 def save_result(data, processo):
@@ -58,6 +59,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
+        set_autocommit(False)
         termos = Termo.objects.filter(status='A', dtinicio__isnull=True)
         if termos.count() > 0:
             listener = SimpleListener()
@@ -65,6 +67,7 @@ class Command(BaseCommand):
             listener.dtfinal = termos[0].dtfinal
             termos.status = 'P'
             termos.save()
+            commit()
             print('Stream %d' % listener.processo.id)
             api = get_api()
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
@@ -75,6 +78,7 @@ class Command(BaseCommand):
                 listener.checkpoint -= 10
             termos.status = 'C'
             termos.save()
+            commit()
             print('Processamento concluído')
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
@@ -82,13 +86,15 @@ class Command(BaseCommand):
                 processo = Processamento.objects.create(termo=termos[0], dt=agora)
                 termos[0].status = 'P'
                 termos[0].save()
+                commit()
                 print('Search %d' % processo.id)
                 api = get_api()
                 results = tweepy.Cursor(api.search, q=termos[0].busca, tweet_mode='extended').items()
                 for status in results:
                     save_result(status._json, processo.id)
                     agora = datetime.now(pytz.timezone(TIME_ZONE))
-                    if termos[0].dtfinal < agora:
+                    status = Termo.objects.get(id=termos[0].pk)[0].status
+                    if termos[0].dtfinal < agora or status == 'I':
                         break
                 termos[0].status = 'C'
                 termos[0].save()
