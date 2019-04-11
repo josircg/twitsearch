@@ -23,7 +23,7 @@ import csv
 def export_as_csv_action(description=u"Exportar CSV", fields=None, header=True):
     def export_as_csv(modeladmin, request, queryset):
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=%s.csv' % modeladmin.opts.replace('.', '_')
+        response['Content-Disposition'] = 'attachment; filename=%s.csv' % modeladmin.opts.db_table
 
         writer = csv.writer(response)
         if header:

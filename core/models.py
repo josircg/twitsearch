@@ -24,8 +24,7 @@ class Projeto(models.Model):
     def tot_twits(self):
         soma = 0
         for termo in self.termo_set.all():
-            for proc in termo.processamento_set.all():
-                soma += TweetInput.objects.filter(processamento=proc).count()
+            soma += termo.tot_twits()
         return soma
 
 

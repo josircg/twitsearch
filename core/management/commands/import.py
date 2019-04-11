@@ -37,7 +37,7 @@ def process_twitter(src):
                                   favourites=src['user']['favourites_count'])
         follow.save()
 
-    if 'process' in src and src['process'] != COUNTER['proc_id']:
+    if not 'fixo' in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
         COUNTER['proc'] = Processamento.objects.get(id=src['process'])
         COUNTER['proc_id'] = COUNTER['proc'].id
 
@@ -74,6 +74,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
         parser.add_argument('-p', '--processo', type=str, help='Processo Default')
+        parser.add_argument('-f', '--fixo', type=str, help='Processo Fixo')
 
     def handle(self, *args, **options):
         COUNTER['users'] = 0
@@ -84,6 +85,9 @@ class Command(BaseCommand):
                 proc = Processamento.objects.get(id=options['processo'])
                 COUNTER['proc'] = proc
                 COUNTER['proc_id'] = proc.id
+                if 'fixo' in options:
+                    COUNTER['fixo'] = True
+
             except Processamento.DoesNotExist:
                 self.stdout.write(self.style.WARNING('Processo %s não encontrado' % options['processo']))
                 return

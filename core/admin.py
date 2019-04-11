@@ -7,6 +7,11 @@ from core.models import *
 from twitsearch.settings import SITE_HOST
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
+from django.conf.urls import url
+from django.core.urlresolvers import reverse
+from django.shortcuts import get_object_or_404
+from django.http import HttpResponse, HttpResponseRedirect
+
 
 class TermoInline(admin.TabularInline):
     model = Termo
@@ -24,6 +29,32 @@ class ProjetoAdmin(PowerModelAdmin):
         obj.usuario = request.user
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
 
+    def get_urls(self):
+        return [
+            url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
+            url(r'^nuvem/(?P<id>.*)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
+            ] + super(ProjetoAdmin, self).get_urls()
+
+    def get_buttons(self, request, object_id):
+        buttons = super(ProjetoAdmin, self).get_buttons(request, object_id)
+        if object_id:
+            obj = self.get_object(request, object_id)
+            buttons.append(
+                PowerButton(url=reverse('admin:core_projeto_stats', kwargs={'id': object_id, }),
+                            label=u'Estatísticas'))
+            buttons.append(
+                PowerButton(url=reverse('admin:core_projeto_nuvem', kwargs={'id': object_id, }),
+                            label=u'Nuvem de Palavras'))
+        return buttons
+
+    def stats(self, request, id):
+        projeto = get_object_or_404(Projeto, pk=id)
+        return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
+
+    def nuvem(self, request, id):
+        projeto = get_object_or_404(Projeto, pk=id)
+        return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
+
 
 class HistoryInline(admin.TabularInline):
     model = FollowersHistory
@@ -40,12 +71,15 @@ class TwitInline(admin.TabularInline):
 
 
 class UserAdmin(PowerModelAdmin):
+    search_fields = ('location', )
     list_filter = ('verified',)
     list_display = ('username', 'location', 'verified', 'followers', )
     inlines = [HistoryInline, TwitInline]
 
 
-class TweetAdmin(admin.ModelAdmin):
+class TweetAdmin(PowerModelAdmin):
+    search_fields = ('text', )
+    list_filter = ('termo__projeto', )
     list_display = ('text', 'user', 'retweets')
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link')
     readonly_fields = fields
