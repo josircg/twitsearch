@@ -60,6 +60,9 @@ class Processamento(models.Model):
     def __str__(self):
         return '%s (%s)' % (self.termo, self.dt)
 
+    @property
+    def tot_twits(self):
+        return self.tweetinput_set.count() or 0
 
 class TweetUser(models.Model):
     twit_id = models.BigIntegerField(primary_key=True)

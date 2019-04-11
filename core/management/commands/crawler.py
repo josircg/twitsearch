@@ -65,8 +65,8 @@ class Command(BaseCommand):
             listener = SimpleListener()
             listener.processo = Processamento.objects.create(termo=termos[0], dt=agora)
             listener.dtfinal = termos[0].dtfinal
-            termos.status = 'P'
-            termos.save()
+            termos[0].status = 'P'
+            termos[0].save()
             commit()
             print('Stream %d' % listener.processo.id)
             api = get_api()
@@ -76,8 +76,8 @@ class Command(BaseCommand):
                 time.sleep(360)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 listener.checkpoint -= 10
-            termos.status = 'C'
-            termos.save()
+            termos[0].status = 'C'
+            termos[0].save()
             commit()
             print('Processamento concluído')
         else:
@@ -98,6 +98,7 @@ class Command(BaseCommand):
                         break
                 termos[0].status = 'C'
                 termos[0].save()
+                commit()
                 print('Processamento concluído')
             else:
                 print('Nenhum termo para processar')

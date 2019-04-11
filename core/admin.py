@@ -4,7 +4,6 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from core.models import *
-from twitsearch.settings import SITE_HOST
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
 from django.conf.urls import url
@@ -94,15 +93,15 @@ class TweetAdmin(PowerModelAdmin):
 
     def original_link(self, instance):
         if instance.retwit_id:
-            return mark_safe("<a href='%sadmin/core/tweet/%s/change'>Original</a>" %
-                             (SITE_HOST, instance.retwit_id))
+            return mark_safe("<a href='%'>Original</a>" %
+                             reverse('admin:core_tweet_change', args=[instance.retwit_id]))
         else:
             return '-'
     original_link.short_description = 'Original Twitter'
 
     def user_link(self, instance):
-        return mark_safe("<a href='%sadmin/core/tweetuser/%s/change'>%s</a>" %
-                         (SITE_HOST, instance.user.twit_id, instance.user.username))
+        return mark_safe("<a href='%s'>%s</a>" %
+                         (reverse('admin:core_tweet_change', args=[instance.user.twit_id]), instance.user.username))
     user_link.short_description = 'User'
 
     '''

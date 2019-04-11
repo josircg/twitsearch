@@ -85,7 +85,7 @@ class Command(BaseCommand):
                 proc = Processamento.objects.get(id=options['processo'])
                 COUNTER['proc'] = proc
                 COUNTER['proc_id'] = proc.id
-                if 'fixo' in options:
+                if options['fixo']:
                     COUNTER['fixo'] = True
 
             except Processamento.DoesNotExist:
