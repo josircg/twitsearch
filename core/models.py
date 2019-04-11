@@ -24,8 +24,8 @@ class Projeto(models.Model):
     def tot_twits(self):
         soma = 0
         for termo in self.termo_set.all():
-            soma += termo.tot_twits()
-        return soma
+            soma += termo.tweet_set.count()
+        return u'%d' % soma
 
 
 STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'),
