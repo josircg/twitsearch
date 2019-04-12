@@ -93,11 +93,11 @@ class TweetAdmin(PowerModelAdmin):
 
     def original_link(self, instance):
         if instance.retwit_id:
-            return mark_safe("<a href='%'>Original</a>" %
+            return mark_safe("<a href='%s'>Original</a>" %
                              reverse('admin:core_tweet_change', args=[instance.retwit_id]))
         else:
             return '-'
-    original_link.short_description = 'Retwitted'
+    original_link.short_description = 'Retwitted Link'
 
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %
@@ -105,8 +105,8 @@ class TweetAdmin(PowerModelAdmin):
     user_link.short_description = 'User'
 
     def source(self, instance):
-        return mark_safe("<a href='%s' target='_blank'>%s</a>" % instance.twit_id)
-    user_link.short_description = 'View Twitter'
+        return mark_safe("<a href='https://www.twitter.com/statuses/%s' target='_blank'>Twitter</a>" % instance.twit_id)
+    user_link.short_description = 'Twitter Link'
 
     '''
     def formfield_for_dbfield(self, db_field, **kwargs):
