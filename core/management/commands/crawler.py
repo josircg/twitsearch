@@ -64,7 +64,7 @@ class Command(BaseCommand):
             listener = SimpleListener()
             listener.processo = Processamento.objects.create(termo=termos[0], dt=agora)
             listener.dtfinal = termos[0].dtfinal
-            Termo.objects.filter(id=termos[0].pk).update('P')
+            Termo.objects.filter(id=termos[0].pk).update(status='P')
             print('Stream %d' % listener.processo.id)
             api = get_api()
             status = 'A'
@@ -76,13 +76,13 @@ class Command(BaseCommand):
                 status = Termo.objects.get(id=termos[0].pk).status
                 listener.checkpoint -= 5
 
-            Termo.objects.filter(id=termos[0].pk).update('C')
+            Termo.objects.filter(id=termos[0].pk).update(status='C')
             print('Processamento concluído')
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
             if termos.count() > 0:
                 processo = Processamento.objects.create(termo=termos[0], dt=agora)
-                Termo.objects.filter(id=termos[0].pk).update('P')
+                Termo.objects.filter(id=termos[0].pk).update(status='P')
                 print('Search %s %d' % (termos[0].busca, processo.id))
                 api = get_api()
                 results = tweepy.Cursor(api.search, q=termos[0].busca, tweet_mode='extended').items()
@@ -92,7 +92,7 @@ class Command(BaseCommand):
                     status_proc = Termo.objects.get(id=termos[0].pk).status
                     if termos[0].dtfinal < agora or status_proc == 'I':
                         break
-                Termo.objects.filter(id=termos[0].id).update('C')
+                Termo.objects.filter(id=termos[0].id).update(status='C')
                 print('Processamento concluído')
             else:
                 print('Nenhum termo para processar')
