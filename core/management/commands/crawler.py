@@ -61,19 +61,20 @@ class Command(BaseCommand):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
         termos = Termo.objects.filter(status='A', dtinicio__isnull=True)
         if termos.count() > 0:
+            termo = Termo.objects.get(pk=termos[0].id)
             listener = SimpleListener()
-            listener.processo = Processamento.objects.create(termo=termos[0], dt=agora)
-            listener.dtfinal = termos[0].dtfinal
-            Termo.objects.filter(id=termos[0].pk).update(status='P')
+            listener.processo = Processamento.objects.create(termo=termo, dt=agora)
+            listener.dtfinal = termo.dtfinal
+            Termo.objects.filter(id=termo.id).update(status='P')
             print('Stream %d' % listener.processo.id)
             api = get_api()
             status = 'A'
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
-            tweepy_stream.filter(track=[termos[0].busca], is_async=True)
+            tweepy_stream.filter(track=[termo.busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal < agora and status != 'P':
                 time.sleep(180)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
-                status = Termo.objects.get(id=termos[0].pk).status
+                status = Termo.objects.get(id=termo.id).status
                 listener.checkpoint -= 5
 
             Termo.objects.filter(id=termos[0].pk).update(status='C')
@@ -81,18 +82,19 @@ class Command(BaseCommand):
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
             if termos.count() > 0:
-                processo = Processamento.objects.create(termo=termos[0], dt=agora)
-                Termo.objects.filter(id=termos[0].pk).update(status='P')
-                print('Search %s %d' % (termos[0].busca, processo.id))
+                termo = Termo.objects.get(pk=termos[0].id)
+                processo = Processamento.objects.create(termo=termo, dt=agora)
+                Termo.objects.filter(id=termo.id).update(status='P')
+                print('Search %s %d' % (termo.busca, processo.id))
                 api = get_api()
-                results = tweepy.Cursor(api.search, q=termos[0].busca, tweet_mode='extended').items()
+                results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended').items()
                 for status in results:
                     save_result(status._json, processo.id)
                     agora = datetime.now(pytz.timezone(TIME_ZONE))
-                    status_proc = Termo.objects.get(id=termos[0].pk).status
-                    if termos[0].dtfinal < agora or status_proc == 'I':
+                    status_proc = Termo.objects.get(id=termo.id).status
+                    if termo.dtfinal < agora or status_proc == 'I':
                         break
-                Termo.objects.filter(id=termos[0].id).update(status='C')
+                Termo.objects.filter(id=termo.id).update(status='C')
                 print('Processamento concluído')
             else:
                 print('Nenhum termo para processar')
