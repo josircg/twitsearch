@@ -88,7 +88,7 @@ class TweetAdmin(PowerModelAdmin):
     search_fields = ('text', )
     list_filter = ('termo__projeto', )
     list_display = ('text', 'user', 'retweets')
-    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link')
+    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link', 'source')
     readonly_fields = fields
 
     def original_link(self, instance):
@@ -97,12 +97,16 @@ class TweetAdmin(PowerModelAdmin):
                              reverse('admin:core_tweet_change', args=[instance.retwit_id]))
         else:
             return '-'
-    original_link.short_description = 'Original Twitter'
+    original_link.short_description = 'Retwitted'
 
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %
-                         (reverse('admin:core_tweet_change', args=[instance.user.twit_id]), instance.user.username))
+                         (reverse('admin:core_tweetuser_change', args=[instance.user.id]), instance.user.username))
     user_link.short_description = 'User'
+
+    def source(self, instance):
+        return mark_safe("<a href='%s' target='_blank'>%s</a>" % instance.twit_id)
+    user_link.short_description = 'View Twitter'
 
     '''
     def formfield_for_dbfield(self, db_field, **kwargs):

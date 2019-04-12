@@ -7,7 +7,7 @@ class Command(BaseCommand):
     label = 'Teste Concorrência'
 
     def handle(self, *args, **options):
-        Termo.objects.get(id=1).update(status='P')
+        Termo.objects.filter(id=1).update(status='P')
         status = 'A'
         while status != 'C':
             status = Termo.objects.get(id=1).status

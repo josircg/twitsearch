@@ -67,12 +67,15 @@ class Command(BaseCommand):
             Termo.objects.filter(id=termos[0].pk).update('P')
             print('Stream %d' % listener.processo.id)
             api = get_api()
+            status = 'A'
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
             tweepy_stream.filter(track=[termos[0].busca], is_async=True)
-            while listener.checkpoint > 0 and listener.dtfinal < agora:
-                time.sleep(360)
+            while listener.checkpoint > 0 and listener.dtfinal < agora and status != 'P':
+                time.sleep(180)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
-                listener.checkpoint -= 10
+                status = Termo.objects.get(id=termos[0].pk).status
+                listener.checkpoint -= 5
+
             Termo.objects.filter(id=termos[0].pk).update('C')
             print('Processamento concluído')
         else:
@@ -86,8 +89,8 @@ class Command(BaseCommand):
                 for status in results:
                     save_result(status._json, processo.id)
                     agora = datetime.now(pytz.timezone(TIME_ZONE))
-                    status = Termo.objects.get(id=termos[0].pk)[0].status
-                    if termos[0].dtfinal < agora or status == 'I':
+                    status_proc = Termo.objects.get(id=termos[0].pk).status
+                    if termos[0].dtfinal < agora or status_proc == 'I':
                         break
                 Termo.objects.filter(id=termos[0].id).update('C')
                 print('Processamento concluído')
