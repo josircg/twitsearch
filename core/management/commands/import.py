@@ -37,6 +37,11 @@ def process_twitter(src):
                                   favourites=src['user']['favourites_count'])
         follow.save()
 
+    follow = FollowersHistory.objects.filter(user=user).latest('dt')
+    if user.followers != follow.followers:
+        user.followers = follow.followers
+        user.save()
+
     if not 'fixo' in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
         COUNTER['proc'] = Processamento.objects.get(id=src['process'])
         COUNTER['proc_id'] = COUNTER['proc'].id

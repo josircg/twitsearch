@@ -79,8 +79,7 @@ class TwitInline(admin.TabularInline):
 
 
 class UserAdmin(PowerModelAdmin):
-    search_fields = ('location', )
-    list_filter = ('verified',)
+    list_filter = ('verified', )
     list_display = ('username', 'location', 'verified', 'followers', )
     inlines = [HistoryInline, TwitInline]
 
