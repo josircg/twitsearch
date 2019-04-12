@@ -64,6 +64,7 @@ class Processamento(models.Model):
     def tot_twits(self):
         return self.tweetinput_set.count() or 0
 
+
 class TweetUser(models.Model):
     twit_id = models.BigIntegerField(primary_key=True)
     username = models.CharField(max_length=100)

@@ -4,12 +4,12 @@ from django.db.transaction import set_autocommit, commit
 from core.models import Termo
 
 class Command(BaseCommand):
-    label = 'Grab Twitters'
+    label = 'Teste Concorrência'
 
     def handle(self, *args, **options):
-        set_autocommit(False)
-        termos = Termo.objects.filter(id=1)
-        termos[0].status = 'P'
-        termos[0].save()
-        commit()
-        input('Aguardando')
+        Termo.objects.get(id=1).update(status='P')
+        status = 'A'
+        while status != 'C':
+            status = Termo.objects.get(id=1).status
+        print('Concluído!')
+

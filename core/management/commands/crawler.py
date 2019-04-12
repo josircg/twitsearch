@@ -59,15 +59,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
-        set_autocommit(False)
         termos = Termo.objects.filter(status='A', dtinicio__isnull=True)
         if termos.count() > 0:
             listener = SimpleListener()
             listener.processo = Processamento.objects.create(termo=termos[0], dt=agora)
             listener.dtfinal = termos[0].dtfinal
-            termos[0].status = 'P'
-            termos[0].save()
-            commit()
+            Termo.objects.filter(id=termos[0].pk).update('P')
             print('Stream %d' % listener.processo.id)
             api = get_api()
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
@@ -76,18 +73,14 @@ class Command(BaseCommand):
                 time.sleep(360)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 listener.checkpoint -= 10
-            termos[0].status = 'C'
-            termos[0].save()
-            commit()
+            Termo.objects.filter(id=termos[0].pk).update('C')
             print('Processamento concluído')
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
             if termos.count() > 0:
                 processo = Processamento.objects.create(termo=termos[0], dt=agora)
-                termos[0].status = 'P'
-                termos[0].save()
-                commit()
-                print('Search %d' % processo.id)
+                Termo.objects.filter(id=termos[0].pk).update('P')
+                print('Search %s %d' % (termos[0].busca, processo.id))
                 api = get_api()
                 results = tweepy.Cursor(api.search, q=termos[0].busca, tweet_mode='extended').items()
                 for status in results:
@@ -96,9 +89,7 @@ class Command(BaseCommand):
                     status = Termo.objects.get(id=termos[0].pk)[0].status
                     if termos[0].dtfinal < agora or status == 'I':
                         break
-                termos[0].status = 'C'
-                termos[0].save()
-                commit()
+                Termo.objects.filter(id=termos[0].id).update('C')
                 print('Processamento concluído')
             else:
                 print('Nenhum termo para processar')
