@@ -72,13 +72,10 @@ class TweetUser(models.Model):
     location = models.CharField(max_length=200, null=True)
     verified = models.BooleanField(default=False)
     created_at = models.DateField()
+    followers = models.BigIntegerField(default=0)
 
     def __str__(self):
         return u'%s (%s)' % (self.username, self.location)
-
-    @property
-    def followers(self):
-        return self.followershistory_set.latest('dt').followers
 
     class Meta:
         verbose_name = 'Usuário'

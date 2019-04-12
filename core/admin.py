@@ -63,6 +63,7 @@ class ProjetoAdmin(PowerModelAdmin):
         projeto = get_object_or_404(Projeto, pk=id)
         return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
 
+
 class HistoryInline(admin.TabularInline):
     model = FollowersHistory
     extra = 0
@@ -87,7 +88,7 @@ class UserAdmin(PowerModelAdmin):
 class TweetAdmin(PowerModelAdmin):
     search_fields = ('text', )
     list_filter = ('termo__projeto', )
-    list_display = ('text', 'user', 'retweets')
+    list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link', 'source')
     readonly_fields = fields
 
