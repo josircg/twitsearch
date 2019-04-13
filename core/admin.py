@@ -150,4 +150,5 @@ admin.site.register(TweetUser, UserAdmin)
 admin.site.register(Tweet, TweetAdmin)
 admin.site.register(Termo)
 admin.site.register(Processamento)
+admin.site.register(LockProcessamento)
 

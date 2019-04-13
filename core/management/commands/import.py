@@ -115,9 +115,9 @@ class Command(BaseCommand):
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
-            if LockProcessamento.objects.filter(locked=True):
+            if LockProcessamento.objects.get(locked=True):
                 print('Importação pendente')
-            LockProcessamento.update(locked=True)
+            LockProcessamento.objects.update(locked=True)
             try:
                 cached_dir = dest_dir + '/cached'
                 if not exists(cached_dir):
