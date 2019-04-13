@@ -133,7 +133,7 @@ class Command(BaseCommand):
                         rename(filename, join(cached_dir, arquivo.name))
                         tot_files += 1
             finally:
-                LockProcessamento.update(locked=False)
+                LockProcessamento.objects.update(locked=False)
 
         print('Arquivos processados: %d' % tot_files)
         print('Novos Usuários: %d' % COUNTER['users'])
