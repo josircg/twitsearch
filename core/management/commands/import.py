@@ -115,7 +115,7 @@ class Command(BaseCommand):
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
-            if LockProcessamento.objects.get(locked=True):
+            if LockProcessamento.objects.filter(locked=True):
                 print('Importação pendente')
             LockProcessamento.objects.update(locked=True)
             try:
