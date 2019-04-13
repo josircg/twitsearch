@@ -115,19 +115,25 @@ class Command(BaseCommand):
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
-            cached_dir = dest_dir + '/cached'
-            if not exists(cached_dir):
-                makedirs(cached_dir)
-            for arquivo in scandir(dest_dir):
-                if arquivo.name.endswith(".json"):
-                    filename = join(dest_dir, arquivo.name)
-                    with open(filename, 'r') as file:
-                        texto = file.read()
-                        twit = json.loads(texto)
-                    process_twitter(twit)
-                    commit()
-                    rename(filename, join(cached_dir, arquivo.name))
-                    tot_files += 1
+            if LockProcessamento.objects.filter(locked=True):
+                print('Importação pendente')
+            LockProcessamento.update(locked=True)
+            try:
+                cached_dir = dest_dir + '/cached'
+                if not exists(cached_dir):
+                    makedirs(cached_dir)
+                for arquivo in scandir(dest_dir):
+                    if arquivo.name.endswith(".json"):
+                        filename = join(dest_dir, arquivo.name)
+                        with open(filename, 'r') as file:
+                            texto = file.read()
+                            twit = json.loads(texto)
+                        process_twitter(twit)
+                        commit()
+                        rename(filename, join(cached_dir, arquivo.name))
+                        tot_files += 1
+            finally:
+                LockProcessamento.update(locked=False)
 
         print('Arquivos processados: %d' % tot_files)
         print('Novos Usuários: %d' % COUNTER['users'])

@@ -54,7 +54,7 @@ class Termo(models.Model):
 
 
 class Processamento(models.Model):
-    termo = models.ForeignKey(Termo, on_delete=models.CASCADE)
+    termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
     dt = models.DateTimeField()
 
     def __str__(self):
@@ -63,6 +63,11 @@ class Processamento(models.Model):
     @property
     def tot_twits(self):
         return self.tweetinput_set.count() or 0
+
+
+class LockProcessamento(models.Model):
+    locked = models.BooleanField(default=True)
+    dt_inicio = models.DateTimeField(auto_now=True)
 
 
 class TweetUser(models.Model):
@@ -78,7 +83,7 @@ class TweetUser(models.Model):
         return u'%s (%s)' % (self.username, self.location)
 
     class Meta:
-        verbose_name = 'Usuário'
+        verbose_name = 'Usuário do Twitter'
         verbose_name_plural = 'Usuários do Twitter'
 
 

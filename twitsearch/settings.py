@@ -116,12 +116,15 @@ AUTH_PASSWORD_VALIDATORS = [
 TIME_ZONE = 'America/Sao_Paulo'
 LANGUAGE_CODE = 'pt-BR'
 USE_I18N = True
-USE_L10N = True
 USE_TZ = True
+USE_L10N = False
+DATE_FORMAT = 'd/m/Y'
+DATETIME_FORMAT = 'd/m/Y H:i:s'
 
 # Decimal format
 DECIMAL_SEPARATOR = ','
 THOUSAND_SEPARATOR = '.'
+NUMBER_GROUPING = True
 USE_THOUSAND_SEPARATOR = True
 
 # Static files (CSS, JavaScript, Images)

@@ -4,12 +4,17 @@ from django.contrib import admin
 from django.utils.safestring import mark_safe
 
 from core.models import *
+
+import os
+from core.apps import OSRun
+
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render_to_response, redirect
 from django.http import HttpResponse, HttpResponseRedirect
+from django.template import RequestContext
 
 
 class TermoInline(admin.TabularInline):
@@ -27,6 +32,8 @@ class ProjetoAdmin(PowerModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.usuario = request.user
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
+        if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
+            OSRun('&/var/webapp/twitsearch/twitsearch/crawler.sh')
 
     def get_urls(self):
         return [
@@ -53,11 +60,17 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def stats(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
-        return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
+        return render_to_response('core/estatistica.html', {
+            'title': u'Estatísticas dos Twitters Obtidos',
+            'projeto': projeto,
+        }, RequestContext(request, ))
 
     def nuvem(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
-        return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
+        return render_to_response('core/estatistica.html', {
+            'title': u'Estatísticas dos Twitters Obtidos',
+            'projeto': projeto,
+        }, RequestContext(request, ))
 
     def gephi_export(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
@@ -79,9 +92,19 @@ class TwitInline(admin.TabularInline):
 
 
 class UserAdmin(PowerModelAdmin):
+    search_fields = ('username', 'name')
     list_filter = ('verified', )
-    list_display = ('username', 'location', 'verified', 'followers', )
+    list_display = ('username', 'name', 'location', 'verified', 'followers_str', )
+    fields = list_display
+    readonly_fields = fields
+    localized_fields = ('followers',)
     inlines = [HistoryInline, TwitInline]
+
+    # Localização não funcionou
+    def followers_str(self, obj):
+        return '{:,}'.format(obj.followers).replace(',','.')
+    followers_str.short_description = 'Followers'
+    followers_str.admin_order_field = 'followers'
 
 
 class TweetAdmin(PowerModelAdmin):
@@ -101,12 +124,12 @@ class TweetAdmin(PowerModelAdmin):
 
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %
-                         (reverse('admin:core_tweetuser_change', args=[instance.user.id]), instance.user.username))
-    user_link.short_description = 'User'
+                         (reverse('admin:core_tweetuser_change', args=[instance.user.twit_id]), instance.user.username))
+    user_link.short_description = 'User Link'
 
     def source(self, instance):
         return mark_safe("<a href='https://www.twitter.com/statuses/%s' target='_blank'>Twitter</a>" % instance.twit_id)
-    user_link.short_description = 'Twitter Link'
+    source.short_description = 'Twitter Link'
 
     '''
     def formfield_for_dbfield(self, db_field, **kwargs):
