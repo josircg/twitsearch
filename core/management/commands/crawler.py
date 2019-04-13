@@ -77,7 +77,7 @@ class Command(BaseCommand):
                 status = Termo.objects.get(id=termo.id).status
                 listener.checkpoint -= 5
 
-            Termo.objects.filter(id=termos[0].pk).update(status='C')
+            Termo.objects.filter(id=termo.id).update(status='C')
             print('Processamento concluído')
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
