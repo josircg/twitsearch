@@ -24,4 +24,5 @@ def OSRun(command, stop=False):
         out += "OS error: {0}".format(err)
         if stop:
             raise Exception(stderr)
+    print(out)
     return out

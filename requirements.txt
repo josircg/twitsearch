@@ -1,4 +1,13 @@
+# apt install libicu-dev python3-icu
+# after installation:
+#   polyglot download embeddings2.en sentiment2.en ner2.en
+#   polyglot download embeddings2.pt sentiment2.pt ner2.pt
+
 Django==1.11
 pytz
 tweepy
 django-admin-tools
+numpy
+PyICU
+pycld2
+polyglot

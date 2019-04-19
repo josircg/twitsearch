@@ -27,7 +27,7 @@ class SimpleListener(tweepy.StreamListener):
 
     def __init__(self):
         super(SimpleListener, self).__init__()
-        self.checkpoint = 10
+        self.checkpoint = 50
         self.processo = None
         self.dtfinal = None
 
@@ -44,7 +44,7 @@ class SimpleListener(tweepy.StreamListener):
 
         save_result(data, self.processo.id)
 
-        return self.dtfinal > convert_date(data['created_at'])
+        return self.checkpoint > 0
 
     def on_error(self, status_code):
         # code to run each time an error is received
@@ -72,11 +72,11 @@ class Command(BaseCommand):
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
             tweepy_stream.filter(track=[termo.busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal < agora and status != 'P':
-                time.sleep(180)
+                time.sleep(360)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 status = Termo.objects.get(id=termo.id).status
-                listener.checkpoint -= 5
-
+                listener.checkpoint -= 1
+            listener.checkpoint = 0
             Termo.objects.filter(id=termo.id).update(status='C')
             print('Processamento concluído')
         else:

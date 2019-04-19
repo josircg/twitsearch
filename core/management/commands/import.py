@@ -118,6 +118,7 @@ class Command(BaseCommand):
             if LockProcessamento.objects.filter(locked=True):
                 print('Importação pendente')
             LockProcessamento.objects.update(locked=True)
+            commit()
             try:
                 cached_dir = dest_dir + '/cached'
                 if not exists(cached_dir):
@@ -134,6 +135,7 @@ class Command(BaseCommand):
                         tot_files += 1
             finally:
                 LockProcessamento.objects.update(locked=False)
+                commit()
 
         print('Arquivos processados: %d' % tot_files)
         print('Novos Usuários: %d' % COUNTER['users'])
