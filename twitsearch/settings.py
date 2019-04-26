@@ -60,11 +60,7 @@ ROOT_URLCONF = 'twitsearch.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-<<<<<<< HEAD
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
-=======
-        'DIRS': [ os.path.join(BASE_DIR, 'templates'),],
->>>>>>> 5e5aae8461526bfe2ffab6a479ef121a9384766b
+        'DIRS': [ os.path.join(BASE_DIR, 'templates'), ],
         'APP_DIRS': False,
         'OPTIONS': {
             'context_processors': [
