@@ -97,6 +97,7 @@ class Command(BaseCommand):
                     status_proc = Termo.objects.get(id=termo.id).status
                     if termo.dtfinal < agora or status_proc == 'I':
                         break
+                    print('checkpoint')
 
                 if termo.dtfinal < agora:
                     Termo.objects.filter(id=termo.id).update(status='C')
