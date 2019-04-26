@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls admin_static admin_modify %}
+
+{% block title %}{{block.super}}{% endblock %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" type="text/css" href="{{ admin_media_prefix }}css/forms.css" />{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+     <a href="../../../../">Home</a>&rsaquo;<a href="../../../projeto/{{ projeto.id }}">Projeto</a> &rsaquo; Stats
+</div>
+{% endblock %}
+
+{% block content_title %}<h1>{{projeto.nome}}</h1>{% endblock %}
+
+{% block content %}
+<div id="content-main">
+	<div>
+		<fieldset class="module aligned ">
+            <label>Termos:</label>
+            {% for termo in projeto.termo_set.all %}
+			<div class="form-row instituicao">
+				<div>
+					<p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+				</div>
+			</div>
+            {%  endfor %}
+
+            {% for palavra, count in palavras.items %}
+			<div class="form-row palavra">
+				<div>
+					<p>
+						{{ palavra }}:{{ count }}
+					</p>
+				</div>
+			</div>
+            {%  endfor %}
+
+			{% if aviso.texto %}
+			<div class="form-row texto">
+				<div><label>Texto Explicativo:</label><p>{{projeto.objetivo|safe}}</p></div>
+			</div>
+			{% endif %}
+
+			{% if aviso.dtinicial %}
+			<div class="form-row dtinicial">
+				<div><label>Data Inicial:</label><p>{{aviso.dtinicial}}</p></div>
+			</div>
+			{% endif %}
+
+		</fieldset>
+	</div>
+</div>
+{% endblock %}

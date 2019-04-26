@@ -33,7 +33,7 @@ class ProjetoAdmin(PowerModelAdmin):
         obj.usuario = request.user
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
         if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
-            OSRun('&/var/webapp/twitsearch/twitsearch/crawler.sh')
+            OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh&')
 
     def get_urls(self):
         return [
@@ -60,14 +60,16 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def stats(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
-        return render_to_response('core/estatistica.html', {
+        palavras = projeto.most_common()
+        return render_to_response('core/stats.html', {
             'title': u'Estatísticas dos Twitters Obtidos',
             'projeto': projeto,
+            'palavras': palavras
         }, RequestContext(request, ))
 
     def nuvem(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
-        return render_to_response('core/estatistica.html', {
+        return render_to_response('core/nuvem.html', {
             'title': u'Estatísticas dos Twitters Obtidos',
             'projeto': projeto,
         }, RequestContext(request, ))
@@ -109,7 +111,7 @@ class UserAdmin(PowerModelAdmin):
 
 class TweetAdmin(PowerModelAdmin):
     search_fields = ('text', )
-    list_filter = ('termo__projeto', )
+    list_filter = ('termo__projeto', 'termo')
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link', 'source')
     readonly_fields = fields
@@ -131,24 +133,20 @@ class TweetAdmin(PowerModelAdmin):
         return mark_safe("<a href='https://www.twitter.com/statuses/%s' target='_blank'>Twitter</a>" % instance.twit_id)
     source.short_description = 'Twitter Link'
 
-    '''
-    def formfield_for_dbfield(self, db_field, **kwargs):
-        field = super(TweetAdmin, self).formfield_for_dbfield(db_field, **kwargs)
-        if db_field.name == 'twit_id':
-            field.widget.attrs['size'] = '16'
-            field.widget.attrs['class'] = ''
 
-        if db_field.name == 'text':
-            field.widget.attrs['size'] = '80'
-            field.widget.attrs['class'] = ''
-        return field
-    '''
+class TermoAdmin(PowerModelAdmin):
+    list_display = ('busca', 'projeto', 'dtinicio', 'status', 'tot_twits',)
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(TermoAdmin, self).get_form(request, obj, **kwargs)
+        form.base_fields['busca'].widget.attrs['style'] = 'width: 30em;'
+        return form
 
 
 admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(TweetUser, UserAdmin)
 admin.site.register(Tweet, TweetAdmin)
-admin.site.register(Termo)
+admin.site.register(Termo, TermoAdmin)
 admin.site.register(Processamento)
 admin.site.register(LockProcessamento)
 

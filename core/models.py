@@ -3,13 +3,32 @@ from django.contrib.auth.models import User
 
 import time
 import pytz
+import re
+from twitsearch.settings import BASE_DIR
 from datetime import datetime
+
+from collections import Counter
 
 
 # Converte datas que venham no formato do Twitter
 def convert_date(date_str) -> datetime:
     time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
     return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
+
+
+def stopwords() -> list:
+    excecoes = []
+    for words in open(BASE_DIR+'/excecoes.txt').read().lower().split(','):
+        excecoes.append(words.strip())
+    return excecoes
+
+
+def clean_pontuation(s) -> str:
+    result = ''
+    for letter in s:
+        if not letter in ['.',',','?','!','"', "'"]:
+            result += s
+    return result
 
 
 class Projeto(models.Model):
@@ -26,6 +45,24 @@ class Projeto(models.Model):
         for termo in self.termo_set.all():
             soma += termo.tweet_set.count()
         return u'%d' % soma
+
+    def most_common(self):
+        result = Counter()
+        excecoes = stopwords()
+        for termo in self.termo_set.all():
+            # adiciona os termos de busca na exceção para que eles não distorçam o grupamento
+            for busca in termo.busca.split():
+                excecoes.append(busca)
+
+            for tweet in termo.tweet_set.all():
+                palavras = tweet.text.lower().split()
+                for palavra in palavras:
+                    if not palavra in excecoes and \
+                       not palavra.startswith('http'):
+                        palavra_limpa = clean_pontuation(palavra)
+                        if len(palavra_limpa) > 2:
+                            result[palavra_limpa] += 1
+        return result.most_common(20)
 
 
 STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'),
@@ -46,7 +83,6 @@ class Termo(models.Model):
     @property
     def tot_twits(self):
         return self.tweet_set.count() or 0
-    # count.short_description = u'Total de Twits'
 
     class Meta:
         verbose_name = 'Termo de Busca'
