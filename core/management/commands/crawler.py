@@ -58,7 +58,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
-        termos = Termo.objects.filter(status__in=('A', 'P'), dtinicio__isnull=True)
+        termos = Termo.objects.filter(status='A', dtinicio__isnull=True)
         if termos.count() > 0:
             termo = Termo.objects.get(pk=termos[0].id)
             listener = SimpleListener()
@@ -74,14 +74,14 @@ class Command(BaseCommand):
                 time.sleep(360)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 status = Termo.objects.get(id=termo.id).status
-                listener.checkpoint -= 5
+                listener.checkpoint -= 1
 
             # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
             if listener.dtfinal > agora:
                 Termo.objects.filter(id=termo.id).update(status='C')
 
         else:
-            termos = Termo.objects.filter(status__in=('A', 'P'), dtinicio__lt=agora)
+            termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
             if termos.count() > 0:
                 termo = Termo.objects.get(pk=termos[0].id)
                 processo = Processamento.objects.create(termo=termo, dt=agora)
@@ -98,6 +98,8 @@ class Command(BaseCommand):
 
                 if termo.dtfinal < agora:
                     Termo.objects.filter(id=termo.id).update(status='C')
+                else:
+                    Termo.objects.filter(id=termo.id).update(status='A')
                 print('Processamento concluído')
             else:
                 print('Nenhum termo para processar')
