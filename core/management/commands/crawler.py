@@ -71,10 +71,11 @@ class Command(BaseCommand):
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
             tweepy_stream.filter(track=[termo.busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal < agora and status != 'P':
-                time.sleep(360)
+                time.sleep(720)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 status = Termo.objects.get(id=termo.id).status
                 listener.checkpoint -= 1
+                print('Checkpoint %d' % listener.checkpoint)
 
             # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
             if listener.dtfinal > agora:
