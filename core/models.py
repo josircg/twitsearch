@@ -46,6 +46,17 @@ class Projeto(models.Model):
             soma += termo.tweet_set.count()
         return u'%d' % soma
 
+    @property
+    def status(self):
+        _status = 'C'
+        for termo in self.termo_set.all():
+            if termo.status == 'P':
+                _status = 'P'
+                termo.get_status_display()
+            elif _status not in ('P','I'):
+                _status = termo.status
+        return dict(STATUS_TERMO).get(_status)
+
     def most_common(self):
         result = Counter()
         excecoes = stopwords()

@@ -25,6 +25,7 @@ class TermoInline(admin.TabularInline):
 
 
 class ProjetoAdmin(PowerModelAdmin):
+    list_display = ('nome', 'usuario', 'status', 'tot_twits',)
     fields = ('nome', 'objetivo', 'usuario', 'tot_twits')
     readonly_fields = ('usuario', 'tot_twits', )
     inlines = [TermoInline]
