@@ -1,0 +1,242 @@
+[
+  {
+    "id": 1,
+    "name": "Economia",
+    "type": "INDICATOR"
+  },
+  {
+    "id": 2,
+    "name": "Trabalho e Renda",
+    "type": "INDICATOR"
+  },
+  {
+    "id": 3,
+    "name": "Educação",
+    "type": "INDICATOR"
+  },
+  {
+    "id": 4,
+    "name": "Qualidade de Vida e Desenvolvimento Social",
+    "type": "INDICATOR"
+  },
+  {
+    "id": 7,
+    "name": "Agricultura familiar",
+    "type": "FILTER"
+  },
+  {
+    "id": 8,
+    "name": "Economia Criativa",
+    "type": "FILTER"
+  },
+  {
+    "id": 9,
+    "name": "Pecuária",
+    "type": "FILTER"
+  },
+  {
+    "id": 10,
+    "name": "Madeira e Móveis",
+    "type": "FILTER"
+  },
+  {
+    "id": 11,
+    "name": "Construção Civil",
+    "type": "FILTER"
+  },
+  {
+    "id": 12,
+    "name": "Base Mineral",
+    "type": "FILTER"
+  },
+  {
+    "id": 13,
+    "name": "Agroindústria",
+    "type": "FILTER"
+  },
+  {
+    "id": 14,
+    "name": "Apicultura",
+    "type": "FILTER"
+  },
+  {
+    "id": 15,
+    "name": "Fármacos",
+    "type": "FILTER"
+  },
+  {
+    "id": 16,
+    "name": "Pesca e Aquicultura",
+    "type": "FILTER"
+  },
+  {
+    "id": 17,
+    "name": "Tecnologia da Informação e Comunicação",
+    "type": "FILTER"
+  },
+  {
+    "id": 18,
+    "name": "Construção Naval",
+    "type": "FILTER"
+  },
+  {
+    "id": 19,
+    "name": "Têxtil e Confecções",
+    "type": "FILTER"
+  },
+  {
+    "id": 20,
+    "name": "Biotecnologia",
+    "type": "FILTER"
+  },
+  {
+    "id": 21,
+    "name": "Calçados",
+    "type": "FILTER"
+  },
+  {
+    "id": 22,
+    "name": "Energia",
+    "type": "FILTER"
+  },
+  {
+    "id": 23,
+    "name": "Metalmecânico",
+    "type": "FILTER"
+  },
+  {
+    "id": 24,
+    "name": "Fruticultura",
+    "type": "FILTER"
+  },
+  {
+    "id": 25,
+    "name": "Alimentos e bebidas",
+    "type": "FILTER"
+  },
+  {
+    "id": 26,
+    "name": "Petróleo e Gás",
+    "type": "FILTER"
+  },
+  {
+    "id": 27,
+    "name": "Turismo",
+    "type": "FILTER"
+  },
+  {
+    "id": 28,
+    "name": "Setor Gráfico",
+    "type": "FILTER"
+  },
+  {
+    "id": 29,
+    "name": "Logística",
+    "type": "FILTER"
+  },
+  {
+    "id": 30,
+    "name": "Gemas e Jóias",
+    "type": "FILTER"
+  },
+  {
+    "id": 31,
+    "name": "Cerâmica Vermelha",
+    "type": "FILTER"
+  },
+  {
+    "id": 32,
+    "name": "Químico farmacêutico",
+    "type": "FILTER"
+  },
+  {
+    "id": 33,
+    "name": "Laticínios",
+    "type": "FILTER"
+  },
+  {
+    "id": 34,
+    "name": "Eletroeletrônico",
+    "type": "FILTER"
+  },
+  {
+    "id": 35,
+    "name": "Fogos de Artifício",
+    "type": "FILTER"
+  },
+  {
+    "id": 36,
+    "name": "Floricultura",
+    "type": "FILTER"
+  },
+  {
+    "id": 37,
+    "name": "Vitivinicultura",
+    "type": "FILTER"
+  },
+  {
+    "id": 38,
+    "name": "Agropecuária",
+    "type": "FILTER"
+  },
+  {
+    "id": 39,
+    "name": "HPPC",
+    "type": "FILTER"
+  },
+  {
+    "id": 40,
+    "name": "Mobiliário",
+    "type": "FILTER"
+  },
+  {
+    "id": 41,
+    "name": "Saúde",
+    "type": "FILTER"
+  },
+  {
+    "id": 42,
+    "name": "Confecções",
+    "type": "FILTER"
+  },
+  {
+    "id": 43,
+    "name": "Bens de Capital",
+    "type": "FILTER"
+  },
+  {
+    "id": 44,
+    "name": "Defesa",
+    "type": "FILTER"
+  },
+  {
+    "id": 45,
+    "name": "Ferramentaria",
+    "type": "FILTER"
+  },
+  {
+    "id": 46,
+    "name": "Jogos Digitais",
+    "type": "FILTER"
+  },
+  {
+    "id": 47,
+    "name": "Bibliotecas",
+    "type": "LAYER"
+  },
+  {
+    "id": 48,
+    "name": "Institutos de Pesquisa",
+    "type": "LAYER"
+  },
+  {
+    "id": 49,
+    "name": "Institutos de Pesquisa por Área de Atuação",
+    "type": "LAYER"
+  },
+  {
+    "id": 50,
+    "name": "APL por setor produtivo",
+    "type": "FILTER"
+  }
+]

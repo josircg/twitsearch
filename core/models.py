@@ -66,7 +66,7 @@ class Processamento(models.Model):
 
 
 class LockProcessamento(models.Model):
-    locked = models.BooleanField(default=True)
+    locked = models.BooleanField(default=False)
     dt_inicio = models.DateTimeField(auto_now=True)
 
 
