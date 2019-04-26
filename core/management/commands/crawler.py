@@ -78,8 +78,9 @@ class Command(BaseCommand):
 
             # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
             if listener.dtfinal > agora:
+                Termo.objects.filter(id=termo.id).update(status='A')
+            else:
                 Termo.objects.filter(id=termo.id).update(status='C')
-
         else:
             termos = Termo.objects.filter(status='A', dtinicio__lt=agora)
             if termos.count() > 0:
