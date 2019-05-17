@@ -92,12 +92,16 @@ class Command(BaseCommand):
                 print('Search %s %d' % (termo.busca, processo.id))
                 api = get_api()
                 last = termo.last_tweet()
-                results = tweepy.Cursor(api.search, q=termo.busca, since_id=last, tweet_mode='extended').items()
+                results = tweepy.Cursor(api.search, q=termo.busca, since_id=last, tweet_mode='extended', rpp=100).items()
                 for status in results:
                     save_result(status._json, processo.id)
                     agora = datetime.now(pytz.timezone(TIME_ZONE))
                     status_proc = Termo.objects.get(id=termo.id).status
-                    if termo.dtfinal < agora or status_proc == 'I':
+                    if termo.dtfinal < agora:
+                        print('Tempo finalizado %s' % agora)
+                        break
+                    if status_proc == 'I':
+                        print('Processo interrompido')
                         break
 
                 if termo.dtfinal < agora:
