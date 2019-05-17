@@ -92,7 +92,8 @@ class Command(BaseCommand):
                 print('Search %s %d' % (termo.busca, processo.id))
                 api = get_api()
                 last = termo.last_tweet()
-                results = tweepy.Cursor(api.search, q=termo.busca, since_id=last, tweet_mode='extended', rpp=100).items()
+#                results = tweepy.Cursor(api.search, q=termo.busca, since_id=last, tweet_mode='extended', rpp=100).items()
+                results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended').items()
                 for status in results:
                     save_result(status._json, processo.id)
                     agora = datetime.now(pytz.timezone(TIME_ZONE))
