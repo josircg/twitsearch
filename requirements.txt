@@ -10,4 +10,5 @@ django-admin-tools
 numpy
 PyICU
 pycld2
+morfessor
 polyglot

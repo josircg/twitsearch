@@ -7,7 +7,7 @@ from os.path import isfile, join, exists
 
 from twitsearch.settings import BASE_DIR
 from core.models import *
-from django.db.transaction import set_autocommit, commit
+from django.db.transaction import set_autocommit, commit, rollback
 
 # from typing import Dict, Any - só python 3.6
 # COUNTER: Dict[Any, Any] = {}
@@ -20,11 +20,11 @@ def process_twitter(src):
         user = TweetUser.objects.get(twit_id=src['user']['id'])
     except TweetUser.DoesNotExist:
         user = TweetUser(twit_id=src['user']['id'],
-                         username=src['user']['screen_name'],
-                         name=src['user']['name'],
-                         location=src['user']['location'],
-                         verified=src['user']['verified'],
-                         created_at=convert_date(src['user']['created_at']).date())
+                     username=src['user']['screen_name'],
+                     name=src['user']['name'],
+                     location=src['user']['location'],
+                     verified=src['user']['verified'],
+                     created_at=convert_date(src['user']['created_at']).date())
         user.save()
         COUNTER['users'] += 1
 
@@ -129,9 +129,15 @@ class Command(BaseCommand):
                         with open(filename, 'r') as file:
                             texto = file.read()
                             twit = json.loads(texto)
-                        process_twitter(twit)
-                        commit()
-                        rename(filename, join(cached_dir, arquivo.name))
+                        try:
+                            process_twitter(twit)
+                            commit()
+                            rename(filename, join(cached_dir, arquivo.name))
+                        except Exception as e:
+                            print('Erro no arquivo %s: %s' % (twit['id_str'], e))
+                            rename(filename, join(dest_dir, 'ruim', arquivo.name))
+                            rollback()
+                            raise
                         tot_files += 1
             finally:
                 LockProcessamento.objects.update(locked=False)

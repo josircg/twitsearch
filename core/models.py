@@ -87,6 +87,7 @@ class Termo(models.Model):
                                     help_text='Deixe em branco caso queira iniciar imediatamente')
     dtfinal = models.DateTimeField('Fim da Busca')
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    ult_processamento = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return self.busca
@@ -94,6 +95,13 @@ class Termo(models.Model):
     @property
     def tot_twits(self):
         return self.tweet_set.count() or 0
+
+    def last_tweet(self):
+        last = self.tweet_set.last()
+        if last:
+            return last.twit_id
+        else:
+            return None
 
     class Meta:
         verbose_name = 'Termo de Busca'
@@ -132,6 +140,7 @@ class TweetUser(models.Model):
     class Meta:
         verbose_name = 'Usuário do Twitter'
         verbose_name_plural = 'Usuários do Twitter'
+        ordering = ['twit_id',]
 
 
 class FollowersHistory(models.Model):

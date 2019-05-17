@@ -136,7 +136,7 @@ class TweetAdmin(PowerModelAdmin):
 
 
 class TermoAdmin(PowerModelAdmin):
-    list_display = ('busca', 'projeto', 'dtinicio', 'status', 'tot_twits',)
+    list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'tot_twits',)
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(TermoAdmin, self).get_form(request, obj, **kwargs)
