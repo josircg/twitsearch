@@ -3,7 +3,7 @@
 #   polyglot download embeddings2.en sentiment2.en ner2.en
 #   polyglot download embeddings2.pt sentiment2.pt ner2.pt
 
-Django==1.11
+Django<1.12
 pytz
 tweepy
 django-admin-tools

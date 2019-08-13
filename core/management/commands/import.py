@@ -137,7 +137,6 @@ class Command(BaseCommand):
                             print('Erro no arquivo %s: %s' % (twit['id_str'], e))
                             rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
-                            raise
                         tot_files += 1
             finally:
                 LockProcessamento.objects.update(locked=False)

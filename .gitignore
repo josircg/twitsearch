@@ -5,8 +5,11 @@
 *.sqlite3
 *.fuse_hidden*
 .ipynb_checkpoints
+twitest.py
+Untitled.ipynb
 data/*
 twitsearch/local.py
 twitsearch/test.py
 twitsearch/media/*
 twitsearch/static/*
+!/Untitled.ipynb
