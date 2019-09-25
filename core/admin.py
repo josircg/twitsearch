@@ -131,7 +131,7 @@ class TweetAdmin(PowerModelAdmin):
     user_link.short_description = 'User Link'
 
     def source(self, instance):
-        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Twitter</a>" % (instance.user, instance.twit_id))
+        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Twitter</a>" % (instance.user.username, instance.twit_id))
     source.short_description = 'Twitter Link'
 
 
@@ -144,9 +144,13 @@ class TermoAdmin(PowerModelAdmin):
         return form
 
 
+class ProcessamentoAdmin(PowerModelAdmin):
+    list_display = ('termo', 'dt', 'tot_twits')
+
+
 admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(TweetUser, UserAdmin)
 admin.site.register(Tweet, TweetAdmin)
 admin.site.register(Termo, TermoAdmin)
-admin.site.register(Processamento)
+admin.site.register(Processamento, ProcessamentoAdmin)
 admin.site.register(LockProcessamento)

@@ -117,6 +117,7 @@ class Command(BaseCommand):
         else:
             if LockProcessamento.objects.filter(locked=True):
                 print('Importação pendente')
+                return
             LockProcessamento.objects.update(locked=True)
             commit()
             try:
