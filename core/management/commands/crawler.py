@@ -71,7 +71,7 @@ class Command(BaseCommand):
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
             tweepy_stream.filter(track=[termo.busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal > agora and status == 'P':
-                time.sleep(180)
+                time.sleep(90)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 status = Termo.objects.get(id=termo.id).status
                 listener.checkpoint -= 5
