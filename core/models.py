@@ -172,6 +172,12 @@ class Tweet(models.Model):
         return self.twit_id
 
 
+class Retweet(models.Model):
+    tweet = models.ForeignKey(Tweet)
+    user = models.ForeignKey(TweetUser)
+
+
+
 class TweetInput(models.Model):
     tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     processamento = models.ForeignKey(Processamento, on_delete=models.CASCADE)
