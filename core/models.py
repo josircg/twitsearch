@@ -26,7 +26,7 @@ def stopwords() -> list:
 def clean_pontuation(s) -> str:
     result = ''
     for letter in s:
-        if not letter in ['.',',','?','!','"', "'"]:
+        if letter not in ['.', ',', '?', '!', '"', "'"]:
             result += s
     return result
 
@@ -68,8 +68,7 @@ class Projeto(models.Model):
             for tweet in termo.tweet_set.all():
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
-                    if not palavra in excecoes and \
-                       not palavra.startswith('http'):
+                    if palavra not in excecoes and not palavra.startswith('http'):
                         palavra_limpa = clean_pontuation(palavra)
                         if len(palavra_limpa) > 2:
                             result[palavra_limpa] += 1
@@ -120,6 +119,15 @@ class Processamento(models.Model):
         return self.tweetinput_set.count() or 0
 
 
+class Credencial(models.Model):
+    username = models.CharField(max_length=100)
+    key = models.CharField(max_length=30)
+    secret = models.CharField(max_length=30)
+    token = models.CharField(max_length=30)
+    token_secret = models.CharField(max_length=30)
+    last_conn = models.DateTimeField(null=True)
+
+
 class LockProcessamento(models.Model):
     locked = models.BooleanField(default=False)
     dt_inicio = models.DateTimeField(auto_now=True)
@@ -127,8 +135,8 @@ class LockProcessamento(models.Model):
 
 class TweetUser(models.Model):
     twit_id = models.BigIntegerField(primary_key=True)
-    username = models.CharField(max_length=100)
-    name = models.CharField(max_length=200)
+    username = models.CharField(max_length=100, null=True)
+    name = models.CharField(max_length=200, null=True)
     location = models.CharField(max_length=200, null=True)
     verified = models.BooleanField(default=False)
     created_at = models.DateField()
@@ -140,7 +148,7 @@ class TweetUser(models.Model):
     class Meta:
         verbose_name = 'Usuário do Twitter'
         verbose_name_plural = 'Usuários do Twitter'
-        ordering = ['twit_id',]
+        ordering = ['twit_id', ]
 
 
 class FollowersHistory(models.Model):
@@ -166,7 +174,8 @@ class Tweet(models.Model):
     favorites = models.IntegerField()
     user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True)
-    retwit_id = models.CharField(max_length=21,null=True)
+    retwit_id = models.CharField(max_length=21, null=True)
+    language = models.CharField(max_length=5, null=True)
 
     def __str__(self):
         return self.twit_id
@@ -175,7 +184,10 @@ class Tweet(models.Model):
 class Retweet(models.Model):
     tweet = models.ForeignKey(Tweet)
     user = models.ForeignKey(TweetUser)
+    created_time = models.DateTimeField(null=True)
 
+    def __str__(self):
+        return self.user.username
 
 
 class TweetInput(models.Model):
