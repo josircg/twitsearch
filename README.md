@@ -10,8 +10,8 @@ Uma vez que o projeto esteja definido, o programa inicia a busca e registro dos 
 
 # Milestones
 
-Versão 0.2: busca pelos retweets e utilização de mais de várias credenciais
+Versão 0.2: busca pelos retweets e utilização de várias credenciais para realizar a coleta.
 
-Versão 0.3: Integração com o Visão
+Versão 0.3: Integração com o Visão (visao.ibict.br)
 
 Versão 0.4: Exportação GEPHI
