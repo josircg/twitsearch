@@ -26,8 +26,8 @@ class TermoInline(admin.TabularInline):
 
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
-    fields = ('nome', 'objetivo', 'usuario', 'tot_twits')
-    readonly_fields = ('usuario', 'tot_twits', )
+    fields = ('nome', 'objetivo', 'usuario', 'tot_twits', 'tot_retwits')
+    readonly_fields = ('usuario', 'tot_twits', 'tot_retwits')
     inlines = [TermoInline]
 
     def save_model(self, request, obj, form, change):
@@ -40,6 +40,7 @@ class ProjetoAdmin(PowerModelAdmin):
         return [
             url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
             url(r'^nuvem/(?P<id>.*)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
+            url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             url(r'^gephi/(?P<id>.*)/$', self.admin_site.admin_view(self.gephi_export),
                 name='core_projeto_gephi_export'),
             ] + super(ProjetoAdmin, self).get_urls()
@@ -63,7 +64,7 @@ class ProjetoAdmin(PowerModelAdmin):
         projeto = get_object_or_404(Projeto, pk=id)
         palavras = projeto.most_common()
         return render_to_response('core/stats.html', {
-            'title': u'Estatísticas dos Twitters Obtidos',
+            'title': u'Estatísticas do Projeto',
             'projeto': projeto,
             'palavras': palavras
         }, RequestContext(request, ))
@@ -75,6 +76,14 @@ class ProjetoAdmin(PowerModelAdmin):
             'projeto': projeto,
         }, RequestContext(request, ))
 
+    def visao(self, request, id):
+        projeto = get_object_or_404(Projeto, pk=id)
+        return render_to_response('core/visao.html', {
+            'title': u'Envio de Dados para o Visão',
+            'projeto': projeto,
+        }, RequestContext(request, ))
+
+    @staticmethod
     def gephi_export(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
         return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
@@ -86,12 +95,28 @@ class HistoryInline(admin.TabularInline):
     fields = ('dt', 'followers', 'favourites')
     readonly_fields = fields
 
+    def has_add_permission(self, request):
+        return False
+
 
 class TwitInline(admin.TabularInline):
     model = Tweet
     extra = 0
     fields = ('text', 'created_time', 'retweets', 'favorites')
     readonly_fields = fields
+
+    def has_add_permission(self, request):
+        return False
+
+
+class RetweetInline(admin.TabularInline):
+    model = Retweet
+    extra = 0
+    fields = ('tweet', 'created_time',)
+    readonly_fields = ('tweet', 'created_time',)
+
+    def has_add_permission(self, request):
+        return False
 
 
 class UserAdmin(PowerModelAdmin):
@@ -101,7 +126,7 @@ class UserAdmin(PowerModelAdmin):
     fields = list_display
     readonly_fields = fields
     localized_fields = ('followers',)
-    inlines = [HistoryInline, TwitInline]
+    inlines = [HistoryInline, TwitInline, RetweetInline]
 
     # Localização não funcionou
     def followers_str(self, obj):
@@ -112,18 +137,10 @@ class UserAdmin(PowerModelAdmin):
 
 class TweetAdmin(PowerModelAdmin):
     search_fields = ('text', )
-    list_filter = ('termo__projeto', 'termo')
+    list_filter = ('termo__projeto', 'termo', 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
-    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'original_link', 'source')
+    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'source', 'language',)
     readonly_fields = fields
-
-    def original_link(self, instance):
-        if instance.retwit_id:
-            return mark_safe("<a href='%s'>Original</a>" %
-                             reverse('admin:core_tweet_change', args=[instance.retwit_id]))
-        else:
-            return '-'
-    original_link.short_description = 'Retwitted Link'
 
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %

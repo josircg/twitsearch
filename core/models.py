@@ -1,13 +1,13 @@
-from django.db import models
-from django.contrib.auth.models import User
-
 import time
 import pytz
-import re
-from twitsearch.settings import BASE_DIR
 from datetime import datetime
-
 from collections import Counter
+
+from django.db import models, connection
+from django.db.models import Sum
+from django.contrib.auth.models import User
+
+from twitsearch.settings import BASE_DIR
 
 
 # Converte datas que venham no formato do Twitter
@@ -27,7 +27,7 @@ def clean_pontuation(s) -> str:
     result = ''
     for letter in s:
         if letter not in ['.', ',', '?', '!', '"', "'"]:
-            result += s
+            result += letter
     return result
 
 
@@ -44,7 +44,27 @@ class Projeto(models.Model):
         soma = 0
         for termo in self.termo_set.all():
             soma += termo.tweet_set.count()
-        return u'%d' % soma
+        return '{:,}'.format(soma).replace(',','.')
+
+    @property
+    def tot_retwits(self):
+        soma = 0
+        for termo in self.termo_set.all():
+            soma += termo.tot_retwits
+        return '{:,}'.format(soma).replace(',','.')
+
+    @property
+    def unique_users(self):
+        with connection.cursor() as cursor:
+            cursor.execute("select count(distinct user_id) from" +
+                           "(select distinct c.user_id from core_tweet c, core_termo e" +
+                           " where e.projeto_id = %s and e.id = c.termo_id" +
+                           " union " +
+                           " select distinct r.user_id from core_termo e, core_tweet as t, core_retweet as r" +
+                           " where e.projeto_id = %s and e.id = t.termo_id and t.twit_id = r.tweet_id) as uniao",
+                           [self.id, self.id])
+            soma = cursor.fetchone()[0]
+        return '{:,}'.format(soma).replace(',','.')
 
     @property
     def status(self):
@@ -53,7 +73,7 @@ class Projeto(models.Model):
             if termo.status == 'P':
                 _status = 'P'
                 termo.get_status_display()
-            elif _status not in ('P','I'):
+            elif _status not in ('P', 'I'):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
@@ -63,12 +83,12 @@ class Projeto(models.Model):
         for termo in self.termo_set.all():
             # adiciona os termos de busca na exceção para que eles não distorçam o grupamento
             for busca in termo.busca.split():
-                excecoes.append(busca)
+                excecoes.append(clean_pontuation(busca))
 
             for tweet in termo.tweet_set.all():
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
-                    if palavra not in excecoes and not palavra.startswith('http'):
+                    if palavra not in excecoes and not palavra.startswith('http') and not palavra.startswith('@'):
                         palavra_limpa = clean_pontuation(palavra)
                         if len(palavra_limpa) > 2:
                             result[palavra_limpa] += 1
@@ -94,6 +114,23 @@ class Termo(models.Model):
     @property
     def tot_twits(self):
         return self.tweet_set.count() or 0
+
+    @property
+    def tot_retwits(self):
+        total = Tweet.objects.filter(termo=self).aggregate(Sum('retweets'))['retweets__sum']
+        return total or 0
+
+    @property
+    def unique_users(self):
+        with connection.cursor() as cursor:
+            cursor.execute("select count(distinct user_id) from" +
+                           "(select distinct c.user_id from core_tweet c where c.termo_id = %s" +
+                           " union " +
+                           " select distinct r.user_id from core_tweet as t, core_retweet as r" +
+                           " where t.twit_id = r.tweet_id and t.termo_id = %s) as uniao",
+                           [self.id, self.id])
+            total = cursor.fetchone()[0]
+        return total or 0
 
     def last_tweet(self):
         last = self.tweet_set.last()

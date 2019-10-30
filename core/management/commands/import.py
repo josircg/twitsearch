@@ -46,35 +46,37 @@ def process_twitter(src):
         COUNTER['proc'] = Processamento.objects.get(id=src['process'])
         COUNTER['proc_id'] = COUNTER['proc'].id
 
-    if 'full_text' in src:
-        texto = src['full_text']
+    if 'retweeted_status' in src:
+        tweet = process_twitter(src['retweeted_status'])
+        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+        if created:
+            COUNTER['retweets'] += 1
     else:
-        texto = src['text']
+        if 'full_text' in src:
+            texto = src['full_text']
+        else:
+            texto = src['text']
 
-    try:
-        tweet = Tweet.objects.get(twit_id=src['id_str'])
-    except Tweet.DoesNotExist:
-        tweet = Tweet(
-                    twit_id=src['id_str'], user=user, text=texto,
-                    created_time=dt,
-                    retweets=0,
-                    favorites=0,
-                    termo=COUNTER['proc'].termo)
-        COUNTER['twits'] += 1
-    tweet.retweets = max(src['retweet_count'], tweet.retweets)
-    tweet.favorites = max(src['favorite_count'], tweet.favorites)
-    if 'retweeted_status' in src:
-        tweet.retwit_id = src['retweeted_status']['id']
-    tweet.save()
-
-    TweetInput.objects.create(processamento=COUNTER['proc'], tweet=tweet)
-
-    if 'retweeted_status' in src:
-        process_twitter(src['retweeted_status'])
+        try:
+            tweet = Tweet.objects.get(twit_id=src['id_str'])
+        except Tweet.DoesNotExist:
+            tweet = Tweet(
+                        twit_id=src['id_str'], user=user, text=texto,
+                        created_time=dt,
+                        retweets=0,
+                        favorites=0,
+                        termo=COUNTER['proc'].termo,
+                        language=src['lang'])
+            COUNTER['tweets'] += 1
+            TweetInput.objects.create(processamento=COUNTER['proc'], tweet=tweet)
+        tweet.retweets = max(src['retweet_count'], tweet.retweets)
+        tweet.favorites = max(src['favorite_count'], tweet.favorites)
+        tweet.save()
+    return tweet
 
 
 class Command(BaseCommand):
-    label = 'Converte Twits'
+    label = 'Importa Tweets'
 
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
@@ -83,8 +85,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         COUNTER['users'] = 0
-        COUNTER['twits'] = 0
+        COUNTER['tweets'] = 0
+        COUNTER['retweets'] = 0
         COUNTER['proc_id'] = 0
+
         if 'processo' in options:
             try:
                 proc = Processamento.objects.get(id=options['processo'])
@@ -136,7 +140,7 @@ class Command(BaseCommand):
                             rename(filename, join(cached_dir, arquivo.name))
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (twit['id_str'], e))
-                            rename(filename, join(dest_dir, 'ruim', arquivo.name))
+                            # rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
                         tot_files += 1
             finally:
@@ -145,4 +149,5 @@ class Command(BaseCommand):
 
         print('Arquivos processados: %d' % tot_files)
         print('Novos Usuários: %d' % COUNTER['users'])
-        print('Novos Twits: %d' % COUNTER['twits'])
+        print('Novos Tweets: %d' % COUNTER['tweets'])
+        print('Novos Retweets: %d' % COUNTER['retweets'])

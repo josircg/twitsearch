@@ -1,5 +1,4 @@
 {% extends "admin/base_site.html" %}
-{% load i18n admin_urls admin_static admin_modify %}
 
 {% block title %}{{block.super}}{% endblock %}
 
@@ -7,7 +6,7 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-     <a href="../../../../">Home</a>&rsaquo;<a href="../../../projeto/{{ projeto.id }}">Projeto</a> &rsaquo; Stats
+     <a href="../../../../">Home</a>&rsaquo;<a href="../../projeto/{{ projeto.id }}/change">Projeto</a> &rsaquo; Stats
 </div>
 {% endblock %}
 
@@ -17,36 +16,36 @@
 <div id="content-main">
 	<div>
 		<fieldset class="module aligned ">
-            <label>Termos:</label>
-            {% for termo in projeto.termo_set.all %}
-			<div class="form-row instituicao">
-				<div>
-					<p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
-				</div>
+			<div class="form-row texto">
+			    {% if projeto.texto %}
+				<div><label>Texto Explicativo:</label><p>{{projeto.objetivo|safe}}</p></div>
+			    {% endif %}
+                <label><b>Termos:</b></label>
+                {% for termo in projeto.termo_set.all %}
+                <div class="form-row instituicao">
+                    <div>
+                        <p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+                    </div>
+                </div>
+                {%  endfor %}
+                <p></p>
+				<div><label>Total de Tweets Coletados: {{projeto.tot_twits}}</label></div>
+				<div><label>Total de Retweets: {{projeto.tot_retwits}}</label></div>
+				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
 			</div>
-            {%  endfor %}
 
-            {% for palavra, count in palavras.items %}
+            <p></p>
+            <label><b>Palavras mais utilizadas:</b></label>
+            <p></p>
+            {% for palavra in palavras %}
 			<div class="form-row palavra">
 				<div>
 					<p>
-						{{ palavra }}:{{ count }}
+						{{ palavra.0 }} - {{ palavra.1 }}
 					</p>
 				</div>
 			</div>
             {%  endfor %}
-
-			{% if aviso.texto %}
-			<div class="form-row texto">
-				<div><label>Texto Explicativo:</label><p>{{projeto.objetivo|safe}}</p></div>
-			</div>
-			{% endif %}
-
-			{% if aviso.dtinicial %}
-			<div class="form-row dtinicial">
-				<div><label>Data Inicial:</label><p>{{aviso.dtinicial}}</p></div>
-			</div>
-			{% endif %}
 
 		</fieldset>
 	</div>
