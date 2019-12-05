@@ -53,6 +53,10 @@ class Projeto(models.Model):
             soma += termo.tot_retwits
         return '{:,}'.format(soma).replace(',','.')
 
+    def top_tweets(self):
+        top_tweets = Counter()
+        return None
+
     @property
     def unique_users(self):
         with connection.cursor() as cursor:
@@ -180,7 +184,7 @@ class TweetUser(models.Model):
     followers = models.BigIntegerField(default=0)
 
     def __str__(self):
-        return u'%s (%s)' % (self.username, self.location)
+        return u'%s (%s)' % (self.username, self.location[:20])
 
     class Meta:
         verbose_name = 'Usuário do Twitter'
@@ -219,9 +223,10 @@ class Tweet(models.Model):
 
 
 class Retweet(models.Model):
-    tweet = models.ForeignKey(Tweet)
+    tweet = models.ForeignKey(Tweet)  # Tweet original que gerou o retwet
     user = models.ForeignKey(TweetUser)
     created_time = models.DateTimeField(null=True)
+    retweet_id = models.CharField(max_length=21, null=True)  # id do retweet
 
     def __str__(self):
         return self.user.username

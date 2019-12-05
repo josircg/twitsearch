@@ -21,10 +21,16 @@ class Command(BaseCommand):
         tot_files = 0
         set_autocommit(False)
         for tweet in dset:
-            original = Tweet.objects.get(twit_id=tweet.retwit_id)
-            Retweet.objects.get_or_create(tweet=original, user=tweet.user, created_time=tweet.created_time)
-            tweet.delete()
-            commit()
-            tot_files += 1
+            try:
+                original = Tweet.objects.get(twit_id=tweet.retwit_id)
+                Retweet.objects.get_or_create(tweet=original, user=tweet.user, created_time=tweet.created_time,
+                                              retweet_id=tweet.twit_id)
+                tweet.delete()
+                commit()
+                tot_files += 1
+                if tot_files % 1000 == 0:
+                    print(tot_files)
+            except Tweet.DoesNotExist:
+                print('Tweet Original not found: %s' % tweet.retwit_id)
 
         print('ReTweets processados: %d' % tot_files)

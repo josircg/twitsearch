@@ -14,8 +14,8 @@ import json
 
 from django.contrib.auth import get_permission_codename
 
-from .actions import export_as_csv_action, delete_selected, report_action
 
+from .actions import export_as_csv_action, delete_selected, report_action
 
 '''
  Features:

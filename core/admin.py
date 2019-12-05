@@ -6,7 +6,7 @@ from django.utils.safestring import mark_safe
 from core.models import *
 
 import os
-from core.apps import OSRun
+from core.apps import OSRun, export_tags_action, export_extra_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
@@ -55,18 +55,23 @@ class ProjetoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_nuvem', kwargs={'id': object_id, }),
                             label=u'Nuvem de Palavras'))
-        buttons.append(
-            PowerButton(url=reverse('admin:core_projeto_gephi_export', kwargs={'id': object_id, }),
-                        label=u'Exportação Gephi'))
+            buttons.append(
+                PowerButton(url=reverse('admin:core_projeto_gephi_export', kwargs={'id': object_id, }),
+                            label=u'Exportação Gephi'))
+            buttons.append(
+                PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
+                            label=u'Visão'))
         return buttons
 
     def stats(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
         palavras = projeto.most_common()
+        tot_tweets = projeto.top_tweets()
         return render_to_response('core/stats.html', {
             'title': u'Estatísticas do Projeto',
             'projeto': projeto,
-            'palavras': palavras
+            'palavras': palavras,
+            'top_tweets': tot_tweets,
         }, RequestContext(request, ))
 
     def nuvem(self, request, id):
@@ -136,9 +141,15 @@ class UserAdmin(PowerModelAdmin):
 
 
 class TweetAdmin(PowerModelAdmin):
-    search_fields = ('text', )
+    multi_search = (
+        ('q1', 'Texto', ['text']),
+        ('q2', 'Usuário', ['user__username']),
+        ('q3', 'ID', ['twit_id']),
+    )
+
     list_filter = ('termo__projeto', 'termo', 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
+    list_csv = ('text', 'user', 'user__twit_id', 'retweets', 'favorites', 'created_time',)
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'source', 'language',)
     readonly_fields = fields
 
@@ -150,6 +161,32 @@ class TweetAdmin(PowerModelAdmin):
     def source(self, instance):
         return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Twitter</a>" % (instance.user.username, instance.twit_id))
     source.short_description = 'Twitter Link'
+
+    def get_actions(self, request):
+        actions = super(TweetAdmin, self).get_actions(request)
+        export = export_tags_action()
+        actions['export_tags'] = (export, 'export_tags', export.short_description)
+        extra = export_extra_action()
+        actions['export_extra'] = (extra, 'export_extra', extra.short_description)
+        return actions
+
+    def get_buttons(self, request, object_id):
+        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
+        if object_id:
+            buttons.append(
+                PowerButton(url=reverse('admin:core_retweet', kwargs={'id': object_id, }),
+                            label=u'Retweets'))
+
+#    def get_urls(self):
+#        return [
+#            url(r'^retweet/(?P<id>.*)/$', self.admin_site.admin_view(self.r),
+#                name='core_retweet'),
+#            ] + super(ProjetoAdmin, self).get_urls()
+
+
+class RetweetAdmin(PowerModelAdmin):
+    search_fields = ('retweet_id',)
+    list_display = ('user', 'created_time', 'tweet',)
 
 
 class TermoAdmin(PowerModelAdmin):
@@ -167,6 +204,7 @@ class ProcessamentoAdmin(PowerModelAdmin):
 
 admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(TweetUser, UserAdmin)
+admin.site.register(Retweet, RetweetAdmin)
 admin.site.register(Tweet, TweetAdmin)
 admin.site.register(Termo, TermoAdmin)
 admin.site.register(Processamento, ProcessamentoAdmin)

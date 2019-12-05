@@ -48,3 +48,5 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='core.TweetUser'),
         ),
     ]
+
+# ALTER TABLE `core_retweet` ADD CONSTRAINT `core_retweet_user_id_bf9acc76_fk_core_tweetuser_twit_id` FOREIGN KEY (`user_id`) REFERENCES `core_tweetuser` (`twit_id`);

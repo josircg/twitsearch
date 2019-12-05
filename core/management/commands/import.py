@@ -14,6 +14,7 @@ from django.db.transaction import set_autocommit, commit, rollback
 COUNTER = {}
 
 
+# https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
 def process_twitter(src):
 
     try:
@@ -46,11 +47,23 @@ def process_twitter(src):
         COUNTER['proc'] = Processamento.objects.get(id=src['process'])
         COUNTER['proc_id'] = COUNTER['proc'].id
 
+    if 'quoted_status' in src:
+        tweet = process_twitter(src['quoted_status'])
+        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+        if created:
+            COUNTER['retweets'] += 1
+        else:
+            retweet.retweet_id = src['id_str']
+            retweet.save()
+
     if 'retweeted_status' in src:
         tweet = process_twitter(src['retweeted_status'])
         retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
         if created:
             COUNTER['retweets'] += 1
+        else:
+            retweet.retweet_id = src['id_str']
+            retweet.save()
     else:
         if 'full_text' in src:
             texto = src['full_text']
@@ -69,8 +82,10 @@ def process_twitter(src):
                         language=src['lang'])
             COUNTER['tweets'] += 1
             TweetInput.objects.create(processamento=COUNTER['proc'], tweet=tweet)
-        tweet.retweets = max(src['retweet_count'], tweet.retweets)
-        tweet.favorites = max(src['favorite_count'], tweet.favorites)
+        if 'retweet_count' in src:
+            tweet.retweets = max(src['retweet_count'], tweet.retweets)
+        if 'favorite_count' in src:
+            tweet.favorites = max(src['favorite_count'], tweet.favorites)
         tweet.save()
     return tweet
 
