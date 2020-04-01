@@ -146,10 +146,10 @@ class Command(BaseCommand):
                 for arquivo in scandir(dest_dir):
                     if arquivo.name.endswith(".json"):
                         filename = join(dest_dir, arquivo.name)
-                        with open(filename, 'r') as file:
-                            texto = file.read()
-                            twit = json.loads(texto)
                         try:
+                            with open(filename, 'r') as file:
+                                texto = file.read()
+                                twit = json.loads(texto)
                             process_twitter(twit)
                             commit()
                             rename(filename, join(cached_dir, arquivo.name))

@@ -43,10 +43,11 @@ def export_tags_action(description=u"Exportar para Tags"):
 
         writer = csv.writer(response)
         writer.writerow(['id_str', 'from_user', 'text', 'created_at',
-                         'time','geo_coordinates','user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
+                         'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
                          'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
-                         'user_followers_count','user_friends_count','user_location',
-                         'status_url','entities_str'])
+                         'user_followers_count', 'user_friends_count', 'user_location',
+                         'status_url', 'entities_str'])
+        num_lines = 0
         for obj in queryset:
             line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
                     obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
@@ -54,6 +55,10 @@ def export_tags_action(description=u"Exportar para Tags"):
                     obj.user.followers, 0, obj.user.location,
                     '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
             writer.writerow(line)
+            num_lines += 1
+            if num_lines % 1000 == 0:
+                print(num_lines)
+            '''
             for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
                 line = [retweet.retweet_id, retweet.user.twit_id, 'RT '+obj.text,
                         obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
@@ -62,6 +67,7 @@ def export_tags_action(description=u"Exportar para Tags"):
                         obj.user.followers, 0, obj.user.location,
                         '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
                 writer.writerow(line)
+            '''
         return response
     export_tags.short_description = description
     return export_tags

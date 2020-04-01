@@ -26,11 +26,13 @@ class Command(BaseCommand):
                 Retweet.objects.get_or_create(tweet=original, user=tweet.user, created_time=tweet.created_time,
                                               retweet_id=tweet.twit_id)
                 tweet.delete()
-                commit()
+                if tot_files % 100 == 0:
+                    commit()
                 tot_files += 1
                 if tot_files % 1000 == 0:
                     print(tot_files)
             except Tweet.DoesNotExist:
                 print('Tweet Original not found: %s' % tweet.retwit_id)
+        commit()
 
         print('ReTweets processados: %d' % tot_files)

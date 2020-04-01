@@ -35,6 +35,8 @@ class Command(BaseCommand):
                 tweet.save()
                 commit()
                 tot_files += 1
+                if tot_files % 1000 == 0:
+                    print(tot_files)
             else:
                 print('Arquivo %s não encontrado' % filename)
 
