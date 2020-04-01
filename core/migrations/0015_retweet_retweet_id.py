@@ -11,7 +11,7 @@ class Migration(migrations.Migration):
         ('core', '0014_auto_20191021_2300'),
     ]
 
-    operation = [
+    operations = [
         migrations.AddField(
             model_name='retweet',
             name='retweet_id',
