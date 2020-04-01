@@ -168,6 +168,7 @@ class TweetAdmin(PowerModelAdmin):
         actions['export_tags'] = (export, 'export_tags', export.short_description)
         extra = export_extra_action()
         actions['export_extra'] = (extra, 'export_extra', extra.short_description)
+#        actions['export_gc'] = 'export_graph_common'
         return actions
 
     def get_buttons(self, request, object_id):

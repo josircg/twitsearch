@@ -11,15 +11,18 @@ class Migration(migrations.Migration):
         ('core', '0013_auto_20191016_1511'),
     ]
 
+    fake = [
+        migrations.AddField(
+            model_name='tweet',
+            name='language',
+            field=models.CharField(max_length=5, null=True),
+        ),
+    ]
+
     operations = [
         migrations.AddField(
             model_name='retweet',
             name='created_time',
             field=models.DateTimeField(null=True),
-        ),
-        migrations.AddField(
-            model_name='tweet',
-            name='language',
-            field=models.CharField(max_length=5, null=True),
         ),
     ]

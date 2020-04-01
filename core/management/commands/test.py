@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit
 from core.models import Termo
 
+
 class Command(BaseCommand):
     label = 'Teste Concorrência'
 

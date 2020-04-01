@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.conf.urls import url, include
-from core.views import index
+from core.views import index, visao
 
 # django 2
 # from django.urls import path
@@ -24,6 +24,7 @@ from core.views import index
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^admin_tools/', include('admin_tools.urls')),
+    url('visao/', visao),
     url('', index),
 ]
 
