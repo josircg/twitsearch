@@ -5,6 +5,7 @@ from django.apps import AppConfig
 import subprocess
 
 from django.http import HttpResponse
+from twitsearch.settings import BASE_DIR
 
 
 class CoreConfig(AppConfig):
@@ -38,10 +39,9 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=tags%s.csv' % modeladmin.opts.db_table
-
-        writer = csv.writer(response)
+        filename = BASE_DIR + '/data/tags.csv'
+        csvfile = open(filename, 'w')
+        writer = csv.writer(csvfile)
         writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                          'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
                          'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
@@ -66,8 +66,15 @@ def export_tags_action(description=u"Exportar para Tags"):
                 writer.writerow(line)
                 num_lines += 1
 
+        csvfile.close()
         print('tags: %d' % num_lines)
+
+        with open(filename, 'r') as f:
+            file_data = f.read()
+        response = HttpResponse(file_data, content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename=tags%s.csv' % modeladmin.opts.db_table
         return response
+
     export_tags.short_description = description
     return export_tags
 
