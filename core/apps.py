@@ -66,6 +66,7 @@ def export_tags_action(description=u"Exportar para Tags"):
                 writer.writerow(line)
                 num_lines += 1
 
+        print('tags: %d' % num_lines)
         return response
     export_tags.short_description = description
     return export_tags
