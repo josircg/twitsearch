@@ -56,9 +56,6 @@ def export_tags_action(description=u"Exportar para Tags"):
                     '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
             writer.writerow(line)
             num_lines += 1
-            if num_lines % 1000 == 0:
-                print(num_lines)
-            '''
             for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
                 line = [retweet.retweet_id, retweet.user.twit_id, 'RT '+obj.text,
                         obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
@@ -67,7 +64,8 @@ def export_tags_action(description=u"Exportar para Tags"):
                         obj.user.followers, 0, obj.user.location,
                         '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
                 writer.writerow(line)
-            '''
+                num_lines += 1
+
         return response
     export_tags.short_description = description
     return export_tags
