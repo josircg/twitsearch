@@ -177,12 +177,13 @@ class TweetAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url=reverse('admin:core_retweet', kwargs={'id': object_id, }),
                             label=u'Retweets'))
+        return buttons
 
 #    def get_urls(self):
 #        return [
 #            url(r'^retweet/(?P<id>.*)/$', self.admin_site.admin_view(self.r),
 #                name='core_retweet'),
-#            ] + super(ProjetoAdmin, self).get_urls()
+#            ] + super(TweetAdmin, self).get_urls()
 
 
 class RetweetAdmin(PowerModelAdmin):

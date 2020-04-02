@@ -39,36 +39,7 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        filename = BASE_DIR + '/data/tags.csv'
-        csvfile = open(filename, 'w')
-        writer = csv.writer(csvfile)
-        writer.writerow(['id_str', 'from_user', 'text', 'created_at',
-                         'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
-                         'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
-                         'user_followers_count', 'user_friends_count', 'user_location',
-                         'status_url', 'entities_str'])
-        num_lines = 0
-        for obj in queryset:
-            line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
-                    obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
-                    '', '', '', '',
-                    obj.user.followers, 0, obj.user.location,
-                    '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-            writer.writerow(line)
-            num_lines += 1
-            for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
-                line = [retweet.retweet_id, retweet.user.twit_id, 'RT '+obj.text,
-                        obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
-                        obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
-                        '', '', '', '',
-                        obj.user.followers, 0, obj.user.location,
-                        '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-                writer.writerow(line)
-                num_lines += 1
-
-        csvfile.close()
-        print('tags: %d' % num_lines)
-
+        filename = generate_tags_file(queryset)
         with open(filename, 'r') as f:
             file_data = f.read()
         response = HttpResponse(file_data, content_type='text/csv')
@@ -77,6 +48,43 @@ def export_tags_action(description=u"Exportar para Tags"):
 
     export_tags.short_description = description
     return export_tags
+
+
+def generate_tags_file(queryset):
+    filename = BASE_DIR + '/data/tags.csv'
+    csvfile = open(filename, 'w')
+    writer = csv.writer(csvfile)
+    writer.writerow(['id_str', 'from_user', 'text', 'created_at',
+                     'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
+                     'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
+                     'user_followers_count', 'user_friends_count', 'user_location',
+                     'status_url', 'entities_str'])
+    num_lines = 0
+    for obj in queryset:
+        line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+                obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
+                '', '', '', '',
+                obj.user.followers, 0, obj.user.location,
+                '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
+        writer.writerow(line)
+        num_lines += 1
+        for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
+            line = [retweet.retweet_id, retweet.user.twit_id, 'RT ' + obj.text,
+                    obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+                    obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
+                    '', '', '', '',
+                    obj.user.followers, 0, obj.user.location,
+                    '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
+            writer.writerow(line)
+            num_lines += 1
+
+    csvfile.close()
+
+    logfile = open(BASE_DIR + '/data/tags.log', 'w')
+    logfile.writelines(['Linhas exportadas:%d' % num_lines])
+    logfile.close()
+
+    return filename
 
 
 def export_extra_action(description=u"Exportar CSV com retweets"):

@@ -23,6 +23,7 @@ class Command(BaseCommand):
             dset = Tweet.objects.filter(language__isnull=True)
 
         tot_files = 0
+        tot_notfound = 0
         dest_dir = BASE_DIR + '/data/cached'
         set_autocommit(False)
         for tweet in dset:
@@ -33,11 +34,14 @@ class Command(BaseCommand):
                     twit = json.loads(texto)
                 tweet.language = twit['lang']
                 tweet.save()
-                commit()
                 tot_files += 1
-                if tot_files % 1000 == 0:
+                if tot_files % 100 == 0:
                     print(tot_files)
+                    commit()
             else:
-                print('Arquivo %s não encontrado' % filename)
+                tot_notfound +=1
+                if tot_notfound % 1000:
+                    print('Arquivo %s não encontrado' % filename)
 
         print('Arquivos processados: %d' % tot_files)
+        print('Arquivos não encontrados: %d' % tot_notfound)
