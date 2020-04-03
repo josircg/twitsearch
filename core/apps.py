@@ -61,26 +61,29 @@ def generate_tags_file(queryset):
                      'status_url', 'entities_str'])
     num_lines = 0
     for obj in queryset:
-        line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
-                obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
-                '', '', '', '',
-                obj.user.followers, 0, obj.user.location,
-                '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-        writer.writerow(line)
-        num_lines += 1
-        for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
-            line = [retweet.retweet_id, retweet.user.twit_id, 'RT ' + obj.text,
-                    obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+        if obj.text[0:1] != 'RT':
+            line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
                     obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
                     '', '', '', '',
                     obj.user.followers, 0, obj.user.location,
                     '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
             writer.writerow(line)
             num_lines += 1
+            for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
+                line = [retweet.retweet_id, retweet.user.twit_id, 'RT ' + obj.text,
+                        obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+                        obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
+                        '', '', '', '',
+                        obj.user.followers, 0, obj.user.location,
+                        '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
+                writer.writerow(line)
+                num_lines += 1
 
     csvfile.close()
 
-    logfile = open(BASE_DIR + '/data/tags.log', 'w')
+    # propositalmente estou enviando apenas o log
+    filename = BASE_DIR + '/data/tags.log'
+    logfile = open(filename, 'w')
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 

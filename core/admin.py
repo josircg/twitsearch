@@ -81,6 +81,7 @@ class ProjetoAdmin(PowerModelAdmin):
             'projeto': projeto,
         }, RequestContext(request, ))
 
+
     def visao(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
         return render_to_response('core/visao.html', {
@@ -171,13 +172,13 @@ class TweetAdmin(PowerModelAdmin):
 #        actions['export_gc'] = 'export_graph_common'
         return actions
 
-    def get_buttons(self, request, object_id):
-        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
-        if object_id:
-            buttons.append(
-                PowerButton(url=reverse('admin:core_retweet', kwargs={'id': object_id, }),
-                            label=u'Retweets'))
-        return buttons
+#    def get_buttons(self, request, object_id):
+#        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
+#        if object_id:
+#            buttons.append(
+#                PowerButton(url=reverse('admin:core_retweet', kwargs={'id': object_id, }),
+#                            label=u'Retweets'))
+#        return buttons
 
 #    def get_urls(self):
 #        return [

@@ -40,7 +40,7 @@ class Command(BaseCommand):
                     commit()
             else:
                 tot_notfound +=1
-                if tot_notfound % 1000:
+                if tot_notfound % 1000 == 0:
                     print('Arquivo %s não encontrado' % filename)
 
         print('Arquivos processados: %d' % tot_files)
