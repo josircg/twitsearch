@@ -72,8 +72,7 @@ def nuvem(request, id):
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
-    th = Thread(target=generate_tags_file, args=(tweets))
+    th = Thread(target=generate_tags_file, args=(tweets,))
     th.start()
-    messages.warning(request, 'A solicitação do CSV foi iniciado.')
-
-    return redirect(reverse('solicitar_csv', kwargs={'pk': id}))
+    messages.warning(request, 'A solicitação do csv foi iniciado.')
+    return redirect(reverse('admin:index'))
