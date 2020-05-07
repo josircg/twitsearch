@@ -13,3 +13,4 @@ twitsearch/test.py
 twitsearch/media/*
 twitsearch/static/*
 Untitled.ipynb
+venv*

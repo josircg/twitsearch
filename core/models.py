@@ -18,8 +18,9 @@ def convert_date(date_str) -> datetime:
 
 def stopwords() -> list:
     excecoes = []
-    for words in open(BASE_DIR+'/excecoes.txt').read().lower().split(','):
-        excecoes.append(words.strip())
+    for line in open(BASE_DIR+'/excecoes.txt').readlines():
+        for words in line.split(','):
+            excecoes.append(words.strip().lower())
     return excecoes
 
 
@@ -92,10 +93,11 @@ class Projeto(models.Model):
             for tweet in termo.tweet_set.all():
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
-                    if palavra not in excecoes and not palavra.startswith('http') and not palavra.startswith('@'):
+                    if not palavra.startswith('http') and not palavra.startswith('@'):
                         palavra_limpa = clean_pontuation(palavra)
-                        if len(palavra_limpa) > 2:
-                            result[palavra_limpa] += 1
+                        if palavra_limpa not in excecoes:
+                            if len(palavra_limpa) > 3:
+                                result[palavra_limpa] += 1
         return result.most_common(20)
 
 
