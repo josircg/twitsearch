@@ -2,7 +2,8 @@ import os
 from threading import Thread
 
 from django.conf import settings
-from django.shortcuts import render, get_object_or_404, render_to_response
+from django.contrib import messages
+from django.shortcuts import render, get_object_or_404, render_to_response, redirect
 
 # Create your views here.
 
@@ -10,6 +11,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import requests
 from django.template import RequestContext
+from django.urls import reverse
 from wordcloud import WordCloud
 
 from core.apps import generate_tags_file
@@ -53,8 +55,9 @@ def nuvem(request, id):
     cloud.generate_from_frequencies(palavras)
     path = os.path.join(BASE_DIR, 'media', 'nuvens')
 
-    if not os.path.exists(settings.MEDIA_ROOT) or not os.path.exists(path):
-        os.mkdir(settings.MEDIA_ROOT) # dir media
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT) # dir media
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens')) # path
 
     filename = 'nuvem-%s.png' % projeto.pk
@@ -71,3 +74,6 @@ def solicitar_csv(request, id):
     tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
     th = Thread(target=generate_tags_file, args=(tweets))
     th.start()
+    messages.warning(request, 'A solicitação do CSV foi iniciado.')
+
+    return redirect(reverse('solicitar_csv', kwargs={'pk': id}))

@@ -57,7 +57,7 @@ class ProjetoAdmin(PowerModelAdmin):
                 PowerButton(url=reverse('core_projeto_stats', kwargs={'id': object_id, }),
                             label=u'Estatísticas'))
             buttons.append(
-                PowerButton(url=reverse('admin:core_projeto_nuvem', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('core_projeto_nuvem', kwargs={'id': object_id, }),
                             label=u'Nuvem de Palavras'))
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_gephi_export', kwargs={'id': object_id, }),
