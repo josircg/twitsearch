@@ -39,7 +39,7 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_urls(self):
         return [
             # url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
-            url(r'^nuvem/(?P<id>.*)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
+            url(r'^nuvem/(?P<id>\d+)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
             url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             url(r'^gephi/(?P<id>.*)/$', self.admin_site.admin_view(self.gephi_export),
                 name='core_projeto_gephi_export'),

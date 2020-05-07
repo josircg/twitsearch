@@ -23,12 +23,11 @@ from core.views import index, visao, stats
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^', index, name='home'),
     url(r'^admin_tools/', include('admin_tools.urls')),
-    url('visao/', visao),
-    url('estatistica/(?P<id>.*)', stats, name='core_projeto_stats'),
-    url('', index),
+    url(r'^visao/', visao),
+    url(r'^estatistica/(?P<id>\d+)', stats, name='core_projeto_stats'),
 ]
-
 # django 2
 #    path('admin/', admin.site.urls),
 #    path('admin_tools/', include('admin_tools.urls')),
