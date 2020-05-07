@@ -16,18 +16,20 @@ Including another URLconf
 from django.contrib import admin
 from django.conf.urls import url, include
 from core.views import index, visao, stats
-
+from django.conf import settings
+from django.conf.urls.static import static
 # django 2
 # from django.urls import path
 # from django.conf.urls import include
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^', index, name='home'),
+    url(r'^', include('core.urls')),
     url(r'^admin_tools/', include('admin_tools.urls')),
-    url(r'^visao/', visao),
-    url(r'^estatistica/(?P<id>\d+)', stats, name='core_projeto_stats'),
-]
+
+
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 # django 2
 #    path('admin/', admin.site.urls),
 #    path('admin_tools/', include('admin_tools.urls')),

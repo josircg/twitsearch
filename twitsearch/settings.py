@@ -111,7 +111,16 @@ NUMBER_GROUPING = True
 USE_THOUSAND_SEPARATOR = True
 
 STATIC_URL = '/static/'
+# Absolute filesystem path to the directory that will hold user-uploaded files.
+# Example: "/var/www/example.com/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+MEDIA_URL = '/media/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_DIRS = (
+  os.path.join(MEDIA_ROOT),
+)
 # django-admin-tools
 ADMIN_TOOLS_MENU = 'menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'dashboard.CustomIndexDashboard'

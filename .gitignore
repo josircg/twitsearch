@@ -14,3 +14,4 @@ twitsearch/media/*
 twitsearch/static/*
 Untitled.ipynb
 venv*
+media/*

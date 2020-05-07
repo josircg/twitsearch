@@ -1,7 +1,11 @@
+import io
+
+from django.conf import settings
 from django.db import models
 from django.forms import TextInput, Textarea
 from django.contrib import admin
 from django.utils.safestring import mark_safe
+from wordcloud import WordCloud
 
 from core.models import *
 
@@ -76,9 +80,16 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def nuvem(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)
+        cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white')
+        palavras = dict(projeto.most_common())
+        cloud.generate_from_frequencies(palavras)
+        filename = 'nuvem-%s.png' % projeto.pk
+        cloud.to_file(os.path.join(BASE_DIR, 'media', 'nuvens', filename))
+
         return render_to_response('core/nuvem.html', {
             'title': u'Estatísticas dos Twitters Obtidos',
             'projeto': projeto,
+            'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
         }, RequestContext(request, ))
 
 

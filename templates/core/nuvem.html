@@ -36,15 +36,11 @@
             <p></p>
             <label><b>Palavras mais utilizadas:</b></label>
             <p></p>
-            {% for palavra in palavras %}
 			<div class="form-row palavra">
 				<div>
-					<p>
-						{{ palavra.0 }} - {{ palavra.1 }}
-					</p>
+                    <img src="{{ nuvem }}" alt="" height="500">
 				</div>
 			</div>
-            {%  endfor %}
 
 		</fieldset>
 	</div>
