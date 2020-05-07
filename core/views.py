@@ -1,3 +1,7 @@
+import os
+from threading import Thread
+
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, render_to_response
 
 # Create your views here.
@@ -6,8 +10,11 @@ from django.shortcuts import render
 from django.http import JsonResponse
 import requests
 from django.template import RequestContext
+from wordcloud import WordCloud
 
-from core.models import Projeto
+from core.apps import generate_tags_file
+from core.models import Projeto, Tweet
+from twitsearch.settings import BASE_DIR
 
 
 def index(request):
@@ -38,3 +45,29 @@ def stats(request, id):
         'palavras': palavras,
         'top_tweets': tot_tweets,
     }, RequestContext(request, ))
+
+def nuvem(request, id):
+    projeto = get_object_or_404(Projeto, pk=id)
+    cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white')
+    palavras = dict(projeto.most_common())
+    cloud.generate_from_frequencies(palavras)
+    path = os.path.join(BASE_DIR, 'media', 'nuvens')
+
+    if not os.path.exists(settings.MEDIA_ROOT) or not os.path.exists(path):
+        os.mkdir(settings.MEDIA_ROOT) # dir media
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens')) # path
+
+    filename = 'nuvem-%s.png' % projeto.pk
+    cloud.to_file(os.path.join(path, filename))
+
+    return render_to_response('core/nuvem.html', {
+        'title': u'Estatísticas dos Twitters Obtidos',
+        'projeto': projeto,
+        'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
+    }, RequestContext(request, ))
+
+def solicitar_csv(request, id):
+    projeto = get_object_or_404(Projeto, pk=id)
+    tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
+    th = Thread(target=generate_tags_file, args=(tweets))
+    th.start()
