@@ -150,9 +150,10 @@ class TweetAdmin(PowerModelAdmin):
 
     list_filter = ('termo__projeto', 'termo', 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
-    list_csv = ('text', 'user', 'user__twit_id', 'retweets', 'favorites', 'created_time',)
+    list_csv = ('text', 'user', 'retweets', 'favorites', 'created_time',)
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'source', 'language',)
     readonly_fields = fields
+    list_per_page = 30
 
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %
@@ -190,6 +191,7 @@ class TweetAdmin(PowerModelAdmin):
 class RetweetAdmin(PowerModelAdmin):
     search_fields = ('retweet_id',)
     list_display = ('user', 'created_time', 'tweet',)
+    list_per_page = 30
 
 
 class TermoAdmin(PowerModelAdmin):

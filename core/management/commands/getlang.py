@@ -34,6 +34,11 @@ class Command(BaseCommand):
                     twit = json.loads(texto)
                 tweet.language = twit['lang']
                 tweet.save()
+                if twit['retweeted_status']:
+                    original_tweet = Tweet.objects.filter(twit_id=twit['retweeted_status']['id_str'])
+                    if original_tweet.count() > 0:
+                        original_tweet[0].language = twit['retweeted_status']['lang']
+                        original_tweet.save()
                 tot_files += 1
                 if tot_files % 100 == 0:
                     print(tot_files)
