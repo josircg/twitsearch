@@ -38,7 +38,7 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def get_urls(self):
         return [
-            url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
+            # url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
             url(r'^nuvem/(?P<id>.*)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
             url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             url(r'^gephi/(?P<id>.*)/$', self.admin_site.admin_view(self.gephi_export),
@@ -50,7 +50,7 @@ class ProjetoAdmin(PowerModelAdmin):
         if object_id:
             obj = self.get_object(request, object_id)
             buttons.append(
-                PowerButton(url=reverse('admin:core_projeto_stats', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('core_projeto_stats', kwargs={'id': object_id, }),
                             label=u'Estatísticas'))
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_nuvem', kwargs={'id': object_id, }),
@@ -63,16 +63,16 @@ class ProjetoAdmin(PowerModelAdmin):
                             label=u'Visão'))
         return buttons
 
-    def stats(self, request, id):
-        projeto = get_object_or_404(Projeto, pk=id)
-        palavras = projeto.most_common()
-        tot_tweets = projeto.top_tweets()
-        return render_to_response('core/stats.html', {
-            'title': u'Estatísticas do Projeto',
-            'projeto': projeto,
-            'palavras': palavras,
-            'top_tweets': tot_tweets,
-        }, RequestContext(request, ))
+    # def stats(self, request, id):
+    #     projeto = get_object_or_404(Projeto, pk=id)
+    #     palavras = projeto.most_common()
+    #     tot_tweets = projeto.top_tweets()
+    #     return render_to_response('core/stats.html', {
+    #         'title': u'Estatísticas do Projeto',
+    #         'projeto': projeto,
+    #         'palavras': palavras,
+    #         'top_tweets': tot_tweets,
+    #     }, RequestContext(request, ))
 
     def nuvem(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)

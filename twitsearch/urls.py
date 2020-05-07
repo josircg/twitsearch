@@ -15,7 +15,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.conf.urls import url, include
-from core.views import index, visao
+from core.views import index, visao, stats
 
 # django 2
 # from django.urls import path
@@ -25,6 +25,7 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^admin_tools/', include('admin_tools.urls')),
     url('visao/', visao),
+    url('admin/core/projeto/stats/(?P<id>.*)', stats, name='core_projeto_stats'),
     url('', index),
 ]
 
