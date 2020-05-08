@@ -16,7 +16,7 @@ from django.urls import reverse
 from wordcloud import WordCloud
 
 from core.apps import generate_tags_file
-from core.models import Projeto, Tweet, Processamento
+from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO
 from twitsearch.settings import BASE_DIR
 
 
@@ -43,12 +43,19 @@ def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
     top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('favorites')[:3]
+    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0],tipo=PROC_TAGS)
+    proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
+    if proc_tags > proc_importacao:
+        exportacao = 'tags-%d.zip' % projeto.id
+
     return render_to_response('core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
         'top_tweets': top_tweets,
+        'download': download,
     }, RequestContext(request, ))
+
 
 def nuvem(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -71,12 +78,13 @@ def nuvem(request, id):
         'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
     }, RequestContext(request, ))
 
+
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
-    filename = 'tags-%s' % projeto.pk
+    filename = 'tags-%d' % projeto.pk
     th = Thread(target=generate_tags_file, args=(tweets, filename,))
     th.start()
-    Processamento.objects.create(termo=tweets[0].termo, dt=datetime.datetime.now(), tipo='T', twit_id=tweets[0].pk)
-    messages.success(request, 'A solicitação do csv foi iniciado.')
+    Processamento.objects.create(termo=projeto.termo_set.all()[0], dt=datetime.datetime.now(), tipo=PROC_TAGS)
+    messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
     return redirect(reverse('admin:index'))
