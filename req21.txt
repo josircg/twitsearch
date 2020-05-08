@@ -2,3 +2,10 @@ Django==2.1.7
 pytz==2018.9
 tweepy
 django-admin-tools
+numpy
+PyICU
+pycld2
+morfessor
+polyglot
+wordcloud
+

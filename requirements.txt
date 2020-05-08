@@ -12,5 +12,5 @@ PyICU
 pycld2
 morfessor
 polyglot
-wordcloud==1.5.0
+wordcloud
 matplotlib

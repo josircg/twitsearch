@@ -150,9 +150,21 @@ class Termo(models.Model):
         verbose_name_plural = 'Termos de Busca'
 
 
+PROC_IMPORTACAO = 'I'
+PROC_IMPORTUSER = 'U'
+PROC_TAGS = 'T'
+PROC_NETWORK = 'N'
+TIPO_PROCESSAMENTO = ((PROC_IMPORTACAO,'Importação'),
+                      (PROC_IMPORTUSER,'Importação User'),
+                      (PROC_TAGS,'Exportação Tags'),
+                      (PROC_NETWORK,'Montagem Rede'))
+
+
 class Processamento(models.Model):
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
     dt = models.DateTimeField()
+    twit_id = models.CharField('Último Tweet baixado', max_length=21, blank=True, null=True)
+    tipo = models.CharField(max_length=1, choices=TIPO_PROCESSAMENTO, default=PROC_IMPORTACAO)
 
     def __str__(self):
         return '%s (%s)' % (self.termo, self.dt)
@@ -232,6 +244,18 @@ class Retweet(models.Model):
 
     def __str__(self):
         return self.user.username
+
+    # Intervalo de tempo entre a postagem original e o retweet (em minutos)
+    def tweet_dif(self):
+        dif = self.created_time - self.tweet.created_time
+        if dif.days > 1:
+            return '%d dias' % dif.days
+        else:
+            if dif.total_seconds() < 60:
+                return 'primeiro minuto'
+            else:
+                duration_in_s = dif.total_seconds()
+                return '%d minutos' % divmod(duration_in_s, 60)[0]
 
 
 class TweetInput(models.Model):

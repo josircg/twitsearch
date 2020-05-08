@@ -28,6 +28,7 @@ def visao(request):
     return r
     # return r JsonResponse({'data': 'ok'})
 
+
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()

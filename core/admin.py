@@ -200,8 +200,12 @@ class TweetAdmin(PowerModelAdmin):
 
 
 class RetweetAdmin(PowerModelAdmin):
-    search_fields = ('retweet_id',)
-    list_display = ('user', 'created_time', 'tweet',)
+    multi_search = (
+        ('q1', 'Tweet Original', ['tweet']),
+        ('q2', 'Twitter User', ['user__username']),
+        ('q3', 'Retweet ID', ['retweet_id']),
+    )
+    list_display = ('user', 'created_time', 'tweet', 'tweet_dif')
     list_per_page = 30
 
 
@@ -215,7 +219,7 @@ class TermoAdmin(PowerModelAdmin):
 
 
 class ProcessamentoAdmin(PowerModelAdmin):
-    list_display = ('termo', 'dt', 'tot_twits')
+    list_display = ('termo', 'tipo', 'dt', 'twit_id', 'tot_twits')
 
 
 admin.site.register(Projeto, ProjetoAdmin)
