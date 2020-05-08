@@ -44,7 +44,7 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        generate_tags_file(filename='tags', queryset=queryset)
+        generate_tags_file(project_id='tags', queryset=queryset)
         with open(os.path.join(settings.MEDIA_ROOT, 'tags.zip'), 'rb') as f:
             file_data = f.read()
         response = HttpResponse(file_data, content_type='application/octet-stream')
@@ -57,7 +57,7 @@ def export_tags_action(description=u"Exportar para Tags"):
 
 def generate_tags_file(queryset, project_id):
     path = settings.MEDIA_ROOT
-    prefixo = 'tags-%d' % project_id
+    prefixo = 'tags-%s' % project_id
     csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
@@ -87,15 +87,17 @@ def generate_tags_file(queryset, project_id):
 
     csvfile.close()
     # propositalmente estou enviando apenas o log
-    filename_log = BASE_DIR + '/data/tags.log'
+    filename_log = BASE_DIR + '/media/tags.log'
     logfile = open(filename_log, 'w')
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 
+    print('Criando zip')
     path_zip = os.path.join(path, '%s.zip' % prefixo)
     with zipfile.ZipFile(path_zip, 'w') as zip:
-        zip.write(csvfile)
+        zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
+    print('zip criado')
     termo = Termo.objects.filter(projeto_id=project_id)[0]
     Processamento.objects.create(termo=termo, dt=datetime.datetime.now(), tipo=PROC_TAGS)
     return
