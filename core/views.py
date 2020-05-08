@@ -55,7 +55,7 @@ def stats(request, id):
     except:
         exportacao = None
 
-    return render_to_response('core/stats.html', {
+    return render(request, 'core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
