@@ -82,15 +82,15 @@ class Projeto(models.Model):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
-    def most_common(self):
+    def most_common(self, language='pt-br'):
         result = Counter()
         excecoes = stopwords()
         for termo in self.termo_set.all():
             # adiciona os termos de busca na exceção para que eles não distorçam o grupamento
             for busca in termo.busca.split():
-                excecoes.append(clean_pontuation(busca))
+                excecoes.append(busca)
 
-            for tweet in termo.tweet_set.all():
+            for tweet in termo.tweet_set.filter(language=language):
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
                     if not palavra.startswith('http') and not palavra.startswith('@'):
@@ -98,7 +98,7 @@ class Projeto(models.Model):
                         if palavra_limpa not in excecoes:
                             if len(palavra_limpa) > 3:
                                 result[palavra_limpa] += 1
-        return result.most_common(20)
+        return result.most_common(30)
 
 
 STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'),
