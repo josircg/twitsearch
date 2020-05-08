@@ -9,7 +9,6 @@ from django.contrib.auth.models import User
 
 from twitsearch.settings import BASE_DIR
 
-
 # Converte datas que venham no formato do Twitter
 def convert_date(date_str) -> datetime:
     time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
@@ -82,7 +81,7 @@ class Projeto(models.Model):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
-    def most_common(self, language='pt-br'):
+    def most_common(self, language='pt'):
         result = Counter()
         excecoes = stopwords()
         for termo in self.termo_set.all():
@@ -234,6 +233,10 @@ class Tweet(models.Model):
 
     def __str__(self):
         return self.twit_id
+
+    def url(self):
+        return "<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Link</a>" % (
+            self.user.username, self.twit_id)
 
 
 class Retweet(models.Model):

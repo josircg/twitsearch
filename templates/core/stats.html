@@ -36,7 +36,13 @@
 				<div><label>Total de Retweets: {{projeto.tot_retwits}}</label></div>
 				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
 			</div>
-
+            <label style="margin-top: 10px; display: block"><b>Top 3 - Tweets mais favoritados:</b></label>
+            <p></p>
+            <ol>
+                {% for tweet in top_tweets %}
+                    <li>{{ tweet.url }} {{ tweet.text }}</li>
+                {% endfor %}
+            </ol>
             <p></p>
             <label><b>Palavras mais utilizadas:</b></label>
             <p></p>
@@ -50,13 +56,6 @@
 			</div>
             {%  endfor %}
 
-            <label style="margin-top: 10px; display: block"><b>Top 3 - Tweets mais favoritados:</b></label>
-            <p></p>
-            <ol>
-                {% for tweet in top_tweets %}
-                    <li>{{ tweet.text }}</li>
-                {% endfor %}
-            </ol>
 		</fieldset>
 	</div>
 </div>

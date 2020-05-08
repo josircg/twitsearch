@@ -175,7 +175,7 @@ class TweetAdmin(PowerModelAdmin):
     user_link.short_description = 'User Link'
 
     def source(self, instance):
-        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Twitter</a>" % (instance.user.username, instance.twit_id))
+        return mark_safe(self.tweet_url)
     source.short_description = 'Twitter Link'
 
     def get_actions(self, request):
