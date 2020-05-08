@@ -41,8 +41,8 @@ def visao(request):
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
-    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
-    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0],tipo=PROC_TAGS)
+    top_tweets = Tweet.objects.filter(termo__projeto_id=id, termo=0).order_by('-favorites')[:3]
+    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
     try:
@@ -50,7 +50,6 @@ def stats(request, id):
             exportacao = 'tags-%d.zip' % projeto.id
         else:
             exportacao = None
-
     except:
         exportacao = None
 
