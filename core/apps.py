@@ -7,6 +7,7 @@ from django.apps import AppConfig
 
 import subprocess
 
+from django.conf import settings
 from django.http import HttpResponse
 from twitsearch.settings import BASE_DIR
 
@@ -42,8 +43,8 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        filename = generate_tags_file(filename='tags', queryset=queryset)
-        with open(filename, 'rb') as f:
+        generate_tags_file(filename='tags', queryset=queryset)
+        with open(os.path.join(BASE_DIR, 'data', 'tags.zip'), 'rb') as f:
             file_data = f.read()
         response = HttpResponse(file_data, content_type='application/octet-stream')
         response['Content-Disposition'] = 'attachment; filename=tags_%s.zip' % modeladmin.opts.db_table
