@@ -1,7 +1,7 @@
 import csv
-import io
 import os
 import zipfile
+import datetime
 
 from django.apps import AppConfig
 
@@ -10,6 +10,7 @@ import subprocess
 from django.conf import settings
 from django.http import HttpResponse
 from twitsearch.settings import BASE_DIR
+from core.models import Processamento, Projeto, Termo, PROC_TAGS, PROC_IMPORTACAO
 
 
 class CoreConfig(AppConfig):
@@ -54,9 +55,10 @@ def export_tags_action(description=u"Exportar para Tags"):
     return export_tags
 
 
-def generate_tags_file(queryset, filename):
+def generate_tags_file(queryset, project_id):
     path = settings.MEDIA_ROOT
-    csvfile = open(os.path.join(path, '%s.csv' % filename), 'w')
+    prefixo = 'tags-%d' % project_id
+    csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                      'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
@@ -90,14 +92,13 @@ def generate_tags_file(queryset, filename):
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 
-    print('Zip iniciado')
-
-    path_zip = os.path.join(path, '%s.zip' % filename)
+    path_zip = os.path.join(path, '%s.zip' % prefixo)
     with zipfile.ZipFile(path_zip, 'w') as zip:
-        zip.write(os.path.join(path, '%s.csv' % filename), '%s.csv' %filename)
-    print('Zip criado')
-    #return path_zip
+        zip.write(csvfile)
 
+    termo = Termo.objects.filter(projeto_id=project_id)[0]
+    Processamento.objects.create(termo=termo, dt=datetime.datetime.now(), tipo=PROC_TAGS)
+    return
 
 def export_extra_action(description=u"Exportar CSV com retweets"):
 

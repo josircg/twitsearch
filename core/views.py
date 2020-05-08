@@ -1,4 +1,3 @@
-import datetime
 import os
 from threading import Thread
 
@@ -88,10 +87,9 @@ def nuvem(request, id):
 
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
-    tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
+    tweets = Tweet.objects.filter(termo__projeto_id=id)
     filename = 'tags-%d' % projeto.pk
-    th = Thread(target=generate_tags_file, args=(tweets, filename,))
+    th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
-    Processamento.objects.create(termo=projeto.termo_set.all()[0], dt=datetime.datetime.now(), tipo=PROC_TAGS)
     messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
     return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
