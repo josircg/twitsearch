@@ -55,8 +55,8 @@ def export_tags_action(description=u"Exportar para Tags"):
 
 def generate_tags_file(queryset, filename):
     path = os.path.join(BASE_DIR, 'data')
-    string_obj = io.StringIO()
-    writer = csv.writer(string_obj)
+    csvfile = open(os.path.join(path, '%s.csv' % filename), 'w')
+    writer = csv.writer(csvfile)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                      'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
                      'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
@@ -82,6 +82,7 @@ def generate_tags_file(queryset, filename):
                 writer.writerow(line)
                 num_lines += 1
 
+    csvfile.close()
     # propositalmente estou enviando apenas o log
     filename_log = BASE_DIR + '/data/tags.log'
     logfile = open(filename_log, 'w')
@@ -89,13 +90,10 @@ def generate_tags_file(queryset, filename):
     logfile.close()
 
     path_zip = os.path.join(path, '%s.zip' % filename)
-
     with zipfile.ZipFile(path_zip, 'w') as zip:
-        zip.writestr('%s.csv' % filename, string_obj.getvalue())
-        with open(filename_log, 'r') as file:
-            zip.writestr('%s.log' % filename, file.read())
+        zip.write(os.path.join(path, '%s.csv' % filename), '%s.csv' %filename)
 
-    return path_zip
+    #return path_zip
 
 
 def export_extra_action(description=u"Exportar CSV com retweets"):
