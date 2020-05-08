@@ -53,11 +53,31 @@ class SimpleListener(tweepy.StreamListener):
             return True
 
 
+def processa_item_unico(twitid, termo):
+    agora = datetime.now(pytz.timezone(TIME_ZONE))
+    termo = Termo.objects.get(id=termo)
+    listener = SimpleListener()
+    listener.processo = Processamento.objects.create(termo=termo, dt=agora)
+    listener.dtfinal = termo.dtfinal
+    api = get_api()
+    tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
+    tweepy_stream.filter(track=[termo.busca], is_async=True)
+    print('Twit %s importado' % twitid)
+
+
 class Command(BaseCommand):
     label = 'Grab Twitters'
 
+    def add_arguments(self, parser):
+        parser.add_argument('--twit', type=str, help='Twitter ID')
+        parser.add_argument('--proc', type=str, help='Processo')
+
     def handle(self, *args, **options):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
+        if 'twit' in options and options['twit']:
+            processa_item_unico(options['twit'], options['termo'])
+            return
+
         termos = Termo.objects.filter(status='A', dtinicio__isnull=True).order_by('ult_processamento')
         if termos.count() > 0:
             termo = Termo.objects.get(pk=termos[0].id)
