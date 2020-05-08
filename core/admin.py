@@ -43,7 +43,7 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_urls(self):
         return [
             # url(r'^stats/(?P<id>.*)/$', self.admin_site.admin_view(self.stats), name='core_projeto_stats'),
-            url(r'^nuvem/(?P<id>\d+)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
+            #url(r'^nuvem/(?P<id>\d+)/$', self.admin_site.admin_view(self.nuvem), name='core_projeto_nuvem'),
             url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             url(r'^gephi/(?P<id>.*)/$', self.admin_site.admin_view(self.gephi_export),
                 name='core_projeto_gephi_export'),
@@ -57,7 +57,7 @@ class ProjetoAdmin(PowerModelAdmin):
                 PowerButton(url=reverse('core_projeto_stats', kwargs={'id': object_id, }),
                             label=u'Estatísticas'))
             buttons.append(
-                PowerButton(url=reverse('admin:core_projeto_nuvem', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('core_projeto_nuvem', kwargs={'id': object_id, }),
                             label=u'Nuvem de Palavras'))
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_gephi_export', kwargs={'id': object_id, }),
@@ -78,19 +78,19 @@ class ProjetoAdmin(PowerModelAdmin):
     #         'top_tweets': tot_tweets,
     #     }, RequestContext(request, ))
 
-    def nuvem(self, request, id):
-        projeto = get_object_or_404(Projeto, pk=id)
-        cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white')
-        palavras = dict(projeto.most_common())
-        cloud.generate_from_frequencies(palavras)
-        filename = 'nuvem-%s.png' % projeto.pk
-        cloud.to_file(os.path.join(BASE_DIR, 'media', 'nuvens', filename))
-
-        return render_to_response('core/nuvem.html', {
-            'title': u'Estatísticas dos Twitters Obtidos',
-            'projeto': projeto,
-            'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
-        }, RequestContext(request, ))
+    # def nuvem(self, request, id):
+    #     projeto = get_object_or_404(Projeto, pk=id)
+    #     cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white')
+    #     palavras = dict(projeto.most_common())
+    #     cloud.generate_from_frequencies(palavras)
+    #     filename = 'nuvem-%s.png' % projeto.pk
+    #     cloud.to_file(os.path.join(BASE_DIR, 'media', 'nuvens', filename))
+    #
+    #     return render_to_response('core/nuvem.html', {
+    #         'title': u'Estatísticas dos Twitters Obtidos',
+    #         'projeto': projeto,
+    #         'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
+    #     }, RequestContext(request, ))
 
 
     def visao(self, request, id):
