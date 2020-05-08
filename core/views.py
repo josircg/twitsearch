@@ -88,7 +88,6 @@ def nuvem(request, id):
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     tweets = Tweet.objects.filter(termo__projeto_id=id)
-    filename = 'tags-%d' % projeto.pk
     th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
     messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
