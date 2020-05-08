@@ -15,7 +15,7 @@
 <div id="content-main">
     <ul class="object-tools">
         <li><a href="{% url 'solicitar_csv' projeto.pk  %}">Solicitar CSV</a></li>
-        <li><a href="#">Download CSV</a></li>
+        {% if download %}<li><a href="/media/{{ download }}">Download CSV</a></li>{% endif %}
     </ul>
 	<div>
 		<fieldset class="module aligned ">

@@ -44,7 +44,7 @@ def convert_date(dt):
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
         generate_tags_file(filename='tags', queryset=queryset)
-        with open(os.path.join(BASE_DIR, 'data', 'tags.zip'), 'rb') as f:
+        with open(os.path.join(settings.MEDIA_ROOT, 'tags.zip'), 'rb') as f:
             file_data = f.read()
         response = HttpResponse(file_data, content_type='application/octet-stream')
         response['Content-Disposition'] = 'attachment; filename=tags_%s.zip' % modeladmin.opts.db_table
@@ -55,7 +55,7 @@ def export_tags_action(description=u"Exportar para Tags"):
 
 
 def generate_tags_file(queryset, filename):
-    path = os.path.join(BASE_DIR, 'data')
+    path = settings.MEDIA_ROOT
     csvfile = open(os.path.join(path, '%s.csv' % filename), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
@@ -90,10 +90,12 @@ def generate_tags_file(queryset, filename):
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 
+    print('Zip iniciado')
+
     path_zip = os.path.join(path, '%s.zip' % filename)
     with zipfile.ZipFile(path_zip, 'w') as zip:
         zip.write(os.path.join(path, '%s.csv' % filename), '%s.csv' %filename)
-
+    print('Zip criado')
     #return path_zip
 
 

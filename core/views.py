@@ -45,15 +45,22 @@ def stats(request, id):
     top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('favorites')[:3]
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0],tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
-    if proc_tags > proc_importacao:
-        exportacao = 'tags-%d.zip' % projeto.id
+
+    try:
+        if proc_tags[0].pk > proc_importacao[0].pk:
+            exportacao = 'tags-%d.zip' % projeto.id
+        else:
+            exportacao = None
+
+    except:
+        exportacao = None
 
     return render_to_response('core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
         'top_tweets': top_tweets,
-        'download': download,
+        'download': exportacao,
     }, RequestContext(request, ))
 
 
@@ -87,4 +94,4 @@ def solicitar_csv(request, id):
     th.start()
     Processamento.objects.create(termo=projeto.termo_set.all()[0], dt=datetime.datetime.now(), tipo=PROC_TAGS)
     messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
-    return redirect(reverse('admin:index'))
+    return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
