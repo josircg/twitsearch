@@ -1,4 +1,7 @@
 import csv
+import io
+import os
+import zipfile
 
 from django.apps import AppConfig
 
@@ -39,21 +42,21 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        filename = generate_tags_file(queryset)
-        with open(filename, 'r') as f:
+        filename = generate_tags_file(filename='tags', queryset=queryset)
+        with open(filename, 'rb') as f:
             file_data = f.read()
-        response = HttpResponse(file_data, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=tags%s.csv' % modeladmin.opts.db_table
+        response = HttpResponse(file_data, content_type='application/octet-stream')
+        response['Content-Disposition'] = 'attachment; filename=tags_%s.zip' % modeladmin.opts.db_table
         return response
 
     export_tags.short_description = description
     return export_tags
 
 
-def generate_tags_file(queryset):
-    filename = BASE_DIR + '/data/tags.csv'
-    csvfile = open(filename, 'w')
-    writer = csv.writer(csvfile)
+def generate_tags_file(queryset, filename):
+    path = os.path.join(BASE_DIR, 'data')
+    string_obj = io.StringIO()
+    writer = csv.writer(string_obj)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                      'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
                      'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
@@ -79,15 +82,20 @@ def generate_tags_file(queryset):
                 writer.writerow(line)
                 num_lines += 1
 
-    csvfile.close()
-
     # propositalmente estou enviando apenas o log
-    filename = BASE_DIR + '/data/tags.log'
-    logfile = open(filename, 'w')
+    filename_log = BASE_DIR + '/data/tags.log'
+    logfile = open(filename_log, 'w')
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 
-    return filename
+    path_zip = os.path.join(path, '%s.zip' % filename)
+
+    with zipfile.ZipFile(path_zip, 'w') as zip:
+        zip.writestr('%s.csv' % filename, string_obj.getvalue())
+        with open(filename_log, 'r') as file:
+            zip.writestr('%s.log' % filename, file.read())
+
+    return path_zip
 
 
 def export_extra_action(description=u"Exportar CSV com retweets"):

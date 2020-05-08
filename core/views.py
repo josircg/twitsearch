@@ -1,3 +1,4 @@
+import datetime
 import os
 from threading import Thread
 
@@ -15,7 +16,7 @@ from django.urls import reverse
 from wordcloud import WordCloud
 
 from core.apps import generate_tags_file
-from core.models import Projeto, Tweet
+from core.models import Projeto, Tweet, Processamento
 from twitsearch.settings import BASE_DIR
 
 
@@ -41,12 +42,12 @@ def visao(request):
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
-    tot_tweets = projeto.top_tweets()
+    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('favorites')[:3]
     return render_to_response('core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
-        'top_tweets': tot_tweets,
+        'top_tweets': top_tweets,
     }, RequestContext(request, ))
 
 def nuvem(request, id):
@@ -73,7 +74,9 @@ def nuvem(request, id):
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
-    th = Thread(target=generate_tags_file, args=(tweets,))
+    filename = 'tags-%s' % projeto.pk
+    th = Thread(target=generate_tags_file, args=(tweets, filename,))
     th.start()
-    messages.warning(request, 'A solicitação do csv foi iniciado.')
+    Processamento.objects.create(termo=tweets[0].termo, dt=datetime.datetime.now(), tipo='T', twit_id=tweets[0].pk)
+    messages.success(request, 'A solicitação do csv foi iniciado.')
     return redirect(reverse('admin:index'))
