@@ -15,7 +15,7 @@ from django.urls import reverse
 from wordcloud import WordCloud
 
 from core.apps import generate_tags_file
-from core.models import Projeto, Tweet
+from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO
 from twitsearch.settings import BASE_DIR
 
 
@@ -41,13 +41,26 @@ def visao(request):
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
-    tot_tweets = projeto.top_tweets()
-    return render_to_response('core/stats.html', {
+    top_tweets = Tweet.objects.filter(termo__projeto_id=id, termo=0).order_by('-favorites')[:3]
+    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
+    proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
+
+    try:
+        if proc_tags[0].pk > proc_importacao[0].pk:
+            exportacao = 'tags-%d.zip' % projeto.id
+        else:
+            exportacao = None
+    except:
+        exportacao = None
+
+    return render(request, 'core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
-        'top_tweets': tot_tweets,
+        'top_tweets': top_tweets,
+        'download': exportacao,
     }, RequestContext(request, ))
+
 
 def nuvem(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -70,10 +83,11 @@ def nuvem(request, id):
         'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
     }, RequestContext(request, ))
 
+
 def solicitar_csv(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
-    tweets = Tweet.objects.filter(termo__projeto_id=projeto.pk)
-    th = Thread(target=generate_tags_file, args=(tweets,))
+    tweets = Tweet.objects.filter(termo__projeto_id=id)
+    th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
-    messages.warning(request, 'A solicitação do csv foi iniciado.')
-    return redirect(reverse('admin:index'))
+    messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
+    return redirect(reverse('core_projeto_stats', kwargs={'id': id}))

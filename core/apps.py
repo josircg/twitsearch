@@ -1,11 +1,16 @@
 import csv
+import os
+import zipfile
+import datetime
 
 from django.apps import AppConfig
 
 import subprocess
 
+from django.conf import settings
 from django.http import HttpResponse
 from twitsearch.settings import BASE_DIR
+from core.models import Processamento, Projeto, Termo, PROC_TAGS, PROC_IMPORTACAO
 
 
 class CoreConfig(AppConfig):
@@ -39,20 +44,21 @@ def convert_date(dt):
 
 def export_tags_action(description=u"Exportar para Tags"):
     def export_tags(modeladmin, request, queryset):
-        filename = generate_tags_file(queryset)
-        with open(filename, 'r') as f:
+        generate_tags_file(project_id='tags', queryset=queryset)
+        with open(os.path.join(settings.MEDIA_ROOT, 'tags.zip'), 'rb') as f:
             file_data = f.read()
-        response = HttpResponse(file_data, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=tags%s.csv' % modeladmin.opts.db_table
+        response = HttpResponse(file_data, content_type='application/octet-stream')
+        response['Content-Disposition'] = 'attachment; filename=tags_%s.zip' % modeladmin.opts.db_table
         return response
 
     export_tags.short_description = description
     return export_tags
 
 
-def generate_tags_file(queryset):
-    filename = BASE_DIR + '/data/tags.csv'
-    csvfile = open(filename, 'w')
+def generate_tags_file(queryset, project_id):
+    path = settings.MEDIA_ROOT
+    prefixo = 'tags-%s' % project_id
+    csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                      'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
@@ -80,15 +86,21 @@ def generate_tags_file(queryset):
                 num_lines += 1
 
     csvfile.close()
-
     # propositalmente estou enviando apenas o log
-    filename = BASE_DIR + '/data/tags.log'
-    logfile = open(filename, 'w')
+    filename_log = BASE_DIR + '/media/tags.log'
+    logfile = open(filename_log, 'w')
     logfile.writelines(['Linhas exportadas:%d' % num_lines])
     logfile.close()
 
-    return filename
+    print('Criando zip')
+    path_zip = os.path.join(path, '%s.zip' % prefixo)
+    with zipfile.ZipFile(path_zip, 'w') as zip:
+        zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
+    print('zip criado')
+    termo = Termo.objects.filter(projeto_id=project_id)[0]
+    Processamento.objects.create(termo=termo, dt=datetime.datetime.now(), tipo=PROC_TAGS)
+    return
 
 def export_extra_action(description=u"Exportar CSV com retweets"):
 

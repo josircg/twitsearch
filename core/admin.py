@@ -65,6 +65,9 @@ class ProjetoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
                             label=u'Visão'))
+            buttons.append(
+                PowerButton(url=u'https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators', label=u'bookmark da explicação dos operadores', attrs={'target': '_blank'})
+            )
         return buttons
 
     # def stats(self, request, id):
@@ -172,7 +175,7 @@ class TweetAdmin(PowerModelAdmin):
     user_link.short_description = 'User Link'
 
     def source(self, instance):
-        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Twitter</a>" % (instance.user.username, instance.twit_id))
+        return mark_safe(self.tweet_url)
     source.short_description = 'Twitter Link'
 
     def get_actions(self, request):

@@ -3,7 +3,7 @@
 {% block title %}{{block.super}}{% endblock %}
 {% block extrahead %}<meta charset="UTF-8">{% endblock %}
 {% block extrastyle %}{{ block.super }}
-{#    <link rel="stylesheet" type="text/css" href="{{ admin_media_prefix }}css/forms.css" />#}
+    <link rel="stylesheet" type="text/css" href="{{ admin_media_prefix }}css/forms.css" />
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -15,7 +15,7 @@
 <div id="content-main">
     <ul class="object-tools">
         <li><a href="{% url 'solicitar_csv' projeto.pk  %}">Solicitar CSV</a></li>
-        <li><a href="#">Download CSV</a></li>
+        {% if download %}<li><a href="/media/{{ download }}">Download CSV</a></li>{% endif %}
     </ul>
 	<div>
 		<fieldset class="module aligned ">
@@ -36,7 +36,13 @@
 				<div><label>Total de Retweets: {{projeto.tot_retwits}}</label></div>
 				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
 			</div>
-
+            <label style="margin-top: 10px; display: block"><b>Top 3 - Tweets mais favoritados:</b></label>
+            <p></p>
+            <ol>
+                {% for tweet in top_tweets %}
+                    <li>{{ tweet.url }} {{ tweet.text }}</li>
+                {% endfor %}
+            </ol>
             <p></p>
             <label><b>Palavras mais utilizadas:</b></label>
             <p></p>
