@@ -229,6 +229,7 @@ class Tweet(models.Model):
     favorites = models.IntegerField()
     user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True)
+    processo = models.ForeignKey(Processamento, null=True)
     retwit_id = models.CharField(max_length=21, null=True)
     language = models.CharField(max_length=5, null=True)
 
