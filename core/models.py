@@ -6,8 +6,10 @@ from collections import Counter
 from django.db import models, connection
 from django.db.models import Sum
 from django.contrib.auth.models import User
+from django.utils.safestring import mark_safe
 
 from twitsearch.settings import BASE_DIR
+
 
 # Converte datas que venham no formato do Twitter
 def convert_date(date_str) -> datetime:
@@ -153,10 +155,10 @@ PROC_IMPORTACAO = 'I'
 PROC_IMPORTUSER = 'U'
 PROC_TAGS = 'T'
 PROC_NETWORK = 'N'
-TIPO_PROCESSAMENTO = ((PROC_IMPORTACAO,'Importação'),
-                      (PROC_IMPORTUSER,'Importação User'),
-                      (PROC_TAGS,'Exportação Tags'),
-                      (PROC_NETWORK,'Montagem Rede'))
+TIPO_PROCESSAMENTO = ((PROC_IMPORTACAO, 'Importação'),
+                      (PROC_IMPORTUSER, 'Importação User'),
+                      (PROC_TAGS, 'Exportação Tags'),
+                      (PROC_NETWORK, 'Montagem Rede'))
 
 
 class Processamento(models.Model):
@@ -236,8 +238,8 @@ class Tweet(models.Model):
         return self.twit_id
 
     def url(self):
-        return "<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Link</a>" % (
-            self.user.username, self.twit_id)
+        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Link</a>" % (
+            self.user.username, self.twit_id))
 
 
 class Retweet(models.Model):

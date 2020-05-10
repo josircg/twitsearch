@@ -16,7 +16,6 @@ COUNTER = {}
 
 # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
 def process_twitter(src):
-
     try:
         user = TweetUser.objects.get(twit_id=src['user']['id'])
     except TweetUser.DoesNotExist:
@@ -25,7 +24,8 @@ def process_twitter(src):
                      name=src['user']['name'],
                      location=src['user']['location'],
                      verified=src['user']['verified'],
-                     created_at=convert_date(src['user']['created_at']).date())
+                     created_at=convert_date(src['user']['created_at']).date(),
+                     processo=COUNTER['proc'])
         user.save()
         COUNTER['users'] += 1
 
@@ -43,7 +43,7 @@ def process_twitter(src):
         user.followers = follow.followers
         user.save()
 
-    if not 'fixo' in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
+    if 'fixo' not in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
         COUNTER['proc'] = Processamento.objects.get(id=src['process'])
         COUNTER['proc_id'] = COUNTER['proc'].id
 

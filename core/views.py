@@ -20,7 +20,7 @@ from twitsearch.settings import BASE_DIR
 
 
 def index(request):
-    return render(request, 'index.html', context={'hello': 'world'})
+    return render(request, 'home.html', context={'hello': 'world'})
 
 
 def visao(request):
@@ -41,7 +41,7 @@ def visao(request):
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
-    top_tweets = Tweet.objects.filter(termo__projeto_id=id, termo=0).order_by('-favorites')[:3]
+    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
