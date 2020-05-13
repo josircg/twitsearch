@@ -8,16 +8,17 @@ from django.shortcuts import render, get_object_or_404, render_to_response, redi
 # Create your views here.
 
 from django.shortcuts import render
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import requests
 from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
 from core.apps import generate_tags_file
-from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO
+from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO, TweetUser, Retweet
 from twitsearch.settings import BASE_DIR
-
+import networkx as nx
+import matplotlib.pyplot as plt
 
 def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
@@ -85,9 +86,35 @@ def nuvem(request, id):
 
 
 def solicitar_csv(request, id):
-    projeto = get_object_or_404(Projeto, pk=id)
+    get_object_or_404(Projeto, pk=id)
     tweets = Tweet.objects.filter(termo__projeto_id=id)
     th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
     messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
     return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
+
+def create_graph(request, id_projeto):
+    get_object_or_404(Projeto, pk=id_projeto)
+    g = nx.Graph()
+    filename = 'plot-%s.png' % id_projeto
+    path = os.path.join(settings.MEDIA_ROOT, 'grafos')
+
+    # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
+    tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
+                  .values_list('tweet__user__name', 'tweet__retweet__user__name'))
+
+    g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
+    print(nx.info(g))
+    nx.draw(g, with_labels=True, node_size=900, font_size=9,) # desenha o grafo
+
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT) # dir media
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'grafos')) # path
+
+    plt.savefig(os.path.join(path, filename))
+    plt.show()
+
+    return render(request, 'core/grafo.html', {
+        'grafo': os.path.join(settings.MEDIA_URL, 'grafos', filename)
+    })

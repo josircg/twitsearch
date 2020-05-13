@@ -68,6 +68,10 @@ class ProjetoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url=u'https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators', label=u'bookmark da explicação dos operadores', attrs={'target': '_blank'})
             )
+            buttons.append(
+                PowerButton(url=reverse('graph', kwargs={'id': object_id}), label='Grafo')
+            )
+
         return buttons
 
     # def stats(self, request, id):

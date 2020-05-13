@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Grafo{% endblock %}
+{% block extrahead %}<meta charset="UTF-8">{% endblock %}
+{% block extrastyle %}{{ block.super }}
+{#    <link rel="stylesheet" type="text/css" href="{{ admin_media_prefix }}css/forms.css" />#}
+{% endblock %}
+
+{% block breadcrumbs %}
+{% endblock %}
+
+{% block content_title %}<h1>{{projeto.nome}}</h1>{% endblock %}
+
+{% block content %}
+<div id="content-main">
+	<div>
+		<fieldset class="module aligned ">
+            <p></p>
+            <div><b>Observação: </b>Somente os tweets em português foram incluídos na formação da nuvem.</div>
+            <br>
+            <label><b>Grafo:</b></label>
+            <p></p>
+			<div class="form-row palavra">
+				<div>
+                    <img src="{{ grafo }}" alt="">
+				</div>
+			</div>
+
+		</fieldset>
+	</div>
+</div>
+{% endblock %}
