@@ -1,4 +1,5 @@
 import os
+import random
 from threading import Thread
 
 from django.conf import settings
@@ -96,7 +97,7 @@ def solicitar_csv(request, id):
 def create_graph(request, id_projeto):
     get_object_or_404(Projeto, pk=id_projeto)
     g = nx.Graph()
-    filename = 'plot-%s.png' % id_projeto
+    filename = 'grafo-%s.gexf' % id_projeto
     path = os.path.join(settings.MEDIA_ROOT, 'grafos')
 
     # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
@@ -105,16 +106,35 @@ def create_graph(request, id_projeto):
 
     g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
     print(nx.info(g))
-    nx.write_gexf(g, 'graf.gexf') # exportando grafo para gexf
-    nx.draw(g, with_labels=True, node_size=100, font_size=5,) # desenha o grafo
+
+    for node in g.nodes():
+        x = random.uniform(-100.12, 100.212)
+        y = random.uniform(-10.12, 80.212)
+        blue = random.randint(0, 255)
+        green = random.randint(0, 255)
+        red = random.randint(0, 255)
+        alpha = random.randint(0, 255)
+
+        g.nodes[node]['viz'] = {'size': 200,
+                                'color': {'b': '%s' % blue, 'g': '%s' % green, 'r': '%s' % red, 'a': '%s' % alpha},
+                                'position': {
+                                    'x': '%s' % x,
+                                    'y': '%s' % y,
+                                }
+                                }
 
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
             os.mkdir(settings.MEDIA_ROOT) # dir media
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'grafos')) # path
 
-    plt.savefig(os.path.join(path, filename))
-    plt.show()
+    nx.write_gexf(g, os.path.join(settings.MEDIA_ROOT, 'grafos', filename))  # exportando grafo para gexf
+
+    #plotagem
+
+    #nx.draw(g, with_labels=True, node_size=100, font_size=5, )  # desenha o grafo
+    #plt.savefig(os.path.join(path, filename))
+    #plt.show()
 
     return render(request, 'core/grafo.html', {
         'grafo': os.path.join(settings.MEDIA_URL, 'grafos', filename)
