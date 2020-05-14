@@ -107,8 +107,8 @@ def create_graph(request, id_projeto):
     # g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
 
     tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
-    nodes = list(tweets.values_list('twit_id', flat=True))
-    g.add_nodes_from(nodes)  # add nodes
+    # nodes = list(tweets.values_list('twit_id', flat=True))
+    # g.add_nodes_from(nodes)  # add nodes
 
     for tweet in tweets:
         g.add_node(tweet.user.name)
