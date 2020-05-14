@@ -105,7 +105,7 @@ def create_graph(request, id_projeto):
 
     g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
     print(nx.info(g))
-    nx.draw(g, with_labels=True, node_size=900, font_size=9,) # desenha o grafo
+    nx.draw(g, with_labels=True, node_size=100, font_size=5,) # desenha o grafo
 
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
