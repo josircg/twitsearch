@@ -101,10 +101,20 @@ def create_graph(request, id_projeto):
     path = os.path.join(settings.MEDIA_ROOT, 'grafos')
 
     # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
-    tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
-                  .values_list('tweet__user__name', 'tweet__retweet__user__name'))
+    # tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
+    #               .values_list('tweet__user__name', 'tweet__retweet__user__name'))
+    #
+    # g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
 
-    g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
+    tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
+    nodes = list(tweets.values_list('twit_id', flat=True))
+    g.add_nodes_from(nodes)  # add nodes
+
+    for tweet in tweets:
+        for retweet in tweet.retweet_set.all():
+            g.add_edge(tweet.user.name, retweet.user.name)  # add edges
+
+
     print(nx.info(g))
 
     for node in g.nodes():
