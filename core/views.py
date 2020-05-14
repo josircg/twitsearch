@@ -111,9 +111,9 @@ def create_graph(request, id_projeto):
     g.add_nodes_from(nodes)  # add nodes
 
     for tweet in tweets:
+        g.add_node(tweet.user.name)
         for retweet in tweet.retweet_set.all():
             g.add_edge(tweet.user.name, retweet.user.name)  # add edges
-
 
     print(nx.info(g))
 
