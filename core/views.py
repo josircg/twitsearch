@@ -100,38 +100,32 @@ def create_graph(request, id_projeto):
     filename = 'grafo-%s.gexf' % id_projeto
     path = os.path.join(settings.MEDIA_ROOT, 'grafos')
 
-    # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
-    # tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
-    #               .values_list('tweet__user__name', 'tweet__retweet__user__name'))
-    #
-    # g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
-
     tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
-    # nodes = list(tweets.values_list('twit_id', flat=True))
-    # g.add_nodes_from(nodes)  # add nodes
+    # tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
+    #              .values_list('tweet__user__name', 'tweet__retweet__user__name'))
+    # g.add_edges_from(tweets)
 
     for tweet in tweets:
-        g.add_node(tweet.user.name)
+        g.add_node(tweet.user.name) # add nodes
         for retweet in tweet.retweet_set.all():
             g.add_edge(tweet.user.name, retweet.user.name)  # add edges
 
-    print(nx.info(g))
-
-    for node in g.nodes():
-        x = random.uniform(-100.12, 100.212)
-        y = random.uniform(-10.12, 80.212)
+    pos = nx.spring_layout(g) # gerando posicoes aleatorias
+    for p in pos.items():
         blue = random.randint(0, 255)
         green = random.randint(0, 255)
         red = random.randint(0, 255)
         alpha = random.randint(0, 255)
-
+        node = p[0]
+        info = list(p[1])
         g.nodes[node]['viz'] = {'size': 200,
                                 'color': {'b': '%s' % blue, 'g': '%s' % green, 'r': '%s' % red, 'a': '%s' % alpha},
                                 'position': {
-                                    'x': '%s' % x,
-                                    'y': '%s' % y,
+                                    'x': info[0],
+                                    'y': info[1]
                                 }
                                 }
+    print(nx.info(g))
 
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
@@ -139,7 +133,6 @@ def create_graph(request, id_projeto):
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'grafos')) # path
 
     nx.write_gexf(g, os.path.join(settings.MEDIA_ROOT, 'grafos', filename))  # exportando grafo para gexf
-
     #plotagem
 
     #nx.draw(g, with_labels=True, node_size=100, font_size=5, )  # desenha o grafo
