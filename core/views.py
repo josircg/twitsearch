@@ -91,31 +91,25 @@ def solicitar_csv(request, id):
     tweets = Tweet.objects.filter(termo__projeto_id=id)
     th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
-    messages.success(request, 'A geração do csv foi iniciada. Dê um refresh até que apareça o botão de Download CSV')
+    messages.success(request, 'A geração do csv foi iniciada. Atualize essa página (teclando F5) até que apareça o botão de Download CSV')
     return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
+
 
 def create_graph(request, id_projeto):
     get_object_or_404(Projeto, pk=id_projeto)
-    g = nx.Graph()
+    g = nx.DirectGraph()
     filename = 'grafo-%s.gexf' % id_projeto
     path = os.path.join(settings.MEDIA_ROOT, 'grafos')
 
     # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
-    # tweets = list(Retweet.objects.filter(tweet__termo__projeto_id__exact=id_projeto).order_by('-tweet__retweet')[:200]
-    #               .values_list('tweet__user__name', 'tweet__retweet__user__name'))
-    #
-    # g.add_edges_from(tweets) # definindo as relações os nós são criados automaticamente
-
     tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
-    # nodes = list(tweets.values_list('twit_id', flat=True))
-    # g.add_nodes_from(nodes)  # add nodes
-
     for tweet in tweets:
-        g.add_node(tweet.user.name)
+        g.add_node(tweet.user.name,)
         for retweet in tweet.retweet_set.all():
             g.add_edge(tweet.user.name, retweet.user.name)  # add edges
 
     print(nx.info(g))
+    print(nx.density(g))
 
     for node in g.nodes():
         x = random.uniform(-100.12, 100.212)
