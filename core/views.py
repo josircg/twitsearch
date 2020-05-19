@@ -21,6 +21,7 @@ from twitsearch.settings import BASE_DIR
 import networkx as nx
 import matplotlib.pyplot as plt
 
+
 def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
 
@@ -97,48 +98,49 @@ def solicitar_csv(request, id):
 
 def create_graph(request, id_projeto):
     get_object_or_404(Projeto, pk=id_projeto)
-    g = nx.DirectGraph()
-    filename = 'grafo-%s.gexf' % id_projeto
-    path = os.path.join(settings.MEDIA_ROOT, 'grafos')
+    g = nx.DiGraph()
 
-    # Exemplo saida: [(1,2) , (1,3), (1, 4)] onde cada item da tupla é um nó e uma relação
+    # A rede é formada pelos usuários e não pelos tweets.
     tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
     for tweet in tweets:
         g.add_node(tweet.user.name,)
         for retweet in tweet.retweet_set.all():
-            g.add_edge(tweet.user.name, retweet.user.name)  # add edges
+            g.add_edge(tweet.user.name, retweet.user.name)
 
-    print(nx.info(g))
-    print(nx.density(g))
+    pos = nx.spring_layout(g)  # gerando posicoes aleatorias
 
-    for node in g.nodes():
-        x = random.uniform(-100.12, 100.212)
-        y = random.uniform(-10.12, 80.212)
+    for p in pos.items():
         blue = random.randint(0, 255)
         green = random.randint(0, 255)
         red = random.randint(0, 255)
         alpha = random.randint(0, 255)
-
-        g.nodes[node]['viz'] = {'size': 200,
+        node = p[0]
+        info = list(p[1])
+        g.nodes[node]['viz'] = {'size': 100,
                                 'color': {'b': '%s' % blue, 'g': '%s' % green, 'r': '%s' % red, 'a': '%s' % alpha},
                                 'position': {
-                                    'x': '%s' % x,
-                                    'y': '%s' % y,
+                                    'x': info[0],
+                                    'y': info[1]
                                 }
                                 }
+    print(nx.info(g))
+    print('Density: %s' % nx.density(g))
 
+    # Gerando o arquivo gexf para ser utilizado no sigma
+    # TODO: Habilitar botão no template para que o usuário possa fazer o download do GEXF para outros programas
+    filename = 'grafo-%s.gexf' % id_projeto
+    path = os.path.join(settings.MEDIA_ROOT, 'grafos')
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT) # dir media
-        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'grafos')) # path
+            os.mkdir(settings.MEDIA_ROOT)
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'grafos'))
 
     nx.write_gexf(g, os.path.join(settings.MEDIA_ROOT, 'grafos', filename))  # exportando grafo para gexf
 
-    #plotagem
-
-    #nx.draw(g, with_labels=True, node_size=100, font_size=5, )  # desenha o grafo
-    #plt.savefig(os.path.join(path, filename))
-    #plt.show()
+    # geração de imagem
+    # nx.draw(g, with_labels=True, node_size=100, font_size=5, )  # desenha o grafo
+    # plt.savefig(os.path.join(path, filename))
+    # plt.show()
 
     return render(request, 'core/grafo.html', {
         'grafo': os.path.join(settings.MEDIA_URL, 'grafos', filename)

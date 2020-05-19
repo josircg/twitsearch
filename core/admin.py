@@ -2,7 +2,6 @@ import io
 
 from django.conf import settings
 from django.db import models
-from django.forms import TextInput, Textarea
 from django.contrib import admin
 from django.utils.safestring import mark_safe
 from wordcloud import WordCloud
@@ -10,7 +9,7 @@ from wordcloud import WordCloud
 from core.models import *
 
 import os
-from core.apps import OSRun, export_tags_action, export_extra_action
+from core.apps import OSRun, export_tags_action, export_extra_action, detach_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
@@ -184,11 +183,12 @@ class TweetAdmin(PowerModelAdmin):
 
     def get_actions(self, request):
         actions = super(TweetAdmin, self).get_actions(request)
+        detach = detach_action()
+        actions['export_detach'] = (detach, 'detach', detach.short_description)
         export = export_tags_action()
         actions['export_tags'] = (export, 'export_tags', export.short_description)
         extra = export_extra_action()
         actions['export_extra'] = (extra, 'export_extra', extra.short_description)
-#        actions['export_gc'] = 'export_graph_common'
         return actions
 
 #    def get_buttons(self, request, object_id):

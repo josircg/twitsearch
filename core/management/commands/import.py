@@ -24,8 +24,7 @@ def process_twitter(src):
                      name=src['user']['name'],
                      location=src['user']['location'],
                      verified=src['user']['verified'],
-                     created_at=convert_date(src['user']['created_at']).date(),
-                     processo=COUNTER['proc'])
+                     created_at=convert_date(src['user']['created_at']).date())
         user.save()
         COUNTER['users'] += 1
 

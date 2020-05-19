@@ -8,7 +8,10 @@ from django.apps import AppConfig
 import subprocess
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
+from django.contrib import messages
+from django.core.urlresolvers import reverse
+
 from twitsearch.settings import BASE_DIR
 from core.models import Processamento, Projeto, Termo, PROC_TAGS, PROC_IMPORTACAO
 
@@ -40,6 +43,21 @@ def OSRun(command, stop=False):
 # Mon Nov 25 23:56:33 +0000 2019	25/11/2019 23:56:33
 def convert_date(dt):
     return dt.strftime("%a %b %d %H:%M:%S %z %Y")
+
+
+def detach_action(description=u"Desassociar tweet do Projeto"):
+    def detach(modeladmin, request, queryset):
+        alterados = 0
+        for tweet in queryset:
+            tweet.termo_id = None
+            tweet.save()
+            alterados += 1
+
+        messages.info(request, u'%d tweets retirados do projeto' % alterados)
+        return HttpResponseRedirect(reverse('admin:core_tweet'))
+
+    detach.short_description = description
+    return detach
 
 
 def export_tags_action(description=u"Exportar para Tags"):
@@ -101,6 +119,7 @@ def generate_tags_file(queryset, project_id):
     termo = Termo.objects.filter(projeto_id=project_id)[0]
     Processamento.objects.create(termo=termo, dt=datetime.datetime.now(), tipo=PROC_TAGS)
     return
+
 
 def export_extra_action(description=u"Exportar CSV com retweets"):
 
