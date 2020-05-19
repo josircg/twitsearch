@@ -80,7 +80,7 @@ def process_twitter(src):
                         termo=COUNTER['proc'].termo,
                         language=src['lang'])
             COUNTER['tweets'] += 1
-            TweetInput.objects.create(processamento=COUNTER['proc'], tweet=tweet)
+        TweetInput.objects.get_or_create(processamento=COUNTER['proc'], tweet=tweet)
         if 'retweet_count' in src:
             tweet.retweets = max(src['retweet_count'], tweet.retweets)
         if 'favorite_count' in src:
