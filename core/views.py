@@ -140,7 +140,9 @@ def solicitar_csv(request, id):
     tweets = Tweet.objects.filter(termo__projeto_id=id)
     th = Thread(target=generate_tags_file, args=(tweets, id,))
     th.start()
-    messages.success(request, 'A geração do csv foi iniciada. Atualize essa página (teclando F5) até que apareça o botão de Download CSV')
+    messages.success(request,
+                     'A geração do csv foi iniciada. Atualize essa página (teclando F5) '
+                     'até que apareça o botão de Download CSV')
     return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
 
 
