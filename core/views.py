@@ -2,9 +2,10 @@ import os
 import random
 from threading import Thread
 
+from django.db import connection
 from django.conf import settings
 from django.contrib import messages
-from django.shortcuts import render, get_object_or_404, render_to_response, redirect
+from django.shortcuts import get_object_or_404, render_to_response, redirect
 
 # Create your views here.
 
@@ -40,9 +41,11 @@ def visao(request):
     return r
     # return r JsonResponse({'data': 'ok'})
 
+
 import numpy as np
 import numpy.random
 import matplotlib.pyplot as plt
+
 
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -65,24 +68,22 @@ def stats(request, id):
     import numpy as np
     import matplotlib.pyplot as plt
 
-    # In our heatmap, nan will mean "no such date", e.g. 31 June
-    # dia, hora, twitte
-    data = [(10, 3, '1'), (11, 2,'2'), (11, 4,'2121212'), (11, 3, '211212')]
-
     heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
-
-    for hour, day, T in data:
-        # NumPy arrays are zero-indexed; days and months are not!
-        heatmap[hour, day - 1] = T
+    with connection.cursor() as cursor:
+        cursor.execute("select DATE_FORMAT(created_time, '%Y%m%d%h') as data, "
+                       "       DATE_FORMAT(created_time, '%h') as hora, count(*) as total"
+                       "  from core_tweet t, core_termo p" \
+                       " where p.projeto_id = %s and t.termo_id = p.id "
+                       "       group by data, hora",
+                       [id])
+        for rec in cursor.fetchall():
+            heatmap[rec['data'], rec['hora'] - 1] = rec['total']
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    #ax.set_yticks(range(12))
-    #ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            #            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     days = np.array(range(0, 31, 2))
     ax.set_yticks(days)
     ax.set_yticklabels(['{:d}'.format(day + 1) for day in days])
@@ -98,7 +99,6 @@ def stats(request, id):
     # cbar.set_label('Twi')
 
     plt.show()
-
 
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
@@ -126,8 +126,8 @@ def nuvem(request, id):
 
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT) # dir media
-        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens')) # path
+            os.mkdir(settings.MEDIA_ROOT)  # dir media
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens'))  # path
 
     filename = 'nuvem-%s.png' % projeto.pk
     cloud.to_file(os.path.join(path, filename))
@@ -135,7 +135,7 @@ def nuvem(request, id):
     return render_to_response('core/nuvem.html', {
         'title': u'Estatísticas dos Twitters Obtidos',
         'projeto': projeto,
-        'nuvem': os.path.join(settings.MEDIA_URL+ 'nuvens', filename),
+        'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
     }, RequestContext(request, ))
 
 
@@ -157,7 +157,7 @@ def create_graph(request, id_projeto):
     # A rede é formada pelos usuários e não pelos tweets.
     tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
     for tweet in tweets:
-        g.add_node(tweet.user.name,)
+        g.add_node(tweet.user.name, )
         for retweet in tweet.retweet_set.all():
             g.add_edge(tweet.user.name, retweet.user.name)
 
