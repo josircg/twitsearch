@@ -78,7 +78,9 @@ def stats(request, id):
                        "       group by dia, hora",
                        [id])
         for rec in cursor.fetchall():
-            heatmap[int(rec[1]), int(rec[0]) - 1, ] = rec[2]
+            dia = int('%01d' % int(rec[0]))
+            hora = int('%01d' % int(rec[1]))
+            heatmap[hora, dia -1 ] = int(rec[2])
 
     heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
@@ -88,14 +90,14 @@ def stats(request, id):
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
     days = np.array(range(0, 31, 2))
-    ax.set_yticks(days)
-    ax.set_yticklabels(['{:d}'.format(day + 1) for day in days])
-    ax.set_ylabel('Dias do mês')
+    ax.set_xticks(days)
+    ax.set_xticklabels(['{:d}'.format(day + 1) for day in days])
+    ax.set_xlabel('Dias do mês')
     ax.set_title('Tweets por faixa de horário')
 
     horas = np.array(range(0, 23, 2))
-    ax.set_xticks(horas)
-    ax.set_xlabel('Horas do dia')
+    ax.set_yticks(horas)
+    ax.set_ylabel('Horas do dia')
 
     # # Add a colour bar along the bottom and label it
     # cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
