@@ -71,14 +71,17 @@ def stats(request, id):
     heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
     with connection.cursor() as cursor:
-        cursor.execute("select DATE_FORMAT(created_time, '%Y%m%d%h') as data, "
+        cursor.execute("select DATE_FORMAT(created_time, '%d') as dia, "
                        "       DATE_FORMAT(created_time, '%h') as hora, count(*) as total"
                        "  from core_tweet t, core_termo p" \
                        " where p.projeto_id = %s and t.termo_id = p.id "
                        "       group by data, hora",
                        [id])
         for rec in cursor.fetchall():
-            heatmap[rec['data'], rec['hora'] - 1] = rec['total']
+            heatmap[int(rec['dia']) - 1, int(rec['hora'])] = rec['total']
+
+    heatmap = np.empty((31, 23))
+    heatmap[:] = np.nan
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
