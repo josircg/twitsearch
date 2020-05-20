@@ -65,37 +65,41 @@ def stats(request, id):
     import numpy as np
     import matplotlib.pyplot as plt
 
-    # Read in the relevant data from our input file
-    dt = np.dtype([('month', np.int), ('day', np.int), ('T', np.float)])
-    data = np.genfromtxt('doc/boston2012.dat', dtype=dt, usecols=(1, 2, 3),
-                         delimiter=(4, 2, 2, 6))
-
     # In our heatmap, nan will mean "no such date", e.g. 31 June
-    heatmap = np.empty((12, 31))
+    # dia, hora, twitte
+    data = [(10, 3, '1'), (11, 2,'2'), (11, 4,'2121212'), (11, 3, '211212')]
+
+    heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
 
-    for month, day, T in data:
+    for hour, day, T in data:
         # NumPy arrays are zero-indexed; days and months are not!
-        heatmap[month - 1, day - 1] = T
+        heatmap[hour, day - 1] = T
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    ax.set_yticks(range(12))
-    ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    #ax.set_yticks(range(12))
+    #ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            #            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
     days = np.array(range(0, 31, 2))
-    ax.set_xticks(days)
-    ax.set_xticklabels(['{:d}'.format(day + 1) for day in days])
-    ax.set_xlabel('Day of month')
-    ax.set_title('Maximum daily temperatures in Boston, 2012')
+    ax.set_yticks(days)
+    ax.set_yticklabels(['{:d}'.format(day + 1) for day in days])
+    ax.set_ylabel('Dias do mês')
+    ax.set_title('Tweets por faixa de horário')
 
-    # Add a colour bar along the bottom and label it
-    cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
-    cbar.set_label('Temperature, $^\circ\mathrm{C}$')
+    horas = np.array(range(0, 23, 2))
+    ax.set_xticks(horas)
+    ax.set_xlabel('Horas do dia')
+
+    # # Add a colour bar along the bottom and label it
+    # cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
+    # cbar.set_label('Twi')
 
     plt.show()
+
+
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
             exportacao = 'tags-%d.zip' % projeto.id
