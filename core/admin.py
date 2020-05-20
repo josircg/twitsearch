@@ -140,7 +140,7 @@ class TweetAdmin(PowerModelAdmin):
     list_filter = ('termo__projeto', 'termo', 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
     list_csv = ('text', 'user', 'retweets', 'favorites', 'created_time',)
-    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'source', 'language',)
+    fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'language', 'url')
     readonly_fields = fields
     list_per_page = 30
 

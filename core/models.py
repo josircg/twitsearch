@@ -237,6 +237,7 @@ class Tweet(models.Model):
     def __str__(self):
         return self.twit_id
 
+    @property
     def url(self):
         return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Link</a>" % (
             self.user.username, self.twit_id))

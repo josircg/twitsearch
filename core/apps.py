@@ -52,9 +52,7 @@ def detach_action(description=u"Desassociar tweet do Projeto"):
             tweet.termo_id = None
             tweet.save()
             alterados += 1
-
         messages.info(request, u'%d tweets retirados do projeto' % alterados)
-        return HttpResponseRedirect(reverse('admin:core_tweet_changelist'))
 
     detach.short_description = description
     return detach
