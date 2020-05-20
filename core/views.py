@@ -66,15 +66,15 @@ def stats(request, id):
     import matplotlib.pyplot as plt
 
     # In our heatmap, nan will mean "no such date", e.g. 31 June
-    # dia, hora, twitte
-    data = [(10, 3, '1'), (11, 2,'2'), (11, 4,'2121212'), (11, 3, '211212')]
+    # hora, dia, twitte
+    data = [(10, 3, '1'), (11, 2,'2'), (11, 4,'2121212'), (11, 3, '2121212'), (20, 15, '12'),(0, 11, '1213123123123123')]
 
     heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
 
     for hour, day, T in data:
         # NumPy arrays are zero-indexed; days and months are not!
-        heatmap[hour, day - 1] = T
+        heatmap[day -1 , hour] = T
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
