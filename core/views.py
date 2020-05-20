@@ -40,6 +40,9 @@ def visao(request):
     return r
     # return r JsonResponse({'data': 'ok'})
 
+import numpy as np
+import numpy.random
+import matplotlib.pyplot as plt
 
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -48,6 +51,51 @@ def stats(request, id):
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
+    # # Generate some test data
+    # x = list([1,7,7,8,9,5,4])
+    # y = list([1,2,3,1212,31,4,2])
+    #
+    # heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
+    # extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+    #
+    # plt.clf()
+    # plt.imshow(heatmap.T, extent=extent)
+    # plt.show()
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+    # Read in the relevant data from our input file
+    dt = np.dtype([('month', np.int), ('day', np.int), ('T', np.float)])
+    data = np.genfromtxt('doc/boston2012.dat', dtype=dt, usecols=(1, 2, 3),
+                         delimiter=(4, 2, 2, 6))
+
+    # In our heatmap, nan will mean "no such date", e.g. 31 June
+    heatmap = np.empty((12, 31))
+    heatmap[:] = np.nan
+
+    for month, day, T in data:
+        # NumPy arrays are zero-indexed; days and months are not!
+        heatmap[month - 1, day - 1] = T
+
+    # Plot the heatmap, customize and label the ticks
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    im = ax.imshow(heatmap, interpolation='nearest')
+    ax.set_yticks(range(12))
+    ax.set_yticklabels(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'])
+    days = np.array(range(0, 31, 2))
+    ax.set_xticks(days)
+    ax.set_xticklabels(['{:d}'.format(day + 1) for day in days])
+    ax.set_xlabel('Day of month')
+    ax.set_title('Maximum daily temperatures in Boston, 2012')
+
+    # Add a colour bar along the bottom and label it
+    cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
+    cbar.set_label('Temperature, $^\circ\mathrm{C}$')
+
+    plt.show()
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
             exportacao = 'tags-%d.zip' % projeto.id
