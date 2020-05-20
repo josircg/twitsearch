@@ -68,17 +68,17 @@ def stats(request, id):
     import numpy as np
     import matplotlib.pyplot as plt
 
-    heatmap = np.empty((31, 23))
+    heatmap = np.empty((23, 31))
     heatmap[:] = np.nan
     with connection.cursor() as cursor:
-        cursor.execute("select DATE_FORMAT(created_time, '%d') as dia, "
-                       "       DATE_FORMAT(created_time, '%h') as hora, count(*) as total"
+        cursor.execute("select DATE_FORMAT(created_time, '%%d') as dia, "
+                       "       DATE_FORMAT(created_time, '%%h') as hora, count(*) as total"
                        "  from core_tweet t, core_termo p" \
                        " where p.projeto_id = %s and t.termo_id = p.id "
-                       "       group by data, hora",
+                       "       group by dia, hora",
                        [id])
         for rec in cursor.fetchall():
-            heatmap[int(rec['dia']) - 1, int(rec['hora'])] = rec['total']
+            heatmap[int(rec[1]), int(rec[0]) - 1, ] = rec[2]
 
     heatmap = np.empty((31, 23))
     heatmap[:] = np.nan
