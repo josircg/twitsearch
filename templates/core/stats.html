@@ -46,17 +46,22 @@
             <p></p>
             <label><b>Palavras mais utilizadas:</b></label>
             <p></p>
-            {% for palavra in palavras %}
-			<div class="form-row palavra">
-				<div>
-					<p>
-						{{ palavra.0 }} - {{ palavra.1 }}
-					</p>
-				</div>
-			</div>
-            {%  endfor %}
-            <div class="form-row heatmap">
-                <img src="{{ heatmap }}" alt="Mapa de calor">
+            <div class="block" style="display: flex; justify-content: center;">
+                <div class="form-row palavra">
+                 {% for palavra in palavras %}
+                    <div>
+                        <p>
+                            {{ palavra.0 }} - {{ palavra.1 }}
+                        </p>
+                    </div>
+                {%  endfor %}
+			    </div>
+                 <div class="form-row heatmap">
+                    <img src="{{ heatmap }}" alt="Mapa de calor" width="550">
+                </div>
+                <div class="form-row grafico">
+                    <img src="{{ bar }}" alt="Grafico de barra" width="550">
+                </div>
             </div>
 		</fieldset>
 	</div>

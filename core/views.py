@@ -16,10 +16,11 @@ from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
-from core.apps import generate_tags_file
+from core.apps import generate_tags_file, check_dir
 from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO, TweetUser, Retweet
 from twitsearch.settings import BASE_DIR
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -42,10 +43,6 @@ def visao(request):
     # return r JsonResponse({'data': 'ok'})
 
 
-import numpy as np
-import numpy.random
-import matplotlib.pyplot as plt
-
 
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -54,22 +51,12 @@ def stats(request, id):
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
-    # # Generate some test data
-    # x = list([1,7,7,8,9,5,4])
-    # y = list([1,2,3,1212,31,4,2])
-    #
-    # heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
-    # extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    #
-    # plt.clf()
-    # plt.imshow(heatmap.T, extent=extent)
-    # plt.show()
 
-    import numpy as np
-    import matplotlib.pyplot as plt
 
     heatmap = np.empty((23, 31))
     heatmap[:] = np.nan
+    dias = []
+    total_twetts = []
     with connection.cursor() as cursor:
         cursor.execute("select DATE_FORMAT(created_time, '%%d') as dia, "
                        "       DATE_FORMAT(created_time, '%%h') as hora, count(*) as total"
@@ -81,6 +68,8 @@ def stats(request, id):
             dia = int('%01d' % int(rec[0]))
             hora = int('%01d' % int(rec[1]))
             heatmap[hora, dia -1 ] = int(rec[2])
+            dias.append(dia)
+            total_twetts.append(int(rec[2]))
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
@@ -98,12 +87,22 @@ def stats(request, id):
 
     filename = 'heatmap-%s.png' % id
     path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
-    if not os.path.exists(path):
-        if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT)
-        os.mkdir(path)
+    check_dir(path) # testa se os diretorios existem senao cria
 
     plt.savefig(os.path.join(path, filename))
+    plt.show()
+
+    # grafico de barra
+    path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
+    check_dir(path_bar)
+    filename_bar = 'bar-%s.png' % id
+
+    plt.bar(dias, total_twetts, color='red')
+    plt.ylabel('Total de tweets')
+    plt.xlabel('Dias do mês')
+    plt.xticks(range(1, 32, 2))
+    plt.title('Total de twets por dia')
+    plt.savefig(os.path.join(path_bar, filename_bar))
     plt.show()
 
     try:
@@ -120,7 +119,8 @@ def stats(request, id):
         'palavras': palavras,
         'top_tweets': top_tweets,
         'download': exportacao,
-        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename)
+        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar )
 
     }, RequestContext(request, ))
 
