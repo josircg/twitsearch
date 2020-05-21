@@ -96,9 +96,14 @@ def stats(request, id):
     ax.set_yticks(horas)
     ax.set_ylabel('Horas do dia')
 
-    # # Add a colour bar along the bottom and label it
-    # cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
-    # cbar.set_label('Twi')
+    filename = 'heatmap-%s.png' % id
+    path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT)
+        os.mkdir(path)
+
+    plt.savefig(os.path.join(path, filename))
     plt.show()
 
     try:
@@ -115,6 +120,8 @@ def stats(request, id):
         'palavras': palavras,
         'top_tweets': top_tweets,
         'download': exportacao,
+        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename)
+
     }, RequestContext(request, ))
 
 
