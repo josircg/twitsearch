@@ -82,27 +82,23 @@ def stats(request, id):
             hora = int('%01d' % int(rec[1]))
             heatmap[hora, dia -1 ] = int(rec[2])
 
-    heatmap = np.empty((31, 23))
-    heatmap[:] = np.nan
-
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    days = np.array(range(0, 31, 2))
+    days = np.array(range(0, 31))
     ax.set_xticks(days)
     ax.set_xticklabels(['{:d}'.format(day + 1) for day in days])
     ax.set_xlabel('Dias do mês')
     ax.set_title('Tweets por faixa de horário')
 
-    horas = np.array(range(0, 23, 2))
+    horas = np.array(range(0, 23))
     ax.set_yticks(horas)
     ax.set_ylabel('Horas do dia')
 
     # # Add a colour bar along the bottom and label it
     # cbar = fig.colorbar(ax=ax, mappable=im, orientation='horizontal')
     # cbar.set_label('Twi')
-
     plt.show()
 
     try:
