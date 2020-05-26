@@ -146,7 +146,7 @@ def stats(request, id):
     plt.bar(dias_sorted, dias_valores, color='red')
     plt.ylabel('Total de tweets')
     plt.xlabel('Dias do mês')
-    plt.xticks(days)
+    plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
     plt.title('Total de tweets por dia')
     plt.savefig(os.path.join(path_bar, filename_bar), dpi=300)
     plt.show()
