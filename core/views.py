@@ -64,7 +64,7 @@ def stats(request, id):
                        '  from core_tweet t, core_termo p, core_tweetuser u'
                        ' where p.projeto_id = %s and t.termo_id = p.id and t.user_id = u.twit_id'
                        '   and created_time between p.dtinicio and p.dtfinal + 1'
-                       'group by t.user_id order by 1', [id])
+                       '       group by t.user_id order by fav desc', [id])
         for rec in cursor.fetchall():
             writer.writerow(rec)
             alcance += int(rec[1]) + int(rec[2]) * 5
@@ -161,6 +161,7 @@ def stats(request, id):
         'projeto': projeto,
         'palavras': palavras,
         'top_tweets': top_tweets,
+        'alcance' : alcance,
         'download': exportacao,
         'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
         'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar )
