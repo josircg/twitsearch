@@ -45,6 +45,13 @@ def convert_date(dt):
     return dt.strftime("%a %b %d %H:%M:%S %z %Y")
 
 
+def check_dir(path):
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT)
+        os.mkdir(path)
+
+
 def detach_action(description=u"Desassociar tweet do Projeto"):
     def detach(modeladmin, request, queryset):
         alterados = 0
@@ -140,9 +147,3 @@ def export_extra_action(description=u"Exportar CSV com retweets"):
         return response
     export_extra.short_description = description
     return export_extra
-
-def check_dir(path):
-    if not os.path.exists(path):
-        if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT)
-        os.mkdir(path)

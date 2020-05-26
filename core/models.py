@@ -233,6 +233,8 @@ class Tweet(models.Model):
     processo = models.ForeignKey(Processamento, null=True)
     retwit_id = models.CharField(max_length=21, null=True)
     language = models.CharField(max_length=5, null=True)
+    location = models.TextField(null=True, blank=True)
+    geo = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
         return self.twit_id

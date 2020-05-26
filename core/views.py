@@ -1,4 +1,5 @@
 import os
+import csv
 import random
 from threading import Thread
 from collections import Counter
@@ -44,7 +45,6 @@ def visao(request):
     # return r JsonResponse({'data': 'ok'})
 
 
-
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
@@ -52,7 +52,24 @@ def stats(request, id):
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
-    soma = 0
+    alcance = 0
+    path = os.path.join(settings.MEDIA_ROOT, 'csv')
+    check_dir(path)
+    filename = 'users-%s.png' % id
+    csvfile = open(os.path.join(path, filename), 'w')
+    writer = csv.writer(csvfile)
+    writer.writerow(['username','favorites','retweets','count'])
+    with connection.cursor() as cursor:
+        cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
+                       '  from core_tweet t, core_termo p, core_tweetuser u'
+                       ' where p.projeto_id = %s and t.termo_id = p.id and t.user_id = u.twit_id'
+                       '   and created_time between p.dtinicio and p.dtfinal + 1'
+                       'group by t.user_id order by 1', [id])
+        for rec in cursor.fetchall():
+            writer.writerow(rec)
+            alcance += int(rec[1]) + int(rec[2]) * 5
+    csvfile.close()
+
     dataset = []
     dias = Counter()
     with connection.cursor() as cursor:
@@ -71,10 +88,9 @@ def stats(request, id):
 
     if len(dias_sorted) > 30:
         # Achar a melhor faixa para mostrar o heatmap
-        tamanho = 50
         dias_np = np.array([total for _, total in dias.most_common()])
         media = np.average(dias_np)
-        base = media - np.std(dias_np) * 2
+        base = media - np.std(dias_np)
         limite_inferior = np.max(dias_np)
         idx_inicial = 0
         for dia in dias_sorted:
