@@ -18,7 +18,7 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, render_to_response, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import RequestContext
-
+from urllib.parse import urlencode
 
 class TermoInline(admin.TabularInline):
     model = Termo
@@ -169,7 +169,6 @@ class TweetAdmin(PowerModelAdmin):
 
 
     def get_buttons(self, request, object_id):
-       from urllib.parse import urlencode
        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
        if object_id:
            buttons.append(
