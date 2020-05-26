@@ -184,7 +184,7 @@ class TweetAdmin(PowerModelAdmin):
 
 class RetweetAdmin(PowerModelAdmin):
     multi_search = (
-        ('q1', 'Tweet Original', ['tweet']),
+        ('q1', 'Tweet Original', ['tweet__twit_id']),
         ('q2', 'Twitter User', ['user__username']),
         ('q3', 'Retweet ID', ['retweet_id']),
     )
