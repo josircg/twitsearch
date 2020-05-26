@@ -55,8 +55,8 @@ def stats(request, id):
     alcance = 0
     path = os.path.join(settings.MEDIA_ROOT, 'csv')
     check_dir(path)
-    filename = 'users-%s.csv' % id
-    csvfile = open(os.path.join(path, filename), 'w')
+    filename_csv = 'users-%s.csv' % id
+    csvfile = open(os.path.join(path, filename_csv), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['username','favorites','retweets','count'])
     with connection.cursor() as cursor:
@@ -167,7 +167,8 @@ def stats(request, id):
         'alcance' : alcance,
         'download': exportacao,
         'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar )
+        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'csv': filename_csv,
 
     }, RequestContext(request, ))
 
