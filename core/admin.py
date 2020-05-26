@@ -194,9 +194,6 @@ class RetweetAdmin(PowerModelAdmin):
 
     raw_id_fields = ('user', 'tweet')
 
-    # def get_queryset(self, request):
-    #     return super(RetweetAdmin, self).get_queryset(request).select_related('tweet')
-
 
 class TermoAdmin(PowerModelAdmin):
     list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'tot_twits',)

@@ -18,27 +18,29 @@ class Command(BaseCommand):
         tot_notfound = 0
         dest_dir = BASE_DIR + '/data/cached'
         set_autocommit(False)
-        for root,dirs,files in walk(dest_dir, topdown=True):
-            filename = join(dest_dir, tweet.twit_id+'.json')
-            if isfile(filename):
-                with open(filename, 'r') as file:
-                    texto = file.read()
-                    twit = json.loads(texto)
-                tweet.language = twit['lang']
-                tweet.save()
-                if twit['retweeted_status']:
-                    original_tweet = Tweet.objects.filter(twit_id=twit['retweeted_status']['id_str'])
-                    if original_tweet.count() > 0:
-                        original_tweet[0].language = twit['retweeted_status']['lang']
-                        original_tweet.save()
-                tot_files += 1
+        for root, dirs, files in walk(dest_dir, topdown=True):
+            tot_files += 1
+            print(files)
+            with open(files, 'r') as file:
+                texto = file.read()
+                twit = json.loads(texto)
+            if 'location' in twit:
+                tweets = Tweet.objects.filter(id=twit['id_str'])
+                if tweets.count() > 0:
+                    if tweets[0].location != twit['location']:
+                        tweets[0].location = twit['location']
+                        tweets[0].save()
+                else:
+                    if twit['retweeted_status'] and 'location' in twit['retweeted_status']:
+                        tweets = Tweet.objects.filter(twit_id=twit['retweeted_status']['id_str'])
+                        if tweets.count() > 0:
+                            tweets[0].location = twit['retweeted_status']['location']
+                            tweets.save()
                 if tot_files % 100 == 0:
                     print(tot_files)
                     commit()
             else:
-                tot_notfound +=1
-                if tot_notfound % 1000 == 0:
-                    print('Arquivo %s não encontrado' % filename)
+                tot_notfound += 1
 
         print('Arquivos processados: %d' % tot_files)
         print('Arquivos não encontrados: %d' % tot_notfound)
