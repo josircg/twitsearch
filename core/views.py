@@ -55,7 +55,7 @@ def stats(request, id):
     alcance = 0
     path = os.path.join(settings.MEDIA_ROOT, 'csv')
     check_dir(path)
-    filename = 'users-%s.png' % id
+    filename = 'users-%s.csv' % id
     csvfile = open(os.path.join(path, filename), 'w')
     writer = csv.writer(csvfile)
     writer.writerow(['username','favorites','retweets','count'])
@@ -67,7 +67,7 @@ def stats(request, id):
                        '       group by t.user_id order by fav desc', [id])
         for rec in cursor.fetchall():
             writer.writerow(rec)
-            alcance += int(rec[1]) + int(rec[2]) * 5
+            alcance += max(int(rec[1]), int(rec[2]))
     csvfile.close()
 
     dataset = []
