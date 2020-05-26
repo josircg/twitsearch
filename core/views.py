@@ -96,9 +96,8 @@ def stats(request, id):
     dia = 0
     for rec in dataset:
         if rec[0] in dias:
-            if dia in dias_sorted:
-                hora = int(rec[1])
-                heatmap[hora, dias_sorted.index(dia)] = int(rec[2])
+            hora = int(rec[1])
+            heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -129,7 +128,6 @@ def stats(request, id):
     plt.bar(dias_sorted, dias_valores, color='red')
     plt.ylabel('Total de tweets')
     plt.xlabel('Dias do mês')
-    plt.xticks(range(1, 32, 2))
     plt.title('Total de tweets por dia')
     plt.savefig(os.path.join(path_bar, filename_bar))
     plt.show()
