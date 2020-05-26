@@ -167,13 +167,15 @@ class TweetAdmin(PowerModelAdmin):
 
         return actions
 
-#    def get_buttons(self, request, object_id):
-#        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
-#        if object_id:
-#            buttons.append(
-#                PowerButton(url=reverse('admin:core_retweet', kwargs={'id': object_id, }),
-#                            label=u'Retweets'))
-#        return buttons
+
+    def get_buttons(self, request, object_id):
+       from urllib.parse import urlencode
+       buttons = super(TweetAdmin, self).get_buttons(request, object_id)
+       if object_id:
+           buttons.append(
+               PowerButton(url='%s?%s' % (reverse('admin:core_retweet_changelist'), urlencode({'q1': object_id})),
+                           label=u'Retweets'))
+       return buttons
 
 #    def get_urls(self):
 #        return [
