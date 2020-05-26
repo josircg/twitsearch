@@ -102,22 +102,24 @@ def stats(request, id):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    days = np.array(range(0, len(dias_sorted)))
+    days = np.array(range(0, len(dias_sorted), 10))
     ax.set_xticks(days)
     ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
     ax.set_xlabel('Dias')
     ax.set_title('Tweets por faixa de horário')
-
-    horas = np.array(range(0, 23))
-    ax.set_yticks(horas)
+    #
+    # horas = np.array()
+    # ax.set_yticks(horas)
     ax.set_ylabel('Horas do dia')
+    # ax.set_yticklabels(['%s' % day[-2:] for day in dias_sorted])
 
     filename = 'heatmap-%s.png' % id
     path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
     # testa se os diretorios existem senao cria
     check_dir(path)
 
-    plt.savefig(os.path.join(path, filename))
+    plt.savefig(os.path.join(path, filename), dpi=300, bbox_inches='tight')
+    plt.xlim(1.3, 4.0)
     plt.show()
 
     # grafico de barra
@@ -128,8 +130,9 @@ def stats(request, id):
     plt.bar(dias_sorted, dias_valores, color='red')
     plt.ylabel('Total de tweets')
     plt.xlabel('Dias do mês')
+    plt.xticks(days)
     plt.title('Total de tweets por dia')
-    plt.savefig(os.path.join(path_bar, filename_bar))
+    plt.savefig(os.path.join(path_bar, filename_bar), dpi=300)
     plt.show()
 
     try:

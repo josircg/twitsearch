@@ -56,12 +56,14 @@
                     </div>
                 {%  endfor %}
 			    </div>
-                 <div class="form-row heatmap">
-                    <img src="{{ heatmap }}" alt="Mapa de calor" width="550">
-                </div>
-                <div class="form-row grafico">
-                    <img src="{{ bar }}" alt="Grafico de barra" width="550">
-                </div>
+                 <div class="graficos" style="display: flex; flex-direction: column; align-items: start">
+                    <div class="form-row grafico">
+                        <img src="{{ bar }}" alt="Grafico de barra" width="900">
+                    </div>
+                     <div class="form-row heatmap">
+                        <img src="{{ heatmap }}" alt="Mapa de calor" width="900">
+                     </div>
+                 </div>
             </div>
 		</fieldset>
 	</div>
