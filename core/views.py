@@ -1,6 +1,7 @@
 import os
 import random
 from threading import Thread
+from collections import Counter
 
 from django.db import connection
 from django.conf import settings
@@ -68,28 +69,54 @@ def stats(request, id):
     import numpy as np
     import matplotlib.pyplot as plt
 
-    heatmap = np.empty((23, 31))
-    heatmap[:] = np.nan
+    soma = 0
+    dataset = []
+    dias = Counter()
     with connection.cursor() as cursor:
-        cursor.execute("select DATE_FORMAT(created_time, '%%d') as dia, "
-                       "       DATE_FORMAT(created_time, '%%h') as hora, count(*) as total"
-                       "  from core_tweet t, core_termo p" \
-                       " where p.projeto_id = %s and t.termo_id = p.id "
-                       "       group by dia, hora",
+        cursor.execute("select DATE_FORMAT(created_time, '%%Y%%m%%d') as dia, "
+                       "       DATE_FORMAT(created_time, '%%H') as hora, count(*) as total"
+                       "  from core_tweet t, core_termo p" 
+                       " where p.projeto_id = %s and t.termo_id = p.id " 
+                       "   and created_time between p.dtinicio and p.dtfinal + 1"
+                       "       group by dia, hora order by dia, hora",
                        [id])
         for rec in cursor.fetchall():
-            dia = int('%01d' % int(rec[0]))
-            hora = int('%01d' % int(rec[1]))
-            heatmap[hora, dia -1 ] = int(rec[2])
+            dataset.append(rec)
+            dias[rec[0]] += rec[2]
+            soma += rec[2]
+
+    media = soma % len(dias)
+    limite_inferior = int(dias.most_common(0)[0])
+    limite_superior = limite_inferior
+    for rec in dataset:
+        if rec[2] >= media:
+            if
+        if int(dia[0]) < limite_inferior:
+            limite_inferior = int(dia[0])
+
+    fim = len(dias) - 1
+    if fim >= 45:
+        inicio = fim - 45
+        tamanho = 45
+    else:
+        inicio = 0
+        tamanho = len(dias)
+
+    heatmap = np.empty((24, tamanho))
+    heatmap[:] = np.nan
+    dia = 0
+    for rec in dataset:
+        hora = int(rec[1])
+        heatmap[hora, dia] = int(rec[2])
 
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    days = np.array(range(0, 31))
+    days = np.array(range(0, tamanho))
     ax.set_xticks(days)
-    ax.set_xticklabels(['{:d}'.format(day + 1) for day in days])
-    ax.set_xlabel('Dias do mês')
+    ax.set_xticklabels(['%s' % day[0][-2:] for day in dataset[inicio:fim]])
+    ax.set_xlabel('Dias')
     ax.set_title('Tweets por faixa de horário')
 
     horas = np.array(range(0, 23))
