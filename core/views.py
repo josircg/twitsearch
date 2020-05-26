@@ -17,10 +17,11 @@ from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
-from core.apps import generate_tags_file
+from core.apps import generate_tags_file, check_dir
 from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO, TweetUser, Retweet
 from twitsearch.settings import BASE_DIR
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
 
 
@@ -43,10 +44,6 @@ def visao(request):
     # return r JsonResponse({'data': 'ok'})
 
 
-import numpy as np
-import numpy.random
-import matplotlib.pyplot as plt
-
 
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
@@ -54,20 +51,6 @@ def stats(request, id):
     top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
     proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
-
-    # # Generate some test data
-    # x = list([1,7,7,8,9,5,4])
-    # y = list([1,2,3,1212,31,4,2])
-    #
-    # heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
-    # extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-    #
-    # plt.clf()
-    # plt.imshow(heatmap.T, extent=extent)
-    # plt.show()
-
-    import numpy as np
-    import matplotlib.pyplot as plt
 
     soma = 0
     dataset = []
@@ -83,39 +66,46 @@ def stats(request, id):
         for rec in cursor.fetchall():
             dataset.append(rec)
             dias[rec[0]] += rec[2]
-            soma += rec[2]
 
-    media = soma % len(dias)
-    limite_inferior = int(dias.most_common(0)[0])
-    limite_superior = limite_inferior
-    for rec in dataset:
-        if rec[2] >= media:
-            if
-        if int(dia[0]) < limite_inferior:
-            limite_inferior = int(dia[0])
+    dias_sorted = sorted([dia for dia, _ in dias.most_common()])
 
-    fim = len(dias) - 1
-    if fim >= 45:
-        inicio = fim - 45
-        tamanho = 45
+    if len(dias_sorted) > 30:
+        # Achar a melhor faixa para mostrar o heatmap
+        tamanho = 50
+        dias_np = np.array([total for _, total in dias.most_common()])
+        media = np.average(dias_np)
+        base = media - np.std(dias_np) * 2
+        limite_inferior = np.max(dias_np)
+        idx_inicial = 0
+        for dia in dias_sorted:
+            if dias[dia] >= base:
+                if idx_inicial + 29 > len(dias_sorted):
+                    idx_inicial = len(dias_sorted) - 29
+                break
+            idx_inicial += 1
+        dias_sorted = dias_sorted[idx_inicial:]
     else:
         inicio = 0
-        tamanho = len(dias)
 
-    heatmap = np.empty((24, tamanho))
+    dias_valores = []
+    for dia in dias_sorted:
+        dias_valores.append(dias[ dia ])
+
+    heatmap = np.empty((24, len(dias_sorted)))
     heatmap[:] = np.nan
     dia = 0
     for rec in dataset:
-        hora = int(rec[1])
-        heatmap[hora, dia] = int(rec[2])
-
+        if rec[0] in dias:
+            if dia in dias_sorted:
+                hora = int(rec[1])
+                heatmap[hora, dias_sorted.index(dia)] = int(rec[2])
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
     im = ax.imshow(heatmap, interpolation='nearest')
-    days = np.array(range(0, tamanho))
+    days = np.array(range(0, len(dias_sorted)))
     ax.set_xticks(days)
-    ax.set_xticklabels(['%s' % day[0][-2:] for day in dataset[inicio:fim]])
+    ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
     ax.set_xlabel('Dias')
     ax.set_title('Tweets por faixa de horário')
 
@@ -125,12 +115,23 @@ def stats(request, id):
 
     filename = 'heatmap-%s.png' % id
     path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
-    if not os.path.exists(path):
-        if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT)
-        os.mkdir(path)
+    # testa se os diretorios existem senao cria
+    check_dir(path)
 
     plt.savefig(os.path.join(path, filename))
+    plt.show()
+
+    # grafico de barra
+    path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
+    check_dir(path_bar)
+    filename_bar = 'bar-%s.png' % id
+
+    plt.bar(dias_sorted, dias_valores, color='red')
+    plt.ylabel('Total de tweets')
+    plt.xlabel('Dias do mês')
+    plt.xticks(range(1, 32, 2))
+    plt.title('Total de tweets por dia')
+    plt.savefig(os.path.join(path_bar, filename_bar))
     plt.show()
 
     try:
@@ -147,7 +148,8 @@ def stats(request, id):
         'palavras': palavras,
         'top_tweets': top_tweets,
         'download': exportacao,
-        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename)
+        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar )
 
     }, RequestContext(request, ))
 

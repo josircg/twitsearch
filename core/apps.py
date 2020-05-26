@@ -140,3 +140,9 @@ def export_extra_action(description=u"Exportar CSV com retweets"):
         return response
     export_extra.short_description = description
     return export_extra
+
+def check_dir(path):
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT)
+        os.mkdir(path)

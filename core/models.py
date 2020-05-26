@@ -91,7 +91,7 @@ class Projeto(models.Model):
             for busca in termo.busca.split():
                 excecoes.append(busca)
 
-            for tweet in termo.tweet_set.filter(language=language):
+            for tweet in termo.tweet_set.all():
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
                     if not palavra.startswith('http') and not palavra.startswith('@'):
