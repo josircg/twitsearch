@@ -15,3 +15,7 @@ polyglot
 wordcloud
 matplotlib
 networkx
+
+# poweradmin
+git+https://bitbucket.org/josir/poweradmin.git@dev
+

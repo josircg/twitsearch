@@ -6,6 +6,8 @@ O software permite que usuários finais (que não tem expertise de programação
 
 Uma vez que o projeto esteja definido, o programa inicia a busca e registro dos tweets e permite que o usuário possa ver o resultado em tempo real. Ao final gerar arquivos CSV com os tweets de cada projeto.
 
+# Observações
+ - Este branch não utiliza o poweradmin no seu código-fonte, ele foi incluido externamente. 
 # Milestones
 
 Versão 0.2: busca pelos retweets (Ok)
