@@ -42,23 +42,17 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_urls(self):
         return [
             url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
-            url(r'^gephi/(?P<id>.*)/$', self.admin_site.admin_view(self.gephi_export),
-                name='core_projeto_gephi_export'),
             ] + super(ProjetoAdmin, self).get_urls()
 
     def get_buttons(self, request, object_id):
         buttons = super(ProjetoAdmin, self).get_buttons(request, object_id)
         if object_id:
-            obj = self.get_object(request, object_id)
             buttons.append(
                 PowerButton(url=reverse('core_projeto_stats', kwargs={'id': object_id, }),
                             label=u'Estatísticas'))
             buttons.append(
                 PowerButton(url=reverse('core_projeto_nuvem', kwargs={'id': object_id, }),
                             label=u'Nuvem de Palavras'))
-            buttons.append(
-                PowerButton(url=reverse('admin:core_projeto_gephi_export', kwargs={'id': object_id, }),
-                            label=u'Exportação Gephi'))
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
                             label=u'Visão'))
@@ -78,10 +72,6 @@ class ProjetoAdmin(PowerModelAdmin):
             'projeto': projeto,
         }, RequestContext(request, ))
 
-    @staticmethod
-    def gephi_export(self, request, id):
-        projeto = get_object_or_404(Projeto, pk=id)
-        return HttpResponseRedirect(reverse('admin:core_projeto_change', args=(id,)))
 
 
 class HistoryInline(admin.TabularInline):

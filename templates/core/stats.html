@@ -17,6 +17,7 @@
         <li><a href="{% url 'solicitar_csv' projeto.pk  %}">Solicitar CSV</a></li>
         {% if download %}<li><a href="/media/{{ download }}">Download CSV</a></li>{% endif %}
         <li><a href="/media/csv/{{ csv }}">User CSV</a></li>
+        <li><a href="/gerar_gephi/{{ projeto.pk }}">Gephi</a></li>
     </ul>
 	<div>
 		<fieldset class="module aligned ">
