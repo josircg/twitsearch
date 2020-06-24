@@ -271,8 +271,8 @@ def gerar_gephi(request, id_projeto):
 
     return response
 
-def use_seaborn(request):
-    import seaborn as sb
-    data = np.random.rand(4,6)
-    heat_map = sb.heatmap(data)
-    plt.show()
+# def use_seaborn(request):
+#     import seaborn as sb
+#     data = np.random.rand(4,6)
+#     heat_map = sb.heatmap(data)
+#     plt.show()

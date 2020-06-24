@@ -12,5 +12,5 @@ urlpatterns = [
     url(r'^solicitar_csv/(?P<id>\d+)/$', solicitar_csv, name='solicitar_csv'),
     url(r'^grafo/(?P<id_projeto>\d+)/$', create_graph, name='graph'),
     url(r'^gerar_gephi/(?P<id_projeto>\d+)/$', gerar_gephi, name='gerar_gephi'),
-    url(r'^exemplo/$', use_seaborn, name='exemplo'),
+    # url(r'^exemplo/$', use_seaborn, name='exemplo'),
 ]
