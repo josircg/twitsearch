@@ -2,7 +2,7 @@ from django.conf import settings
 from django.conf.urls import url
 from django.conf.urls.static import static
 
-from core.views import visao, stats, index, solicitar_csv, nuvem, create_graph, gerar_gephi, use_seaborn
+from core.views import visao, stats, index, solicitar_csv, nuvem, create_graph, gerar_gephi
 
 urlpatterns = [
     url(r'^$', index),
