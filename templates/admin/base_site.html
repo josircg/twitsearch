@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% load cms_tags %}
+{% load cms_tags static %}
 
 {% block title %}{{ title }} | {% site_name %}{% endblock %}
 
@@ -10,6 +10,7 @@
 {% block nav-global %}{% endblock %}
 
 {% block extrastyle %}
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'core/img/favicon.ico' %}">
 {{ block.super }}
 <style type="text/css">
     .vForeignKeyRawIdAdminField, .inline-group .tabular td.original p {

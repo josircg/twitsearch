@@ -24,7 +24,7 @@ from twitsearch.settings import BASE_DIR
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
-
+import seaborn as sb
 
 def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
@@ -108,16 +108,18 @@ def stats(request, id):
         dias_valores.append(dias[ dia ])
 
     heatmap = np.empty((24, len(dias_sorted)))
-    heatmap[:] = np.nan
+    heatmap[:] = 0
     dia = 0
     for rec in dataset:
         if rec[0] in dias:
             hora = int(rec[1])
             heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
+
     # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    im = ax.imshow(heatmap, interpolation='nearest')
+    # im = ax.imshow(heatmap, interpolation='nearest')
+    sb.heatmap(heatmap)
     days = np.array(range(0, len(dias_sorted), 10))
     ax.set_xticks(days)
     ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
@@ -135,7 +137,7 @@ def stats(request, id):
     # testa se os diretorios existem senao cria
     check_dir(path)
 
-    plt.savefig(os.path.join(path, filename), dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(path, filename), bbox_inches='tight')
     plt.xlim(1.3, 4.0)
     plt.show()
 
@@ -144,13 +146,15 @@ def stats(request, id):
     check_dir(path_bar)
     filename_bar = 'bar-%s.png' % id
 
-    plt.bar(dias_sorted, dias_valores, color='red')
+    #plt.bar(dias_sorted, dias_valores, color='red')
+    sb.barplot(dias_sorted, dias_valores)
+
     plt.ylabel('Total de tweets')
     plt.xlabel('Dias do mês')
     ax.set_xticks(days)
     plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
     plt.title('Total de tweets por dia')
-    plt.savefig(os.path.join(path_bar, filename_bar), dpi=300)
+    plt.savefig(os.path.join(path_bar, filename_bar))
     plt.show()
 
     try:
@@ -259,3 +263,20 @@ def create_graph(request, id_projeto):
     return render(request, 'core/grafo.html', {
         'grafo': os.path.join(settings.MEDIA_URL, 'grafos', filename)
     })
+
+def gerar_gephi(request, id_projeto):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
+    csv_file = csv.writer(response)
+    csv_file.writerow(['Tweet', 'Retweet'])
+    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).select_related().values_list('tweet__user__username', 'user__username'))
+    for data in dataset:
+        csv_file.writerow(data)
+
+    return response
+
+# def use_seaborn(request):
+#     import seaborn as sb
+#     data = np.random.rand(4,6)
+#     heat_map = sb.heatmap(data)
+#     plt.show()
