@@ -7,15 +7,15 @@ Django<1.12
 pytz
 tweepy
 django-admin-tools
-numpy
+numpy==1.18.4
 PyICU
 pycld2
 morfessor
 polyglot
 wordcloud
-matplotlib
+matplotlib==3.2.1
 networkx
-seaborn
+seaborn==0.10.1
 # poweradmin
 git+https://bitbucket.org/josir/poweradmin.git@dev
 
