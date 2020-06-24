@@ -123,11 +123,12 @@ def stats(request, id):
     ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
     ax.set_xlabel('Dias')
     ax.set_title('Tweets por faixa de horário')
-    #
-    # horas = np.array()
-    # ax.set_yticks(horas)
+
+    # Monta Eixo Y com as horas
+    horas = np.array(range(0, 23))
+    ax.set_yticks(horas)
     ax.set_ylabel('Horas do dia')
-    # ax.set_yticklabels(['%s' % day[-2:] for day in dias_sorted])
+    ax.set_yticklabels(['%s' % hora for hora in horas])
 
     filename = 'heatmap-%s.png' % id
     path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
@@ -146,7 +147,8 @@ def stats(request, id):
     plt.bar(dias_sorted, dias_valores, color='red')
     plt.ylabel('Total de tweets')
     plt.xlabel('Dias do mês')
-    plt.xticks(days)
+    ax.set_xticks(days)
+    ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
     plt.title('Total de tweets por dia')
     plt.savefig(os.path.join(path_bar, filename_bar), dpi=300)
     plt.show()
@@ -166,8 +168,10 @@ def stats(request, id):
         'top_tweets': top_tweets,
         'alcance' : alcance,
         'download': exportacao,
-        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'heatmap': None,
+        'bar': None,
+#        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+#        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv,
 
     }, RequestContext(request, ))
