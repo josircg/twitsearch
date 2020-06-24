@@ -172,10 +172,8 @@ def stats(request, id):
         'top_tweets': top_tweets,
         'alcance' : alcance,
         'download': exportacao,
-        'heatmap': None,
-        'bar': None,
-#        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-#        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv,
 
     }, RequestContext(request, ))
