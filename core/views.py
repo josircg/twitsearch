@@ -280,7 +280,7 @@ def gerar_gephi(request, id_projeto):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
     csv_file = csv.writer(response)
-    csv_file.writerow(['Tweet', 'Retweet'])
+    csv_file.writerow(['source', 'target'])
     dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).select_related().values_list('tweet__user__username', 'user__username'))
     for data in dataset:
         csv_file.writerow(data)
