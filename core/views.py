@@ -141,21 +141,23 @@ def stats(request, id):
     plt.xlim(1.3, 4.0)
     plt.show()
 
-    # # grafico de barra
-    # path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
-    # check_dir(path_bar)
-    # filename_bar = 'bar-%s.png' % id
-    #
-    # #plt.bar(dias_sorted, dias_valores, color='red')
-    # sb.barplot(dias_sorted, dias_valores)
-    #
-    # plt.ylabel('Total de tweets')
-    # plt.xlabel('Dias do mês')
-    # ax.set_xticks(days)
-    # plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
-    # plt.title('Total de tweets por dia')
-    # plt.savefig(os.path.join(path_bar, filename_bar))
-    # plt.show()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    # grafico de barra
+    path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
+    check_dir(path_bar)
+    filename_bar = 'bar-%s.png' % id
+
+    sb.barplot(dias_sorted, dias_valores)
+
+    plt.ylabel('Total de tweets')
+    plt.xlabel('Dias do mês')
+    ax.set_xticks(days)
+    plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
+    plt.title('Total de tweets por dia')
+    plt.savefig(os.path.join(path_bar, filename_bar))
+    plt.show()
 
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
@@ -173,7 +175,7 @@ def stats(request, id):
         'alcance' : alcance,
         'download': exportacao,
         'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-        #'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv,
 
     }, RequestContext(request, ))
