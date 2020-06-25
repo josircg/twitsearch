@@ -107,55 +107,55 @@ def stats(request, id):
     for dia in dias_sorted:
         dias_valores.append(dias[ dia ])
 
-    # heatmap = np.empty((24, len(dias_sorted)))
-    # heatmap[:] = 0
-    # dia = 0
-    # for rec in dataset:
-    #     if rec[0] in dias:
-    #         hora = int(rec[1])
-    #         heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
-    #
+    heatmap = np.empty((24, len(dias_sorted)))
+    heatmap[:] = 0
+    dia = 0
+    for rec in dataset:
+        if rec[0] in dias:
+            hora = int(rec[1])
+            heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
+
     # # Plot the heatmap, customize and label the ticks
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    # # im = ax.imshow(heatmap, interpolation='nearest')
-    # sb.heatmap(heatmap)
+    # im = ax.imshow(heatmap, interpolation='nearest')
+    sb.heatmap(heatmap)
     days = np.array(range(0, len(dias_sorted), 10))
-    # ax.set_xticks(days)
-    # ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
-    # ax.set_xlabel('Dias')
-    # ax.set_title('Tweets por faixa de horário')
-    #
-    # # Monta Eixo Y com as horas
-    # horas = np.array(range(0, 23))
-    # ax.set_yticks(horas)
-    # ax.set_ylabel('Horas do dia')
-    # ax.set_yticklabels(['%s' % hora for hora in horas])
-    #
-    # filename = 'heatmap-%s.png' % id
-    # path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
-    # # testa se os diretorios existem senao cria
-    # check_dir(path)
-    #
-    # plt.savefig(os.path.join(path, filename), bbox_inches='tight')
-    # plt.xlim(1.3, 4.0)
-    # plt.show()
-
-    # grafico de barra
-    path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
-    check_dir(path_bar)
-    filename_bar = 'bar-%s.png' % id
-
-    #plt.bar(dias_sorted, dias_valores, color='red')
-    sb.barplot(dias_sorted, dias_valores)
-
-    plt.ylabel('Total de tweets')
-    plt.xlabel('Dias do mês')
     ax.set_xticks(days)
-    plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
-    plt.title('Total de tweets por dia')
-    plt.savefig(os.path.join(path_bar, filename_bar))
+    ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
+    ax.set_xlabel('Dias')
+    ax.set_title('Tweets por faixa de horário')
+
+    # Monta Eixo Y com as horas
+    horas = np.array(range(0, 23))
+    ax.set_yticks(horas)
+    ax.set_ylabel('Horas do dia')
+    ax.set_yticklabels(['%s' % hora for hora in horas])
+
+    filename = 'heatmap-%s.png' % id
+    path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
+    # testa se os diretorios existem senao cria
+    check_dir(path)
+
+    plt.savefig(os.path.join(path, filename), bbox_inches='tight')
+    plt.xlim(1.3, 4.0)
     plt.show()
+
+    # # grafico de barra
+    # path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
+    # check_dir(path_bar)
+    # filename_bar = 'bar-%s.png' % id
+    #
+    # #plt.bar(dias_sorted, dias_valores, color='red')
+    # sb.barplot(dias_sorted, dias_valores)
+    #
+    # plt.ylabel('Total de tweets')
+    # plt.xlabel('Dias do mês')
+    # ax.set_xticks(days)
+    # plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
+    # plt.title('Total de tweets por dia')
+    # plt.savefig(os.path.join(path_bar, filename_bar))
+    # plt.show()
 
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
@@ -172,8 +172,8 @@ def stats(request, id):
         'top_tweets': top_tweets,
         'alcance' : alcance,
         'download': exportacao,
-        #'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+        #'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv,
 
     }, RequestContext(request, ))
