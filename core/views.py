@@ -126,7 +126,7 @@ def stats(request, id):
         colorscale='Viridis'
     ))
     fig.update_layout(
-        title='Tweets por faixa de horário',
+        title='Tweets por dia',
         xaxis_nticks=36,
         xaxis=graph_objs.layout.XAxis(
             title=graph_objs.layout.xaxis.Title(
