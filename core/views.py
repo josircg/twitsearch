@@ -123,6 +123,7 @@ def stats(request, id):
 
     fig = graph_objs.Figure(data=graph_objs.Heatmap(
         z=heatmap,
+        x=[datetime.datetime.strftime(datetime.datetime.strptime(data, '%Y%m%d'), '%d/%m/%Y') for data in dias_sorted],
         colorscale='Viridis'
     ))
     fig.update_layout(
