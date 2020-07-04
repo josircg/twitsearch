@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django.core.management.base import BaseCommand
 import json
+from shlex import split as splitx
 
 from os import scandir, rename, makedirs
 from os.path import isfile, join, exists
@@ -12,6 +13,13 @@ from django.db.transaction import set_autocommit, commit, rollback
 # from typing import Dict, Any - só python 3.6
 # COUNTER: Dict[Any, Any] = {}
 COUNTER = {}
+
+
+def find_termo(termo, texto):
+    for palavra in termo.upper().splitx('OR'):
+        if palavra.strip() in texto.upper():
+            return True
+    return False
 
 
 # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
@@ -43,17 +51,25 @@ def process_twitter(src):
         user.save()
 
     if 'fixo' not in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
-        COUNTER['proc'] = Processamento.objects.get(id=src['process'])
-        COUNTER['proc_id'] = COUNTER['proc'].id
+        try:
+            COUNTER['proc'] = Processamento.objects.get(id=src['process'])
+            COUNTER['proc_id'] = COUNTER['proc'].id
+            termo = COUNTER['proc'].termo
+        except Processamento.DoesNotExist:
+            print('Processamento não encontrado: %d' % src['process'])
+            COUNTER['proc'] = None
+            COUNTER['proc_id'] = None
+            termo = None
 
     if 'quoted_status' in src:
-        tweet = process_twitter(src['quoted_status'])
-        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
-        if created:
-            COUNTER['retweets'] += 1
-        else:
-            retweet.retweet_id = src['id_str']
-            retweet.save()
+        if termo and find_termo(termo.busca, src['quoted_status']['full_text']):
+            tweet = process_twitter(src['quoted_status'])
+            retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+            if created:
+                COUNTER['retweets'] += 1
+            else:
+                retweet.retweet_id = src['id_str']
+                retweet.save()
 
     if 'retweeted_status' in src:
         tweet = process_twitter(src['retweeted_status'])
@@ -77,10 +93,13 @@ def process_twitter(src):
                         created_time=dt,
                         retweets=0,
                         favorites=0,
-                        termo=COUNTER['proc'].termo,
+                        termo=termo,
                         language=src['lang'])
             COUNTER['tweets'] += 1
-        TweetInput.objects.get_or_create(processamento=COUNTER['proc'], tweet=tweet)
+
+        if COUNTER['proc']:
+            TweetInput.objects.get_or_create(processamento=COUNTER['proc'], tweet=tweet)
+
         if 'retweet_count' in src:
             tweet.retweets = max(src['retweet_count'], tweet.retweets)
         if 'favorite_count' in src:
@@ -94,7 +113,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
-        parser.add_argument('-p', '--processo', type=str, help='Processo Default')
+        parser.add_argument('-p', '--processo', type=str, help='Processo Default', nargs='?')
         parser.add_argument('-f', '--fixo', type=str, help='Processo Fixo')
 
     def handle(self, *args, **options):
@@ -103,7 +122,7 @@ class Command(BaseCommand):
         COUNTER['retweets'] = 0
         COUNTER['proc_id'] = 0
 
-        if 'processo' in options:
+        if options['processo']:
             try:
                 proc = Processamento.objects.get(id=options['processo'])
                 COUNTER['proc'] = proc
@@ -114,9 +133,6 @@ class Command(BaseCommand):
             except Processamento.DoesNotExist:
                 self.stdout.write(self.style.WARNING('Processo %s não encontrado' % options['processo']))
                 return
-        else:
-            self.stdout.write(self.style.WARNING('ID do Processo é obrigatório'))
-            return
 
         tot_files = 0
         dest_dir = BASE_DIR + '/data'
