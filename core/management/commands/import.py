@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 from django.core.management.base import BaseCommand
 import json
-from shlex import split as splitx
+import pytz
+import shlex
 
 from os import scandir, rename, makedirs
 from os.path import isfile, join, exists
 
 from twitsearch.settings import BASE_DIR
 from core.models import *
+from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback
 
 # from typing import Dict, Any - só python 3.6
@@ -16,7 +18,7 @@ COUNTER = {}
 
 
 def find_termo(termo, texto):
-    for palavra in termo.upper().splitx('OR'):
+    for palavra in termo.upper().split('OR'):
         if palavra.strip() in texto.upper():
             return True
     return False
@@ -65,7 +67,7 @@ def process_twitter(src):
 
         # Se o proc é nulo, então ele ainda não foi criado!
         if not COUNTER['proc']:
-            COUNTER['novo'] = Processamento.objects.create(dt=datetime.today())
+            COUNTER['novo'] = Processamento.objects.create(dt=timezone.now())
             COUNTER['proc'] = COUNTER['novo']
             termo = None
 
