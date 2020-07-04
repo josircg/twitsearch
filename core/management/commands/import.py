@@ -50,15 +50,23 @@ def process_twitter(src):
         user.followers = follow.followers
         user.save()
 
-    if 'fixo' not in COUNTER and 'process' in src and src['process'] != COUNTER['proc_id']:
-        try:
-            COUNTER['proc'] = Processamento.objects.get(id=src['process'])
-            COUNTER['proc_id'] = COUNTER['proc'].id
-            termo = COUNTER['proc'].termo
-        except Processamento.DoesNotExist:
-            print('Processamento não encontrado: %d' % src['process'])
-            COUNTER['proc'] = None
-            COUNTER['proc_id'] = None
+    # Se existir processo no twitter, tentar achar ele. Se não achar, assumir o padrão
+    if not COUNTER['fixo']:
+        if 'process' in src and src['process'] != COUNTER.get('proc'):
+            try:
+                COUNTER['proc'] = Processamento.objects.get(id=src['process'])
+                termo = COUNTER['proc'].termo
+            except Processamento.DoesNotExist:
+                COUNTER['proc'] = COUNTER.get('novo')
+                print('Processamento não encontrado: %d' % src['process'])
+        else:
+            # Se não existe processo no Twitter, utilizar o Processo padrão
+            COUNTER['proc'] = COUNTER['fixo']
+
+        # Se o proc é nulo, então ele ainda não foi criado!
+        if not COUNTER['proc']:
+            COUNTER['novo'] = Processamento.objects.create(dt=datetime.today())
+            COUNTER['proc'] = COUNTER['novo']
             termo = None
 
     if 'quoted_status' in src:
@@ -120,19 +128,18 @@ class Command(BaseCommand):
         COUNTER['users'] = 0
         COUNTER['tweets'] = 0
         COUNTER['retweets'] = 0
-        COUNTER['proc_id'] = 0
 
         if options['processo']:
             try:
                 proc = Processamento.objects.get(id=options['processo'])
                 COUNTER['proc'] = proc
-                COUNTER['proc_id'] = proc.id
-                if options['fixo']:
-                    COUNTER['fixo'] = True
-
+                COUNTER['fixo'] = True
             except Processamento.DoesNotExist:
+                # Se o processo determinado não foi encontrado, deve-se interromper a rotina
                 self.stdout.write(self.style.WARNING('Processo %s não encontrado' % options['processo']))
                 return
+        else:
+            COUNTER['fixo'] = False
 
         tot_files = 0
         dest_dir = BASE_DIR + '/data'
