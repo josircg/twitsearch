@@ -18,4 +18,4 @@ networkx
 seaborn
 # poweradmin
 git+https://bitbucket.org/josir/poweradmin.git@dev
-
+plotly

@@ -1,3 +1,4 @@
+import datetime
 import os
 import csv
 import random
@@ -25,6 +26,10 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sb
+
+from plotly.offline import plot
+from plotly import graph_objs
+
 
 def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
@@ -109,51 +114,62 @@ def stats(request, id):
 
     heatmap = np.empty((24, len(dias_sorted)))
     heatmap[:] = 0
-    dia = 0
     for rec in dataset:
         if rec[0] in dias:
             hora = int(rec[1])
             heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
 
-    # Plot the heatmap, customize and label the ticks
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    # im = ax.imshow(heatmap, interpolation='nearest')
-    sb.heatmap(heatmap)
-    days = np.array(range(0, len(dias_sorted), 10))
-    ax.set_xticks(days)
-    ax.set_xticklabels(['%s' % day[-2:] for day in dias_sorted])
-    ax.set_xlabel('Dias')
-    ax.set_title('Tweets por faixa de horário')
-    #
-    # horas = np.array()
-    # ax.set_yticks(horas)
-    ax.set_ylabel('Horas do dia')
-    # ax.set_yticklabels(['%s' % day[-2:] for day in dias_sorted])
+    #days = np.array(range(0, len(dias_sorted), 10))
 
-    filename = 'heatmap-%s.png' % id
-    path = os.path.join(settings.MEDIA_ROOT, 'heatmap')
-    # testa se os diretorios existem senao cria
-    check_dir(path)
+    fig = graph_objs.Figure(data=graph_objs.Heatmap(
+        z=heatmap,
+        x=[datetime.datetime.strftime(datetime.datetime.strptime(data, '%Y%m%d'), '%d/%m/%Y') for data in dias_sorted],
+        colorscale='Viridis'
+    ))
+    fig.update_layout(
+        title='Tweets por faixa de horário',
+        xaxis_nticks=36,
+        xaxis=graph_objs.layout.XAxis(
+            title=graph_objs.layout.xaxis.Title(
+                text='Dias'
+            )
+        ),
+        yaxis=graph_objs.layout.YAxis(
+            title=graph_objs.layout.yaxis.Title(
+                text="Horas do dia",
+                # font=dict(
+                #     family="Courier New, monospace",
+                #     size=18,
+                #     color="#7f7f7f"
+                # )
+            )
+        )
+    )
+    heatmap_div = plot(fig, output_type='div')
+    dias_sorted_formatter = []
+    for dia in dias_sorted:
+        date = datetime.datetime.strptime(dia, '%Y%m%d')
+        dias_sorted_formatter.append(datetime.datetime.strftime(date, '%d/%m%Y'))
 
-    plt.savefig(os.path.join(path, filename), bbox_inches='tight')
-    plt.xlim(1.3, 4.0)
-    plt.show()
+    fig2 = graph_objs.Figure(graph_objs.Bar(
+        x=dias_sorted_formatter,
+        y=dias_valores
+    ))
 
-    # grafico de barra
-    path_bar = os.path.join(settings.MEDIA_ROOT, 'graficos')
-    check_dir(path_bar)
-    filename_bar = 'bar-%s.png' % id
-
-    #plt.bar(dias_sorted, dias_valores, color='red')
-    sb.barplot(dias_sorted, dias_valores)
-
-    plt.ylabel('Total de tweets')
-    plt.xlabel('Dias do mês')
-    plt.xticks(days, ['%s' % day[-2:] for day in dias_sorted])
-    plt.title('Total de tweets por dia')
-    plt.savefig(os.path.join(path_bar, filename_bar))
-    plt.show()
+    fig2.update_layout(title='Tweets por dia',
+        xaxis_nticks=36,
+        xaxis=graph_objs.layout.XAxis(
+                title=graph_objs.layout.xaxis.Title(
+                    text='Dias do mês'
+            )
+        ),
+        yaxis=graph_objs.layout.YAxis(
+            title=graph_objs.layout.yaxis.Title(
+                text="Total de Tweets",
+                )
+        )
+    )
+    grafico_div = plot(fig2, output_type='div')
 
     try:
         if proc_tags[0].pk > proc_importacao[0].pk:
@@ -170,8 +186,10 @@ def stats(request, id):
         'top_tweets': top_tweets,
         'alcance' : alcance,
         'download': exportacao,
-        'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
-        'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
+        'heatmap_div': heatmap_div,
+        'grafico_div':grafico_div,
+        # 'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
+        # 'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv,
 
     }, RequestContext(request, ))
@@ -264,7 +282,7 @@ def gerar_gephi(request, id_projeto):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
     csv_file = csv.writer(response)
-    csv_file.writerow(['Tweet', 'Retweet'])
+    csv_file.writerow(['source', 'target'])
     dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).select_related().values_list('tweet__user__username', 'user__username'))
     for data in dataset:
         csv_file.writerow(data)
