@@ -12,9 +12,13 @@ from core.models import *
 from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback
 
+# Contador de registros importados
+COUNTER = {}
 # from typing import Dict, Any - só python 3.6
 # COUNTER: Dict[Any, Any] = {}
-COUNTER = {}
+
+# Caso o tweet não tenha um processo definido, utilizar o processamento padrão para todos
+PROC_PADRAO = None
 
 
 def find_termo(termo, texto):
@@ -25,7 +29,8 @@ def find_termo(termo, texto):
 
 
 # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
-def process_twitter(src):
+def process_twitter(src, processo_pai=None):
+    global PROC_PADRAO, COUNTER
     try:
         user = TweetUser.objects.get(twit_id=src['user']['id'])
     except TweetUser.DoesNotExist:
@@ -52,37 +57,38 @@ def process_twitter(src):
         user.followers = follow.followers
         user.save()
 
-    # Se existir processo no twitter, tentar achar ele. Se não achar, assumir o padrão
-    if not COUNTER['fixo']:
-        if 'process' in src and src['process'] != COUNTER.get('proc'):
+    # Se houver um processo fixo, utilizar sempre ele, desprezando o indicado no tweet
+    if processo_pai:
+        processo = processo_pai
+    else:
+        if 'process' in src:
             try:
-                COUNTER['proc'] = Processamento.objects.get(id=src['process'])
-                termo = COUNTER['proc'].termo
+                processo = Processamento.objects.get(id=src['process'])
             except Processamento.DoesNotExist:
-                COUNTER['proc'] = COUNTER.get('novo')
-                print('Processamento não encontrado: %d' % src['process'])
+                processo = PROC_PADRAO
         else:
             # Se não existe processo no Twitter, utilizar o Processo padrão
-            COUNTER['proc'] = COUNTER['fixo']
+            processo = PROC_PADRAO
 
-        # Se o proc é nulo, então ele ainda não foi criado!
-        if not COUNTER['proc']:
-            COUNTER['novo'] = Processamento.objects.create(dt=timezone.now())
-            COUNTER['proc'] = COUNTER['novo']
-            termo = None
+
+    # Se o proc é nulo, então ele ainda não foi criado!
+    if not processo:
+        PROC_PADRAO = Processamento.objects.create(dt=timezone.now())
+        PROC_PADRAO.save()
+        processo = PROC_PADRAO
+        print('Processo default: %d' % processo.id)
 
     if 'quoted_status' in src:
-        if termo and find_termo(termo.busca, src['quoted_status']['full_text']):
-            tweet = process_twitter(src['quoted_status'])
-            retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
-            if created:
-                COUNTER['retweets'] += 1
-            else:
-                retweet.retweet_id = src['id_str']
-                retweet.save()
+        tweet = process_twitter(src['quoted_status'], processo)
+        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+        if created:
+            COUNTER['retweets'] += 1
+        else:
+            retweet.retweet_id = src['id_str']
+            retweet.save()
 
     if 'retweeted_status' in src:
-        tweet = process_twitter(src['retweeted_status'])
+        tweet = process_twitter(src['retweeted_status'], processo)
         retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
         if created:
             COUNTER['retweets'] += 1
@@ -94,6 +100,10 @@ def process_twitter(src):
             texto = src['full_text']
         else:
             texto = src['text']
+
+        termo = processo.termo
+        if termo and ('process' not in src) and not find_termo(termo.busca, texto):
+            termo = None
 
         try:
             tweet = Tweet.objects.get(twit_id=src['id_str'])
@@ -107,14 +117,14 @@ def process_twitter(src):
                         language=src['lang'])
             COUNTER['tweets'] += 1
 
-        if COUNTER['proc']:
-            TweetInput.objects.get_or_create(processamento=COUNTER['proc'], tweet=tweet)
-
         if 'retweet_count' in src:
             tweet.retweets = max(src['retweet_count'], tweet.retweets)
         if 'favorite_count' in src:
             tweet.favorites = max(src['favorite_count'], tweet.favorites)
         tweet.save()
+
+        TweetInput.objects.get_or_create(processamento=processo, tweet=tweet, termo=termo)
+
     return tweet
 
 
@@ -134,14 +144,12 @@ class Command(BaseCommand):
         if options['processo']:
             try:
                 proc = Processamento.objects.get(id=options['processo'])
-                COUNTER['proc'] = proc
-                COUNTER['fixo'] = True
             except Processamento.DoesNotExist:
                 # Se o processo determinado não foi encontrado, deve-se interromper a rotina
                 self.stdout.write(self.style.WARNING('Processo %s não encontrado' % options['processo']))
                 return
         else:
-            COUNTER['fixo'] = False
+            proc = None
 
         tot_files = 0
         dest_dir = BASE_DIR + '/data'
@@ -152,7 +160,7 @@ class Command(BaseCommand):
                 with open(filename, 'r') as file:
                     texto = file.read()
                     twit = json.loads(texto)
-                process_twitter(twit)
+                process_twitter(twit, proc)
                 commit()
                 tot_files = 1
             else:

@@ -134,6 +134,11 @@ class TweetAdmin(PowerModelAdmin):
     readonly_fields = fields
     list_per_page = 30
 
+    def lookup_allowed(self, lookup, value):
+        if lookup == 'tweetinput__processamento__id':
+            return True
+        return super(TweetAdmin, self).lookup_allowed(lookup, value)
+
     def user_link(self, instance):
         return mark_safe("<a href='%s'>%s</a>" %
                          (reverse('admin:core_tweetuser_change', args=[instance.user.twit_id]), instance.user.username))
@@ -157,14 +162,13 @@ class TweetAdmin(PowerModelAdmin):
 
         return actions
 
-
     def get_buttons(self, request, object_id):
-       buttons = super(TweetAdmin, self).get_buttons(request, object_id)
-       if object_id:
-           buttons.append(
+        buttons = super(TweetAdmin, self).get_buttons(request, object_id)
+        if object_id:
+            buttons.append(
                PowerButton(url='%s?%s' % (reverse('admin:core_retweet_changelist'), urlencode({'q1': object_id})),
                            label=u'Retweets'))
-       return buttons
+        return buttons
 
 #    def get_urls(self):
 #        return [
@@ -196,6 +200,16 @@ class TermoAdmin(PowerModelAdmin):
 
 class ProcessamentoAdmin(PowerModelAdmin):
     list_display = ('termo', 'tipo', 'dt', 'twit_id', 'tot_twits')
+    raw_id_fields = ('termo', )
+
+    def get_buttons(self, request, object_id):
+        buttons = super(ProcessamentoAdmin, self).get_buttons(request, object_id)
+        if object_id:
+            buttons.append(
+                PowerButton(url='/admin/core/tweet/?tweetinput__processamento__id=%d' % object_id,
+                            label="Tweets", attrs={'target': '_blank'})
+            )
+        return buttons
 
 
 admin.site.register(Projeto, ProjetoAdmin)

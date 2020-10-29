@@ -151,14 +151,19 @@ class Termo(models.Model):
         verbose_name_plural = 'Termos de Busca'
 
 
-PROC_IMPORTACAO = 'I'
-PROC_IMPORTUSER = 'U'
-PROC_TAGS = 'T'
-PROC_NETWORK = 'N'
-TIPO_PROCESSAMENTO = ((PROC_IMPORTACAO, 'Importação'),
-                      (PROC_IMPORTUSER, 'Importação User'),
-                      (PROC_TAGS, 'Exportação Tags'),
-                      (PROC_NETWORK, 'Montagem Rede'))
+PROC_IMPORTACAO = 'I'  # Importação via busca
+PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
+PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
+PROC_MATCH = 'M'       # Busca na base de dados, tweets que atendam a um critério
+PROC_TAGS = 'T'        # Geração de arquivo CSV com as TAGs
+PROC_NETWORK = 'N'     # Geração de Grafo
+
+TIPO_PROCESSAMENTO = (
+    (PROC_IMPORTACAO,   'Importação'),
+    (PROC_IMPORTUSER,   'Importação User'),
+    (PROC_MATCH,        'Match de Tweets orfãos'),
+    (PROC_TAGS,         'Exportação Tags'),
+    (PROC_NETWORK,      'Montagem Rede'))
 
 
 class Processamento(models.Model):
@@ -168,7 +173,7 @@ class Processamento(models.Model):
     tipo = models.CharField(max_length=1, choices=TIPO_PROCESSAMENTO, default=PROC_IMPORTACAO)
 
     def __str__(self):
-        return '%s (%s)' % (self.termo, self.dt)
+        return '%s: %s' % (self.dt, self.termo if self.termo else self.tipo)
 
     @property
     def tot_twits(self):
@@ -224,13 +229,12 @@ class FollowersHistory(models.Model):
 
 class Tweet(models.Model):
     twit_id = models.CharField(max_length=21, primary_key=True)
-    text = models.CharField(max_length=320)
+    text = models.CharField(max_length=640)
     created_time = models.DateTimeField()
     retweets = models.IntegerField()
     favorites = models.IntegerField()
     user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True)
-    processo = models.ForeignKey(Processamento, null=True)
     retwit_id = models.CharField(max_length=21, null=True)
     language = models.CharField(max_length=5, null=True)
     location = models.TextField(null=True, blank=True)
@@ -270,4 +274,5 @@ class Retweet(models.Model):
 class TweetInput(models.Model):
     tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     processamento = models.ForeignKey(Processamento, on_delete=models.CASCADE)
-    instante = models.DateTimeField(auto_now_add=True)
+    termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, blank=True, null=True)
+

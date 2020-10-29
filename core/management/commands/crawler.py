@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-from django.core.management.base import BaseCommand
 import json
 import pytz
 import time
 from datetime import datetime
+from django.core.management.base import BaseCommand
 
 from twitsearch.local import get_api
 
