@@ -70,7 +70,6 @@ def process_twitter(src, processo_pai=None):
             # Se não existe processo no Twitter, utilizar o Processo padrão
             processo = PROC_PADRAO
 
-
     # Se o proc é nulo, então ele ainda não foi criado!
     if not processo:
         PROC_PADRAO = Processamento.objects.create(dt=timezone.now())
@@ -134,12 +133,15 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
         parser.add_argument('-p', '--processo', type=str, help='Processo Default', nargs='?')
-        parser.add_argument('-f', '--fixo', type=str, help='Processo Fixo')
+        parser.add_argument('-f', '--force', help='Accept multiple imports running', nargs='?')
+        parser.add_argument('-x', '--fixo', type=str, help='Processo Fixo')
 
     def handle(self, *args, **options):
         COUNTER['users'] = 0
         COUNTER['tweets'] = 0
         COUNTER['retweets'] = 0
+
+        force = options.get('force')
 
         if options['processo']:
             try:
@@ -166,9 +168,10 @@ class Command(BaseCommand):
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
-            if LockProcessamento.objects.filter(locked=True):
-                print('Importação pendente')
-                return
+            if not force:
+                if LockProcessamento.objects.filter(locked=True):
+                    print('Importação pendente')
+                    return
             LockProcessamento.objects.update(locked=True)
             commit()
             try:

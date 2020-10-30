@@ -113,6 +113,7 @@ class Termo(models.Model):
                                     help_text='Deixe em branco caso queira iniciar imediatamente')
     dtfinal = models.DateTimeField('Fim da Busca')
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    ult_tweet = models.BigIntegerField(null=True, blank=True)
     ult_processamento = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
