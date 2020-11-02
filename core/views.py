@@ -19,7 +19,8 @@ from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
-from core.apps import generate_tags_file, check_dir
+from core import check_dir
+from core.apps import generate_tags_file, busca_local
 from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO, TweetUser, Retweet
 from twitsearch.settings import BASE_DIR
 import networkx as nx
@@ -115,7 +116,7 @@ def stats(request, id):
     heatmap = np.empty((24, len(dias_sorted)))
     heatmap[:] = 0
     for rec in dataset:
-        if rec[0] in dias:
+        if rec[0] in dias_sorted:
             hora = int(rec[1])
             heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
 
@@ -288,6 +289,14 @@ def gerar_gephi(request, id_projeto):
         csv_file.writerow(data)
 
     return response
+
+
+def solicita_busca(request, id):
+    th = Thread(target=busca_local, args=(id,))
+    th.start()
+    messages.success(request, 'A busca local foi iniciada. Aguarde que o status do Termo apareça como concluído.')
+    return redirect(reverse('admin:core_termo_change', args=[id]))
+
 
 # def use_seaborn(request):
 #     import seaborn as sb

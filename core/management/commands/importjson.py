@@ -7,7 +7,6 @@ import shlex
 from os import scandir, rename, makedirs
 from os.path import isfile, join, exists
 
-from twitsearch.settings import BASE_DIR
 from core.models import *
 from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback

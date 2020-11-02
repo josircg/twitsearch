@@ -1,55 +1,19 @@
 import csv
 import os
 import zipfile
-import datetime
+import shlex
 
 from django.apps import AppConfig
 
-import subprocess
-
 from django.conf import settings
-from django.http import HttpResponse, HttpResponseRedirect
+from django.utils import timezone
+from django.http import HttpResponse
 from django.contrib import messages
-from django.core.urlresolvers import reverse
 
-from twitsearch.settings import BASE_DIR
-from core.models import Processamento, Projeto, Termo, PROC_TAGS, PROC_IMPORTACAO
-
+from core.models import *
 
 class CoreConfig(AppConfig):
     name = 'core'
-
-
-def OSRun(command, stop=False):
-    out = u''
-    try:
-        if type(command) != list:
-            command = command.split(" ")
-        print(repr(command))
-        sp = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = sp.communicate()
-        if stderr:
-            out += u'ERROR: %s\n' % stderr.decode('utf-8')
-        if stdout:
-            out += u'%s\n' % stdout
-    except OSError as err:
-        out += 'Command:%s\n' % command
-        out += "OS error: {0}".format(err)
-        if stop:
-            raise Exception(stderr)
-    return out
-
-
-# Mon Nov 25 23:56:33 +0000 2019	25/11/2019 23:56:33
-def convert_date(dt):
-    return dt.strftime("%a %b %d %H:%M:%S %z %Y")
-
-
-def check_dir(path):
-    if not os.path.exists(path):
-        if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT)
-        os.mkdir(path)
 
 
 def detach_action(description=u"Desassociar tweet do Projeto"):
@@ -122,7 +86,7 @@ def generate_tags_file(queryset, project_id):
 
     print('zip criado')
     termo = Termo.objects.filter(projeto_id=project_id)[0]
-    Processamento.objects.create(termo=termo, dt=datetime.datetime.now(), tipo=PROC_TAGS)
+    Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
     return
 
 
@@ -147,3 +111,56 @@ def export_extra_action(description=u"Exportar CSV com retweets"):
         return response
     export_extra.short_description = description
     return export_extra
+
+
+def busca_local(id):
+    termo = Termo.objects.get(id=id)
+    termos_busca = termo.busca.lower()
+    proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca).first()
+    if not proc:
+        proc = Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=termo.tipo_busca)
+    maior = proc.twit_id or '0'
+
+    lista_busca = list(map(lambda x: x.lower(), shlex.split(termos_busca)))
+
+    # Buscar em cada tweet da base se a descrição faz match com o termo selecionado e associa ao termo
+    if termo.status == PROC_FILTROPROJ:
+        dataset = Tweet.objects.filter(tweetinput__termo__projeto_id=termo.projeto_id)
+    elif termo.dtinicio:
+        dataset = Tweet.objects.filter(created_time__gte=termo.dtinicio)
+
+    if termo.language:
+        dataset = dataset.filter(language=termo.language)
+
+    for tweet in dataset.filter(text__icontains=lista_busca[0]):
+        if termo.tipo_busca == PROC_BUSCAGLOBAL:
+            achou = True
+        elif termo.status == PROC_FILTROPROJ and \
+                tweet.tweetinput_set.filter(termo__projeto_id=termo.projeto_id).count() > 0:
+            achou = True
+        else:
+            achou = False
+
+        if achou and len(lista_busca) > 1:
+            texto = tweet.text.lower()
+            for item in lista_busca:
+                if item[0] == '-':
+                    if item[1:] in texto:
+                        achou = False
+                        break
+                else:
+                    if item not in texto:
+                        achou = False
+                        break
+
+        if achou:
+            if not TweetInput.objects.filter(tweet=tweet, termo=termo):
+                TweetInput.objects.create(tweet=tweet, termo=termo, processamento=proc)
+                if tweet.twit_id > maior:
+                    maior = tweet.twit_id
+
+    termo.status = 'C'
+    termo.save()
+    proc.twit_id = maior
+    proc.save()
+    return

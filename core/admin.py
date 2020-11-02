@@ -1,29 +1,23 @@
-import io
-
-from django.conf import settings
 from django.db import models
 from django.contrib import admin
-from django.utils.safestring import mark_safe
-from wordcloud import WordCloud
 
 from core.models import *
 
-import os
-from core.apps import OSRun, export_tags_action, export_extra_action, detach_action
+from core.apps import export_tags_action, export_extra_action, detach_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
 from django.conf.urls import url
 from django.core.urlresolvers import reverse
-from django.shortcuts import get_object_or_404, render_to_response, redirect
-from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 from urllib.parse import urlencode
+
 
 class TermoInline(admin.TabularInline):
     model = Termo
     extra = 0
-    fields = ('busca', 'dtinicio', 'dtfinal', 'status', 'tot_twits',)
+    fields = ('busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',)
     readonly_fields = ('tot_twits', )
 
 
@@ -36,8 +30,8 @@ class ProjetoAdmin(PowerModelAdmin):
     def save_model(self, request, obj, form, change):
         obj.usuario = request.user
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
-        if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
-            OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh&')
+        # if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
+        #    OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh')
 
     def get_urls(self):
         return [
@@ -57,7 +51,7 @@ class ProjetoAdmin(PowerModelAdmin):
                 PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
                             label=u'Visão'))
             buttons.append(
-                PowerButton(url=u'https://developer.twitter.com/en/docs/tweets/search/guides/standard-operators', label=u'bookmark da explicação dos operadores', attrs={'target': '_blank'})
+                PowerButton(url='https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/overview/standard-operators', label=u'Como utilizar a busca', attrs={'target': '_blank'})
             )
             buttons.append(
                 PowerButton(url=reverse('graph', kwargs={'id_projeto': object_id}), label='Grafo')
@@ -71,7 +65,6 @@ class ProjetoAdmin(PowerModelAdmin):
             'title': u'Envio de Dados para o Visão',
             'projeto': projeto,
         }, RequestContext(request, ))
-
 
 
 class HistoryInline(admin.TabularInline):
@@ -196,6 +189,14 @@ class TermoAdmin(PowerModelAdmin):
         form = super(TermoAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['busca'].widget.attrs['style'] = 'width: 30em;'
         return form
+
+    def get_buttons(self, request, object_id):
+        buttons = super(TermoAdmin, self).get_buttons(request, object_id)
+        if object_id:
+            buttons.append(
+                PowerButton(url=reverse('solicita_busca', kwargs={'id': object_id, }),
+                            label=u'Busca Local'))
+        return buttons
 
 
 class ProcessamentoAdmin(PowerModelAdmin):

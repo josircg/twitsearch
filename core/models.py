@@ -10,6 +10,32 @@ from django.utils.safestring import mark_safe
 
 from twitsearch.settings import BASE_DIR
 
+PROC_IMPORTACAO = 'I'  # Importação via busca
+PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
+PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
+PROC_BUSCAGLOBAL = 'G' # Busca na base de dados, tweets que atendam a um critério
+PROC_FILTROPROJ = 'P'  # Filtro dentro do projeto
+PROC_MATCH = 'M'       # Faz o match de tweets orfãos de projeto
+PROC_TAGS = 'T'        # Geração de arquivo CSV com as TAGs
+PROC_NETWORK = 'N'     # Geração de Grafo
+
+TIPO_BUSCA = (
+    (PROC_IMPORTACAO, 'Importação Twitter'),
+    (PROC_IMPORTUSER, 'Importação Usuário'),
+    (PROC_BUSCAGLOBAL,'Busca Global'),
+    (PROC_FILTROPROJ, 'Busca no Projeto'),
+)
+
+TIPO_PROCESSAMENTO = (
+    (PROC_IMPORTACAO,   'Importação'),
+    (PROC_IMPORTUSER,   'Importação User'),
+    (PROC_BUSCAGLOBAL,  'Busca Global'),
+    (PROC_FILTROPROJ,   'Busca no Projeto'),
+    (PROC_MATCH,        'Match de Tweets orfãos'),
+    (PROC_TAGS,         'Exportação Tags'),
+    (PROC_NETWORK,      'Montagem Rede')
+)
+
 
 # Converte datas que venham no formato do Twitter
 def convert_date(date_str) -> datetime:
@@ -45,7 +71,7 @@ class Projeto(models.Model):
     def tot_twits(self):
         soma = 0
         for termo in self.termo_set.all():
-            soma += termo.tweet_set.count()
+            soma += termo.tot_twits
         return '{:,}'.format(soma).replace(',','.')
 
     @property
@@ -83,7 +109,7 @@ class Projeto(models.Model):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
-    def most_common(self, language='pt'):
+    def most_common(self, total=40, language='pt'):
         result = Counter()
         excecoes = stopwords()
         for termo in self.termo_set.all():
@@ -91,7 +117,8 @@ class Projeto(models.Model):
             for busca in termo.busca.split():
                 excecoes.append(busca)
 
-            for tweet in termo.tweet_set.all():
+            # para cada tweet na linguagem definida, montar matriz de ocorrências
+            for tweet in termo.tweet_set.filter(language=language):
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
                     if not palavra.startswith('http') and not palavra.startswith('@'):
@@ -99,11 +126,10 @@ class Projeto(models.Model):
                         if palavra_limpa not in excecoes:
                             if len(palavra_limpa) > 3:
                                 result[palavra_limpa] += 1
-        return result.most_common(30)
+        return result.most_common(total)
 
 
-STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'),
-                ('I', 'Interrompido'), ('C', 'Concluido'))
+STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('I', 'Interrompido'), ('C', 'Concluido'))
 
 
 class Termo(models.Model):
@@ -112,6 +138,8 @@ class Termo(models.Model):
     dtinicio = models.DateTimeField('Início da Busca', null=True, blank=True,
                                     help_text='Deixe em branco caso queira iniciar imediatamente')
     dtfinal = models.DateTimeField('Fim da Busca')
+    language = models.CharField(max_length=2, null=True, blank=True)
+    tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_IMPORTACAO)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
     ult_tweet = models.BigIntegerField(null=True, blank=True)
     ult_processamento = models.DateTimeField(null=True, blank=True)
@@ -121,7 +149,10 @@ class Termo(models.Model):
 
     @property
     def tot_twits(self):
-        return self.tweet_set.count() or 0
+        if self.tipo_busca == PROC_IMPORTACAO:
+            return self.tweet_set.count() or 0
+        else:
+            return self.tweetinput_set.count() or 0
 
     @property
     def tot_retwits(self):
@@ -152,26 +183,11 @@ class Termo(models.Model):
         verbose_name_plural = 'Termos de Busca'
 
 
-PROC_IMPORTACAO = 'I'  # Importação via busca
-PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
-PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
-PROC_MATCH = 'M'       # Busca na base de dados, tweets que atendam a um critério
-PROC_TAGS = 'T'        # Geração de arquivo CSV com as TAGs
-PROC_NETWORK = 'N'     # Geração de Grafo
-
-TIPO_PROCESSAMENTO = (
-    (PROC_IMPORTACAO,   'Importação'),
-    (PROC_IMPORTUSER,   'Importação User'),
-    (PROC_MATCH,        'Match de Tweets orfãos'),
-    (PROC_TAGS,         'Exportação Tags'),
-    (PROC_NETWORK,      'Montagem Rede'))
-
-
 class Processamento(models.Model):
-    termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
     dt = models.DateTimeField()
-    twit_id = models.CharField('Último Tweet baixado', max_length=21, blank=True, null=True)
     tipo = models.CharField(max_length=1, choices=TIPO_PROCESSAMENTO, default=PROC_IMPORTACAO)
+    termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
+    twit_id = models.CharField('Último Tweet associado', max_length=21, blank=True, null=True)
 
     def __str__(self):
         return '%s: %s' % (self.dt, self.termo if self.termo else self.tipo)
@@ -230,7 +246,7 @@ class FollowersHistory(models.Model):
 
 class Tweet(models.Model):
     twit_id = models.CharField(max_length=21, primary_key=True)
-    text = models.CharField(max_length=640)
+    text = models.CharField(max_length=740)
     created_time = models.DateTimeField()
     retweets = models.IntegerField()
     favorites = models.IntegerField()

@@ -10,7 +10,7 @@ from twitsearch.local import get_api
 import tweepy
 
 from twitsearch.settings import TIME_ZONE
-from core.models import Termo, Processamento, convert_date
+from core.models import Termo, Processamento
 
 
 def save_result(data, processo):
@@ -86,7 +86,7 @@ class Command(BaseCommand):
         ultimo = termo.ult_tweet or 0
         ult_processamento = termo.ult_processamento or termo.dtinicio or (agora.date - timedelta(days=7))
         if ult_processamento.date() < agora.date():
-            # since:2017-04-02 until:2017-04-03"
+            # since:2017-04-02 until:2017-04-03 - não funciona na busca do Tweepy
             extra_filter = ' until:%s' % ult_processamento.strftime('%Y-%m-%d')
             processo = Processamento.objects.create(termo=termo, dt=agora)
             Termo.objects.filter(id=termo.id).update(status='P')
