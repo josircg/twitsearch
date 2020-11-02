@@ -84,7 +84,7 @@ class Command(BaseCommand):
             return
 
         ultimo = termo.ult_tweet or 0
-        ult_processamento = termo.ult_processamento or termo.dtinicio or (agora.date - timedelta(days=7))
+        ult_processamento = termo.ult_processamento or termo.dtinicio or (agora - timedelta(days=7))
         if ult_processamento.date() < agora.date():
             # since:2017-04-02 until:2017-04-03 - não funciona na busca do Tweepy
             extra_filter = ' until:%s' % ult_processamento.strftime('%Y-%m-%d')
