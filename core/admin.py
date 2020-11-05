@@ -21,11 +21,32 @@ class TermoInline(admin.TabularInline):
     readonly_fields = ('tot_twits', )
 
 
+class UsuarioFilter(admin.SimpleListFilter):
+    title = 'Usuarios'
+    parameter_name = 'usuario__id__exact'
+
+    def lookups(self, request, model_admin):
+        return tuple(User.objects.filter(groups__in=request.user.groups.all()).values_list('id', 'username'))
+
+    def queryset(self, request, queryset):
+        if self.value():
+           return queryset.filter(usuario_id=self.value())
+        else:
+            return queryset
+
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
+    list_filter = (UsuarioFilter,)
     fields = ('nome', 'objetivo', 'usuario', 'tot_twits', 'tot_retwits')
     readonly_fields = ('usuario', 'tot_twits', 'tot_retwits')
     inlines = [TermoInline]
+
+    def get_queryset(self, request):
+        if not request.user.is_superuser:
+            return super(ProjetoAdmin, self).get_queryset(request).filter(
+                usuario__groups__in=list(request.user.groups.all())
+            )
+        return super(ProjetoAdmin, self).get_queryset(request)
 
     def save_model(self, request, obj, form, change):
         obj.usuario = request.user
@@ -113,6 +134,52 @@ class UserAdmin(PowerModelAdmin):
     followers_str.admin_order_field = 'followers'
 
 
+class TermoFilter(admin.SimpleListFilter):
+    title = 'Termo'
+    parameter_name = 'termo__id__exact'
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            queryset = Projeto.objects.all()
+        else:
+            queryset = Projeto.objects.filter(usuario=request.user)
+
+        termos = tuple(queryset.values_list('termo', 'termo__busca'))
+        return termos
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(termo=self.value())
+        else:
+            return queryset
+
+
+class ProjetoFilter(admin.SimpleListFilter):
+    title = 'Projeto'
+    parameter_name = 'termo__projeto'
+
+    def lookups(self, request, model_admin):
+        if request.user.is_superuser:
+            queryset = Projeto.objects.all()
+        else:
+            queryset = Projeto.objects.filter(usuario=request.user)
+
+        if request.GET.get('termo__id__exact'):
+            projetos = tuple(queryset.filter(termo=request.GET.get('termo__id__exact',)).values_list('id', 'nome'))
+
+        else:
+            projetos = tuple(queryset.values_list('id', 'nome'))
+
+        return projetos
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            return queryset.filter(termo__projeto=value)
+        else:
+            return queryset
+
+
 class TweetAdmin(PowerModelAdmin):
     multi_search = (
         ('q1', 'Texto', ['text']),
@@ -120,7 +187,7 @@ class TweetAdmin(PowerModelAdmin):
         ('q3', 'ID', ['twit_id']),
     )
 
-    list_filter = ('termo__projeto', 'termo', 'language',)
+    list_filter = (ProjetoFilter, TermoFilter, 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
     list_csv = ('text', 'user', 'retweets', 'favorites', 'created_time',)
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'language', 'url')
