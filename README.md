@@ -1,4 +1,4 @@
-# twitsearch - versão 0.4
+# twitsearch - versão 0.5
 
 Busca e Análise de Opiniões a partir da rede do Twitter. 
 
