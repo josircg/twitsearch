@@ -1,6 +1,10 @@
 # twitsearch - versão 0.4
 
-Busca e Análise de Opiniões a partir da rede do Twitter. 
+Busca e Análise de Opiniões a partir da rede do Twitter.
+
+# Teste do Ricardo - versão -0.1
+
+Josir é cara!!!
 
 O software permite que usuários finais (que não tem expertise de programação de computadores) possam coletar dados e armazenar do Twitter a partir de critérios de busca por eles definidos. A partir dos dados coletados, o usuário pode exportá-los em formato CSV para que possam ser utilizados em planilhas eletrônicas ou em outros softwares de análise de rede social.
 
