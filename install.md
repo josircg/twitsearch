@@ -24,6 +24,41 @@ sudo apt-get install -y nginx python-dev python-setuptools libxml2-dev superviso
 sudo apt-get install mysql-client libsqlclient-dev 
 ```
 
+Para que outros usuários possam reiniciar o supervisor:
+
+```
+cd /etc/supervisor
+sudo chown root:www-data conf.d
+sudo chmod 775 conf.d
+chown webapp:www-data /var/log/supervisor
+chmod 770 /var/log/supervisorsudo 
+```
+
+vi supervisord.conf
+
+```
+[unix_http_server]
+file=/var/run/supervisor.sock
+chmod=0770
+chown=webapp:www-data
+```
+
+```
+sudo touch /var/run/supervisor.sock
+sudo chown webapp:www-data /var/run/supervisor.sock
+sudo chmod 770 /var/run/supervisor.socksudo service supervisor restart
+```
+
+Para que o webapp possa dar restart no nginx:
+
+```
+visudo -f /etc/sudoers.d/nginx
+```
+
+Incluir linhas: 
+%www-data ALL=NOPASSWD: /sbin/service nginx reload, /usr/bin/service nginx reload
+
+
 4) Criar o usuário webapp e continuar a instalação a partir dele:
 
 ```
@@ -36,6 +71,15 @@ usermod -a -G www-data webapp
 ```
 
 Se logar como webapp:
+
+```
+su - webapp
+ssh-keygen -N ''
+cd .ssh
+cat id_rsa.pub
+```
+
+Copiar a chave pública para o github (esse passo não é necessário) - você também pode fazer o git clone com o seu usuário
 
 ```
 cd /var/webapp
