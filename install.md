@@ -29,6 +29,15 @@ sudo apt-get install mysql-client libsqlclient-dev
 ```
 cd var
 mkdir webapp
+chown root:www-data webapp
+chmod g+ws webapp
+adduser  --gecos "" webapp
+usermod -a -G www-data webapp
+```
+
+Se logar como webapp:
+
+```
 cd /var/webapp
 virtualenv -p python3 twitsearch
 cd twitsearch
