@@ -31,7 +31,7 @@ cd /etc/supervisor
 sudo chown root:www-data conf.d
 sudo chmod 775 conf.d
 chown webapp:www-data /var/log/supervisor
-chmod 770 /var/log/supervisorsudo 
+chmod 770 /var/log/supervisor
 ```
 
 vi supervisord.conf
@@ -55,8 +55,10 @@ Para que o webapp possa dar restart no nginx:
 visudo -f /etc/sudoers.d/nginx
 ```
 
-Incluir linhas: 
+Incluir linha: 
+```
 %www-data ALL=NOPASSWD: /sbin/service nginx reload, /usr/bin/service nginx reload
+```
 
 
 4) Criar o usuário webapp e continuar a instalação a partir dele:
@@ -92,7 +94,7 @@ git checkout dev
 pip install -r requirements.txt
 cp configs/local.py twitsearch/
 cp configs/supervisor.conf /etc/supervisor/conf.d/twitsearch.conf
-cp configs/defaults/nginx.conf /etc/nginx/sites-available/twitsearch.conf
+cp configs/nginx.conf /etc/nginx/sites-available/twitsearch.conf
 cd /etc/nginx/sites-enabled/
 ln -s /etc/nginx/sites-available/twitsearch.conf
 ```
@@ -114,5 +116,7 @@ python manage.py createsuperuser
 
 8) Configurar o crontab
 
+```
 15 * * * * /var/webapp/twitsearch/twitsearch/crawler.sh >> /var/webapp/twitsearch/logs/crawler.log
 20 * * * * /var/webapp/twitsearch/twitsearch/import.sh >> /var/webapp/twitsearch/logs/import.log
+```
