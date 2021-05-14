@@ -19,7 +19,7 @@ grant all privileges on twitsearch.* to 'twitsearch'@'%';
 3) Instalação do NGINX e Supervisor
 
 ```
-sudo apt install build-essential libssl-dev python3-dev python3-setuptools libmysqlclient-dev
+sudo apt install build-essential libssl-dev python3-dev python3-setuptools libmysqlclient-dev pkg-config
 sudo apt-get install -y nginx python-dev python-setuptools libxml2-dev supervisor git libfreetype6 libfreetype6-dev zlib1g-dev virtualenv
 sudo apt-get install mysql-client libsqlclient-dev 
 ```
@@ -46,7 +46,8 @@ chown=webapp:www-data
 ```
 sudo touch /var/run/supervisor.sock
 sudo chown webapp:www-data /var/run/supervisor.sock
-sudo chmod 770 /var/run/supervisor.socksudo service supervisor restart
+sudo chmod 770 /var/run/supervisor.sock
+sudo service supervisor restart
 ```
 
 Para que o webapp possa dar restart no nginx:
@@ -87,7 +88,7 @@ Copiar a chave pública para o github (esse passo não é necessário) - você t
 cd /var/webapp
 virtualenv -p python3 twitsearch
 cd twitsearch
-source ./bin/twitsearch
+source ./bin/activate
 git clone git@bitbucket.org:josir/twitsearch.git
 cd twitsearch
 git checkout dev
