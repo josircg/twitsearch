@@ -188,7 +188,7 @@ class Command(BaseCommand):
                             commit()
                             rename(filename, join(cached_dir, arquivo.name))
                         except Exception as e:
-                            print('Erro no arquivo %s: %s' % (twit['id_str'], e))
+                            print('Erro no arquivo %s: %s' % (texto, e))
                             # rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
                         tot_files += 1

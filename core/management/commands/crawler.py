@@ -89,7 +89,7 @@ class Command(BaseCommand):
             # since:2017-04-02 until:2017-04-03 - não funciona na busca do Tweepy
             extra_filter = ' until:%s' % ult_processamento.strftime('%Y-%m-%d')
             processo = Processamento.objects.create(termo=termo, dt=agora)
-            Termo.objects.filter(id=termo.id).update(status='P')
+            Termo.objects.filter(id=termo.id).update(status='P', ult_processamento=agora.date())
             print('Search %s %d %s' % (termo.busca, processo.id, extra_filter))
             api = get_api()
             # results = tweepy.Cursor(api.search, q=termo.busca+extra_filter, since_id=ultimo,
@@ -131,7 +131,7 @@ class Command(BaseCommand):
             else:
                 Termo.objects.filter(id=termo.id).update(status='C', ult_processamento=agora)
 
-        ult_processamento == min(ult_processamento + timedelta(days=1),agora)
+        ult_processamento = min(ult_processamento + timedelta(days=1), agora)
         if termo.dtfinal < ult_processamento:
             status_proc = 'C'
         else:
