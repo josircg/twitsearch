@@ -2,6 +2,7 @@
 import json
 import pytz
 import time
+from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 
@@ -26,7 +27,7 @@ class SimpleListener(tweepy.StreamListener):
 
     def __init__(self):
         super(SimpleListener, self).__init__()
-        self.checkpoint = 50
+        self.checkpoint = 20
         self.processo = None
         self.dtfinal = None
 
@@ -73,7 +74,7 @@ class Command(BaseCommand):
         parser.add_argument('--proc', type=str, help='Processo')
 
     def handle(self, *args, **options):
-        agora = datetime.now(pytz.timezone(TIME_ZONE))
+        agora = timezone.now()
         if 'twit' in options and options['twit']:
             processa_item_unico(options['twit'], options['termo'])
             return
@@ -83,15 +84,23 @@ class Command(BaseCommand):
             print('Nenhum termo para processar')
             return
 
-        ultimo = termo.ult_tweet or 0
-        ult_processamento = termo.ult_processamento or termo.dtinicio or (agora - timedelta(days=7))
+        ultimo = termo.ult_tweet
+
+        # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
+        # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
+        if termo.ult_processamento:
+            ult_processamento = max(termo.ult_processamento + timedelta(days=1), agora - timedelta(days=7))
+        else:
+            ult_processamento = max(termo.dtinicio, agora - timedelta(days=7))
+
         if ult_processamento.date() < agora.date():
-            # since:2017-04-02 until:2017-04-03 - não funciona na busca do Tweepy
-            extra_filter = ' until:%s' % ult_processamento.strftime('%Y-%m-%d')
             processo = Processamento.objects.create(termo=termo, dt=agora)
             Termo.objects.filter(id=termo.id).update(status='P', ult_processamento=agora.date())
-            print('Search %s %d %s' % (termo.busca, processo.id, extra_filter))
+            print('Search %s %d %d' % (termo.busca, processo.id, termo.id))
             api = get_api()
+            termo_busca = termo.busca
+            if ultimo:
+                termo_busca += ' since_id:%d' % ultimo
             # results = tweepy.Cursor(api.search, q=termo.busca+extra_filter, since_id=ultimo,
             #                         tweet_mode='extended', rpp=100, page=10).items()
             results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended').items()
@@ -105,8 +114,8 @@ class Command(BaseCommand):
                     if status_proc == 'I':
                         print('Processo interrompido')
                         break
-            except:
-                print('API Timeout')
+            except Exception as e:
+                print('API Timeout: %s' % e.__str__())
         else:
             listener = SimpleListener()
             listener.processo = Processamento.objects.create(termo=termo, dt=agora)
@@ -115,10 +124,13 @@ class Command(BaseCommand):
             print('Stream %d' % listener.processo.id)
             api = get_api()
             status_proc = 'A'
+            termo_busca = termo.busca
+            if ultimo:
+                termo_busca += ' since_id:%d' % ultimo
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
-            tweepy_stream.filter(track=[termo.busca], is_async=True)
+            tweepy_stream.filter(track=[termo_busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal > agora and status_proc == 'P':
-                time.sleep(90)
+                time.sleep(60)
                 agora = datetime.now(pytz.timezone(TIME_ZONE))
                 status_proc = Termo.objects.get(id=termo.id).status
                 listener.checkpoint -= 5

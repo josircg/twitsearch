@@ -196,6 +196,12 @@ class Command(BaseCommand):
                 LockProcessamento.objects.update(locked=False)
                 commit()
 
+        # Atualiza o contador de tweets de cada termo em aberto
+        for termo in Termo.objects.exclude(status='C'):
+            termo.last_count = termo.tot_twits
+            termo.save()
+        commit()
+
         print('Arquivos processados: %d' % tot_files)
         print('Novos Usuários: %d' % COUNTER['users'])
         print('Novos Tweets: %d' % COUNTER['tweets'])

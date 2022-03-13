@@ -279,6 +279,7 @@ def create_graph(request, id_projeto):
         'grafo': os.path.join(settings.MEDIA_URL, 'grafos', filename)
     })
 
+
 def gerar_gephi(request, id_projeto):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'

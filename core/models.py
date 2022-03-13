@@ -71,7 +71,7 @@ class Projeto(models.Model):
     def tot_twits(self):
         soma = 0
         for termo in self.termo_set.all():
-            soma += termo.tot_twits
+            soma += termo.last_count
         return '{:,}'.format(soma).replace(',','.')
 
     @property
@@ -143,6 +143,7 @@ class Termo(models.Model):
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
     ult_tweet = models.BigIntegerField(null=True, blank=True)
     ult_processamento = models.DateTimeField(null=True, blank=True)
+    last_count = models.IntegerField('Total de Tweets', default=0)
 
     def __str__(self):
         return self.busca
