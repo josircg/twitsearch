@@ -55,7 +55,7 @@ def generate_tags_file(queryset, project_id):
     num_lines = 0
     for obj in queryset:
         if obj.text[0:1] != 'RT':
-            line = [obj.twit_id, obj.user.twit_id, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+            line = [obj.twit_id, obj.user.username, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
                     obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
                     '', '', '', '',
                     obj.user.followers, 0, obj.user.location,
@@ -63,7 +63,7 @@ def generate_tags_file(queryset, project_id):
             writer.writerow(line)
             num_lines += 1
             for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
-                line = [retweet.retweet_id, retweet.user.twit_id, 'RT ' + obj.text,
+                line = [retweet.retweet_id, retweet.user.username, 'RT ' + obj.text,
                         obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
                         obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
                         '', '', '', '',

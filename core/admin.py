@@ -14,21 +14,77 @@ from django.template import RequestContext
 from urllib.parse import urlencode
 
 
+def get_object_from_path(request, model):
+    object_id = request.META['PATH_INFO'].strip('/').split('/')[-2]
+    try:
+        object_id = int(object_id)
+    except ValueError:
+        return None
+    return model.objects.get(pk=object_id)
+
+
+def projeto_readonly(usuario, projeto):
+    if usuario.is_superuser:
+        readonly = False
+    else:
+        grupos = usuario.groups
+        if projeto and grupos and projeto.grupo:
+            readonly = not grupos.filter(id=projeto.grupo.id).exists()
+        else:
+            readonly = True
+    return readonly
+
+
 class TermoInline(admin.TabularInline):
     model = Termo
     extra = 0
     fields = ('busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',)
     readonly_fields = ('tot_twits', )
 
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            readonly = projeto_readonly(request.user, obj)
+        else:
+            readonly = False
+
+        if not readonly:
+            return ('tot_twits', )
+        else:
+            return 'busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',
+
+    def has_add_permission(self, request):
+        projeto = get_object_from_path(request, Projeto)
+        return not projeto_readonly(request.user, projeto)
+
+    def has_delete_permission(self, request, obj=None):
+        return not projeto_readonly(request.user, obj)
+
 
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
-    fields = ('nome', 'objetivo', 'usuario', 'tot_twits', 'tot_retwits')
-    readonly_fields = ('usuario', 'tot_twits', 'tot_retwits')
+    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
     inlines = [TermoInline]
 
+    def get_actions(self, request):
+        actions = super(ProjetoAdmin, self).get_actions(request)
+        if not request.user.is_superuser:
+            if 'delete_selected' in actions:
+                del actions['delete_selected']
+        return actions
+
+    def get_fields(self, request, obj=None):
+        if obj:
+            if request.user.is_superuser:
+                return ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
+            else:
+                return ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario')
+        else:
+            return ('nome', 'objetivo', )
+
     def save_model(self, request, obj, form, change):
-        obj.usuario = request.user
+        if not change:
+            obj.usuario = request.user
+            obj.grupo = request.user.groups.first()
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
         # if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
         #    OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh')
@@ -58,6 +114,20 @@ class ProjetoAdmin(PowerModelAdmin):
             )
 
         return buttons
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            readonly = projeto_readonly(request.user, obj)
+        else:
+            return 'usuario', 'tot_twits', 'tot_retwits'
+
+        if not readonly:
+            if request.user.is_superuser:
+                return 'usuario', 'tot_twits', 'tot_retwits'
+            else:
+                return 'usuario', 'tot_twits', 'tot_retwits', 'grupo'
+        else:
+            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits'
 
     def visao(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)

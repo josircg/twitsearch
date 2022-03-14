@@ -5,12 +5,13 @@ from collections import Counter
 
 from django.db import models, connection
 from django.db.models import Sum
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.utils.safestring import mark_safe
 
 from twitsearch.settings import BASE_DIR
 
 PROC_IMPORTACAO = 'I'  # Importação via busca
+PROC_HISTORICO = 'H'   # Importação via busca histórica (GetOldTweets)
 PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
 PROC_BUSCAGLOBAL = 'G' # Busca na base de dados, tweets que atendam a um critério
@@ -30,6 +31,7 @@ TIPO_PROCESSAMENTO = (
     (PROC_IMPORTACAO,   'Importação'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),
+    (PROC_HISTORICO,    'Busca Histórica'),
     (PROC_FILTROPROJ,   'Busca no Projeto'),
     (PROC_MATCH,        'Match de Tweets orfãos'),
     (PROC_TAGS,         'Exportação Tags'),
@@ -63,6 +65,7 @@ class Projeto(models.Model):
     nome = models.CharField(max_length=20)
     objetivo = models.TextField('Objetivo')
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
 
     def __str__(self):
         return self.nome
@@ -82,7 +85,6 @@ class Projeto(models.Model):
         return '{:,}'.format(soma).replace(',','.')
 
     def top_tweets(self):
-        top_tweets = Counter()
         return None
 
     @property
