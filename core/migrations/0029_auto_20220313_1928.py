@@ -12,5 +12,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL('update core_projeto set grupo_id = 1')
+        migrations.RunSQL('update core_projeto set grupo_id = 1;')
     ]
