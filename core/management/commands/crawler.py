@@ -99,6 +99,7 @@ class Command(BaseCommand):
 
         processo = Processamento.objects.create(termo=termo, dt=agora)
         Termo.objects.filter(id=termo.id).update(status='P')
+        status_proc = 'A'
 
         # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
         # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
