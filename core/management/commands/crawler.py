@@ -31,6 +31,7 @@ class SimpleListener(tweepy.StreamListener):
         self.processo = None
         self.dtfinal = None
         self.menor_data = None
+        self.count = 0
 
     def on_data(self, status):
         # code to run each time you receive some data (direct message, delete, profile update, status,...)
@@ -44,6 +45,7 @@ class SimpleListener(tweepy.StreamListener):
                 return False
 
         save_result(data, self.processo.id)
+        self.count += 1
         created = data.created_at.replace(tzinfo=timezone.utc)
         if not self.menor_data or created < self.menor_data:
             menor_data = created
@@ -117,6 +119,7 @@ class Command(BaseCommand):
             results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended').items()
             status_proc = ''
             try:
+                registros_lidos = 0
                 for status in results:
                     if status.id > ultimo:
                         ultimo = status.id
@@ -127,6 +130,7 @@ class Command(BaseCommand):
 
                     menor_data = min(menor_data, created)
                     status_proc = Termo.objects.get(id=termo.id).status
+                    registros_lidos += 1
 
             except Exception as e:
                 print('API Timeout: %s' % e.__str__())
@@ -154,11 +158,15 @@ class Command(BaseCommand):
             # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
             tweepy_stream.disconnect()
             menor_data = listener.menor_data
+            registros_lidos = listener.count
 
         if termo.dtfinal < menor_data:
             status_proc = 'C'
         else:
             status_proc = 'A' if status_proc != 'I' else 'I'
+            # se não nenhum registro foi baixado, então agenda-se o próximo processamento para 1 hora depois
+            if registros_lidos == 0:
+                menor_data = agora + timedelta(hours=1)
 
         Termo.objects.filter(id=termo.id).update(status=status_proc,
                                                  ult_processamento=menor_data,
