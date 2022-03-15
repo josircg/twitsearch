@@ -11,7 +11,6 @@ from core.models import *
 from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback
 
-# Contador de registros importados
 COUNTER = {}
 # from typing import Dict, Any - só python 3.6
 # COUNTER: Dict[Any, Any] = {}

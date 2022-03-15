@@ -8,4 +8,5 @@ pycld2
 morfessor
 polyglot
 wordcloud
+sqlparse
 

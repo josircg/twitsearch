@@ -62,6 +62,7 @@ class TermoInline(admin.TabularInline):
 
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
+    search_fields = ('nome',)
     fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
     inlines = [TermoInline]
 

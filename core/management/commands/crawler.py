@@ -30,6 +30,7 @@ class SimpleListener(tweepy.StreamListener):
         self.checkpoint = 20
         self.processo = None
         self.dtfinal = None
+        self.menor_data = None
 
     def on_data(self, status):
         # code to run each time you receive some data (direct message, delete, profile update, status,...)
@@ -43,6 +44,9 @@ class SimpleListener(tweepy.StreamListener):
                 return False
 
         save_result(data, self.processo.id)
+        created = data.created_at.replace(tzinfo=timezone.utc)
+        if not self.menor_data or created < self.menor_data:
+            menor_data = created
 
         return self.checkpoint > 0
 
@@ -86,34 +90,44 @@ class Command(BaseCommand):
 
         ultimo = termo.ult_tweet
 
-        # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
-        # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
         if termo.ult_processamento:
-            ult_processamento = max(termo.ult_processamento + timedelta(days=1), agora - timedelta(days=7))
+            ult_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
         else:
             ult_processamento = max(termo.dtinicio, agora - timedelta(days=7))
 
+        # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
+        # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
         if ult_processamento.date() < agora.date():
             processo = Processamento.objects.create(termo=termo, dt=agora)
-            Termo.objects.filter(id=termo.id).update(status='P', ult_processamento=agora.date())
-            print('Search %s %d %d' % (termo.busca, processo.id, termo.id))
+            Termo.objects.filter(id=termo.id).update(status='P')
             api = get_api()
             termo_busca = termo.busca
             if ultimo:
                 termo_busca += ' since_id:%d' % ultimo
+                maior_data = termo.ult_processamento
+                menor_data = termo.ult_processamento
+            else:
+                ultimo = 0
+                maior_data = ult_processamento
+                menor_data = ult_processamento
             # results = tweepy.Cursor(api.search, q=termo.busca+extra_filter, since_id=ultimo,
             #                         tweet_mode='extended', rpp=100, page=10).items()
+
+            print('Search %s %d %d' % (termo.busca, processo.id, termo.id))
             results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended').items()
             status_proc = ''
             try:
                 for status in results:
-                    save_result(status._json, processo.id)
                     if status.id > ultimo:
                         ultimo = status.id
+                        created = status.created_at.replace(tzinfo=timezone.utc)
+                        maior_data = max(maior_data, created)
+
+                    save_result(status._json, processo.id)
+
+                    menor_data = min(menor_data, created)
                     status_proc = Termo.objects.get(id=termo.id).status
-                    if status_proc == 'I':
-                        print('Processo interrompido')
-                        break
+
             except Exception as e:
                 print('API Timeout: %s' % e.__str__())
         else:
@@ -121,12 +135,13 @@ class Command(BaseCommand):
             listener.processo = Processamento.objects.create(termo=termo, dt=agora)
             listener.dtfinal = termo.dtfinal
             Termo.objects.filter(id=termo.id).update(status='P')
-            print('Stream %d' % listener.processo.id)
             api = get_api()
             status_proc = 'A'
             termo_busca = termo.busca
             if ultimo:
                 termo_busca += ' since_id:%d' % ultimo
+
+            print('Stream %d %s' % (listener.processo.id, termo_busca))
             tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
             tweepy_stream.filter(track=[termo_busca], is_async=True)
             while listener.checkpoint > 0 and listener.dtfinal > agora and status_proc == 'P':
@@ -138,18 +153,16 @@ class Command(BaseCommand):
 
             # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
             tweepy_stream.disconnect()
-            if listener.dtfinal > agora:
-                Termo.objects.filter(id=termo.id).update(status='A', ult_processamento=agora)
-            else:
-                Termo.objects.filter(id=termo.id).update(status='C', ult_processamento=agora)
+            menor_data = listener.menor_data
 
-        ult_processamento = min(ult_processamento + timedelta(days=1), agora)
-        if termo.dtfinal < ult_processamento:
+        if termo.dtfinal < menor_data:
             status_proc = 'C'
         else:
             status_proc = 'A' if status_proc != 'I' else 'I'
 
         Termo.objects.filter(id=termo.id).update(status=status_proc,
-                                                 ult_processamento=ult_processamento,
+                                                 ult_processamento=menor_data,
                                                  ult_tweet=ultimo)
+        processo.twit_id = ultimo
+        processo.save()
         print('Processamento concluído')

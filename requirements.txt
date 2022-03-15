@@ -16,6 +16,7 @@ wordcloud
 matplotlib
 networkx
 seaborn
+sqlparse
 # poweradmin
 git+https://bitbucket.org/josir/poweradmin.git@dev
 plotly
