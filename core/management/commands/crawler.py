@@ -78,6 +78,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--twit', type=str, help='Twitter ID')
         parser.add_argument('--proc', type=str, help='Processo')
+        parser.add_argument('--termo', type=str, help='Termo ID')
 
     def handle(self, *args, **options):
         agora = timezone.now()
@@ -85,17 +86,26 @@ class Command(BaseCommand):
             processa_item_unico(options['twit'], options['termo'])
             return
 
-        termo = Termo.objects.filter(status='A').order_by('ult_processamento').first()
+        if 'termo' in options and options['termo']:
+            termo = Termo.objects.filter(id=options['termo']).first()
+            reset_search = True
+        else:
+            termo = Termo.objects.filter(status='A').order_by('ult_processamento').first()
+            reset_search = False
+
         if not termo:
             print('Nenhum termo para processar')
             return
 
-        ultimo = termo.ult_tweet
-
-        if termo.ult_processamento:
-            ult_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
+        if reset_search:
+            ultimo = None
         else:
-            ult_processamento = max(termo.dtinicio, agora - timedelta(days=7))
+            ultimo = termo.ult_tweet
+
+        if termo.ult_processamento or reset_search:
+            ult_processamento = max(termo.ult_processamento, agora - timedelta(days=14))
+        else:
+            ult_processamento = max(termo.dtinicio, agora - timedelta(days=14))
 
         processo = Processamento.objects.create(termo=termo, dt=agora)
         Termo.objects.filter(id=termo.id).update(status='P')

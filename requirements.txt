@@ -1,22 +1,27 @@
+# apt install liblzma-dev pkg-config
+#
+# quando o polyglot estiver implementado:
 # apt install libicu-dev python3-icu
 # after installation:
 #   polyglot download embeddings2.en sentiment2.en ner2.en
 #   polyglot download embeddings2.pt sentiment2.pt ner2.pt
 
-Django<1.12
+Django<1.2
+mysqlclient==1.3.14
 pytz
 tweepy
 django-admin-tools
 numpy
-PyICU
-pycld2
-morfessor
-polyglot
+# PyICU
+# pycld2
+# morfessor
+# polyglot
 wordcloud
 matplotlib
 networkx
 seaborn
 sqlparse
-# poweradmin
+reportlab==3.5.2
 git+https://bitbucket.org/josir/poweradmin.git@dev
 plotly
+gunicorn

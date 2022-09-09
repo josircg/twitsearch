@@ -1,4 +1,4 @@
-Django==2.1.7
+Django<3
 pytz==2018.9
 tweepy
 django-admin-tools
@@ -9,4 +9,6 @@ morfessor
 polyglot
 wordcloud
 sqlparse
+git+https://bitbucket.org/josir/poweradmin.git@django22
+plotly
 
