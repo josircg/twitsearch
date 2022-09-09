@@ -99,13 +99,13 @@ class Command(BaseCommand):
 
         if reset_search:
             ultimo = None
+            ult_processamento = agora - timedelta(days=14)
         else:
             ultimo = termo.ult_tweet
-
-        if termo.ult_processamento or reset_search:
-            ult_processamento = max(termo.ult_processamento, agora - timedelta(days=14))
-        else:
-            ult_processamento = max(termo.dtinicio, agora - timedelta(days=14))
+            if termo.ult_processamento:
+                ult_processamento = max(termo.ult_processamento, agora - timedelta(days=14))
+            else:
+                ult_processamento = max(termo.dtinicio, agora - timedelta(days=14))
 
         processo = Processamento.objects.create(termo=termo, dt=agora)
         Termo.objects.filter(id=termo.id).update(status='P')
