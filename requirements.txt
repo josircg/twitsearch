@@ -6,8 +6,7 @@
 #   polyglot download embeddings2.en sentiment2.en ner2.en
 #   polyglot download embeddings2.pt sentiment2.pt ner2.pt
 
-Django<1.2
-mysqlclient==1.3.14
+Django<2.3
 pytz
 tweepy
 django-admin-tools
