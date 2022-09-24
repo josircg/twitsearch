@@ -29,31 +29,41 @@ def find_termo(termo, texto):
 # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
 def process_twitter(src, processo_pai=None):
     global PROC_PADRAO, COUNTER
+
+    # se não houver o mínimo de elementos para registrar um novo tweet,
+    # a rotina tenta ao menos verificar se o tweet já existe na base
+    if 'user' not in src or 'created_at' not in src:
+        return Tweet.objects.filter(twit_id=src['id']).first()
+
     try:
         user = TweetUser.objects.get(twit_id=src['user']['id'])
     except TweetUser.DoesNotExist:
-        user = TweetUser(twit_id=src['user']['id'],
-                     username=src['user']['screen_name'],
-                     name=src['user']['name'],
-                     location=src['user']['location'],
-                     verified=src['user']['verified'],
-                     created_at=convert_date(src['user']['created_at']).date())
+        user = TweetUser(twit_id=src['user']['id'])
+        user.username = src['user'].get('screen_name',None)
+        user.name = src['user'].get('name', None)
+        if src['user'].get('location'):
+            user.location=src['user']['location']
+            user.verified=src['user']['verified']
+            user.created_at=convert_date(src['user']['created_at']).date()
         user.save()
         COUNTER['users'] += 1
 
     dt = convert_date(src['created_at'])
-    try:
-        FollowersHistory.objects.get(user=user, dt=dt)
-    except FollowersHistory.DoesNotExist:
-        follow = FollowersHistory(user=user, dt=dt,
-                                  followers=src['user']['followers_count'],
-                                  favourites=src['user']['favourites_count'])
-        follow.save()
 
-    follow = FollowersHistory.objects.filter(user=user).latest('dt')
-    if user.followers != follow.followers:
-        user.followers = follow.followers
-        user.save()
+    # Indica que é um JSON da API v1
+    if 'location' in src['user']:
+        try:
+            FollowersHistory.objects.get(user=user, dt=dt)
+        except FollowersHistory.DoesNotExist:
+            follow = FollowersHistory(user=user, dt=dt,
+                                      followers=src['user']['followers_count'],
+                                      favourites=src['user']['favourites_count'])
+            follow.save()
+
+        follow = FollowersHistory.objects.filter(user=user).latest('dt')
+        if user.followers != follow.followers:
+            user.followers = follow.followers
+            user.save()
 
     # Se houver um processo fixo, utilizar sempre ele, desprezando o indicado no tweet
     if processo_pai:
@@ -75,23 +85,31 @@ def process_twitter(src, processo_pai=None):
         processo = PROC_PADRAO
         print('Processo default: %d' % processo.id)
 
+    # Quoted é o retweet com comentário
     if 'quoted_status' in src:
-        tweet = process_twitter(src['quoted_status'], processo)
-        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+        parent = process_twitter(src['quoted_status'], processo)
+        if 'type' in src['quoted_status']:
+            retweet_type = 'Q' if src['quoted_status']['type'] == 'quoted' else 'C'
+        else:
+            retweet_type = 'Q'
+        retweet, created = Retweet.objects.get_or_create(retweet_id=src['id'],
+                                                         parent_id=src['quoted_status']['id'],
+                                                         defaults={'user': user, 'created_time': dt,
+                                                                   'type': retweet_type, 'tweet': parent})
         if created:
             COUNTER['retweets'] += 1
-        else:
-            retweet.retweet_id = src['id_str']
-            retweet.save()
 
+    # Retweet não tem comentário, logo o retweet não é gravado, apenas o link com o pai
     if 'retweeted_status' in src:
-        tweet = process_twitter(src['retweeted_status'], processo)
-        retweet, created = Retweet.objects.get_or_create(tweet=tweet, user=user, created_time=dt)
+        tweet = None
+        parent = process_twitter(src['retweeted_status'], processo)
+        retweet, created = Retweet.objects.get_or_create(retweet_id=src['id'],
+                                                         parent_id=src['retweeted_status']['id'],
+                                                         defaults={'user': user, 'created_time': dt,
+                                                                   'type': 'R', 'tweet': parent})
         if created:
             COUNTER['retweets'] += 1
-        else:
-            retweet.retweet_id = src['id_str']
-            retweet.save()
+
     else:
         if 'full_text' in src:
             texto = src['full_text']
@@ -103,10 +121,10 @@ def process_twitter(src, processo_pai=None):
             termo = None
 
         try:
-            tweet = Tweet.objects.get(twit_id=src['id_str'])
+            tweet = Tweet.objects.get(twit_id=src['id'])
         except Tweet.DoesNotExist:
             tweet = Tweet(
-                        twit_id=src['id_str'], user=user, text=texto,
+                        twit_id=src['id'], user=user, text=texto,
                         created_time=dt,
                         retweets=0,
                         favorites=0,
@@ -152,6 +170,7 @@ class Command(BaseCommand):
             proc = None
 
         tot_files = 0
+        tot_erros = 0
         dest_dir = BASE_DIR + '/data'
         set_autocommit(False)
         if options['twit'] != 'data':
@@ -190,6 +209,7 @@ class Command(BaseCommand):
                             # print('Erro no arquivo %s: %s' % (filename, e))
                             rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
+                            tot_erros += 1
                         tot_files += 1
             finally:
                 LockProcessamento.objects.update(locked=False)
@@ -202,6 +222,9 @@ class Command(BaseCommand):
         commit()
 
         print('Arquivos processados: %d' % tot_files)
+        print('Arquivos com erro: %d' % tot_erros)
         print('Novos Usuários: %d' % COUNTER['users'])
         print('Novos Tweets: %d' % COUNTER['tweets'])
         print('Novos Retweets: %d' % COUNTER['retweets'])
+
+# 1570863000864821248

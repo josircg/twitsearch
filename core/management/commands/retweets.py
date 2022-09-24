@@ -18,6 +18,7 @@ class Command(BaseCommand):
         else:
             dset = Tweet.objects.filter(retwit_id__isnull=False)
 
+        # Para cada tweet que tenha um pai, cria o retweet e apaga o tweet original
         tot_files = 0
         set_autocommit(False)
         for tweet in dset:

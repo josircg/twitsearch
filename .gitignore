@@ -8,6 +8,7 @@
 twitest.py
 Untitled.ipynb
 data/*
+twitsearch/*.yaml
 twitsearch/local.py
 twitsearch/test.py
 twitsearch/media/*

@@ -8,7 +8,7 @@ from core.apps import export_tags_action, export_extra_action, detach_action
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
 from django.conf.urls import url
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.shortcuts import get_object_or_404, render_to_response
 from django.template import RequestContext
 from urllib.parse import urlencode
@@ -189,9 +189,10 @@ class TweetAdmin(PowerModelAdmin):
         ('q1', 'Texto', ['text']),
         ('q2', 'Usuário', ['user__username']),
         ('q3', 'ID', ['twit_id']),
+        ('q4', 'Termo', ['termo']),
     )
 
-    list_filter = ('termo__projeto', 'termo', 'language',)
+    list_filter = ('termo__projeto', 'language',)
     list_display = ('text', 'user', 'retweets', 'favorites', 'created_time')
     list_csv = ('text', 'user', 'retweets', 'favorites', 'created_time',)
     fields = ('text', 'retweets', 'favorites', 'user_link', 'termo', 'created_time', 'language', 'url')
@@ -243,11 +244,11 @@ class TweetAdmin(PowerModelAdmin):
 
 class RetweetAdmin(PowerModelAdmin):
     multi_search = (
-        ('q1', 'Tweet Original', ['tweet__twit_id']),
+        ('q1', 'Tweet Original', ['parent_id']),
         ('q2', 'Twitter User', ['user__username']),
         ('q3', 'Retweet ID', ['retweet_id']),
     )
-    list_display = ('user', 'created_time', 'tweet', 'tweet_dif')
+    list_display = ('retweet_id', 'user', 'created_time', 'tweet', 'type', 'tweet_dif')
     list_per_page = 30
 
     raw_id_fields = ('user', 'tweet')
@@ -255,7 +256,8 @@ class RetweetAdmin(PowerModelAdmin):
 
 class TermoAdmin(PowerModelAdmin):
     search_fields = ('busca',)
-    list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'tot_twits',)
+    list_filter = ('status',)
+    list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'last_count',)
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(TermoAdmin, self).get_form(request, obj, **kwargs)

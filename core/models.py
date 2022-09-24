@@ -10,7 +10,8 @@ from django.utils.safestring import mark_safe
 
 from twitsearch.settings import BASE_DIR
 
-PROC_IMPORTACAO = 'I'  # Importação via busca
+PROC_IMPORTACAO = 'I'  # Importação via busca regular
+PROC_PREMIUM = 'A'     # Importação Premium
 PROC_HISTORICO = 'H'   # Importação via busca histórica (GetOldTweets)
 PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
@@ -21,7 +22,8 @@ PROC_TAGS = 'T'        # Geração de arquivo CSV com as TAGs
 PROC_NETWORK = 'N'     # Geração de Grafo
 
 TIPO_BUSCA = (
-    (PROC_IMPORTACAO, 'Importação Twitter'),
+    (PROC_IMPORTACAO, 'Importação Regular'),
+    (PROC_PREMIUM,    'Importação Premium'),
     (PROC_IMPORTUSER, 'Importação Usuário'),
     (PROC_BUSCAGLOBAL,'Busca Global'),
     (PROC_FILTROPROJ, 'Busca no Projeto'),
@@ -29,6 +31,7 @@ TIPO_BUSCA = (
 
 TIPO_PROCESSAMENTO = (
     (PROC_IMPORTACAO,   'Importação'),
+    (PROC_PREMIUM,      'Importação Premium'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),
     (PROC_HISTORICO,    'Busca Histórica'),
@@ -41,7 +44,11 @@ TIPO_PROCESSAMENTO = (
 
 # Converte datas que venham no formato do Twitter
 def convert_date(date_str) -> datetime:
-    time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
+    if 'Z' in date_str:
+        '2022-03-05T13:17:21.000Z'
+        time_struct = time.strptime(date_str, '%Y-%m-%dT%H:%M:%S.000Z')
+    else:
+        time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
     return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
 
 
@@ -144,7 +151,7 @@ class Termo(models.Model):
     tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_IMPORTACAO)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
     ult_tweet = models.BigIntegerField(null=True, blank=True)
-    ult_processamento = models.DateTimeField(null=True, blank=True)
+    ult_processamento = models.DateTimeField(null=True, blank=True)  # Última vez que o termo foi processado
     last_count = models.IntegerField('Total de Tweets', default=0)
 
     def __str__(self):
@@ -220,11 +227,11 @@ class TweetUser(models.Model):
     name = models.CharField(max_length=200, null=True)
     location = models.CharField(max_length=200, null=True)
     verified = models.BooleanField(default=False)
-    created_at = models.DateField()
+    created_at = models.DateField(null=True, blank=True)
     followers = models.BigIntegerField(default=0)
 
     def __str__(self):
-        return u'%s (%s)' % (self.username, self.location[:20])
+        return u'%s (%s)' % (self.username, self.name)
 
     class Meta:
         verbose_name = 'Usuário do Twitter'
@@ -269,26 +276,34 @@ class Tweet(models.Model):
             self.user.username, self.twit_id))
 
 
+# Aqui estão os retweet, reply_to (comentários) ou quote (retweet com comentário)
+# O tweet original pode ser importado após o retweet. Dessa forma, nem todo retweet tem associação com o Tweet
+# Desta forma, uma rotina pós-exportação deve regularmente verificar se já é possível realizar a associação
 class Retweet(models.Model):
-    tweet = models.ForeignKey(Tweet)  # Tweet original que gerou o retwet
-    user = models.ForeignKey(TweetUser)
+    retweet_id = models.CharField(max_length=21, null=True, blank=True, db_index=True)    # id do retweet
+    parent_id = models.CharField(max_length=21, null=True, blank=True, db_index=True)     # parent id
+    user = models.ForeignKey(TweetUser, on_delete=models.PROTECT)          # user do retweet
+    tweet = models.ForeignKey(Tweet, on_delete=models.SET_NULL, null=True) # Tweet original que gerou o retweet
     created_time = models.DateTimeField(null=True)
-    retweet_id = models.CharField(max_length=21, null=True)  # id do retweet
+    type = models.CharField(max_length=1,
+                            choices=(('C', 'Reply'), ('Q', 'Quote'), ('R', 'Retweet')),
+                            null=True, blank=True)
 
     def __str__(self):
-        return self.user.username
+        return self.retweet_id
 
     # Intervalo de tempo entre a postagem original e o retweet (em minutos)
     def tweet_dif(self):
-        dif = self.created_time - self.tweet.created_time
-        if dif.days > 1:
-            return '%d dias' % dif.days
-        else:
-            if dif.total_seconds() < 60:
-                return 'primeiro minuto'
+        if self.tweet:
+            dif = self.created_time - self.tweet.created_time
+            if dif.days > 1:
+                return '%d dias' % dif.days
             else:
-                duration_in_s = dif.total_seconds()
-                return '%d minutos' % divmod(duration_in_s, 60)[0]
+                if dif.total_seconds() < 60:
+                    return 'primeiro minuto'
+                else:
+                    duration_in_s = dif.total_seconds()
+                    return '%d minutos' % divmod(duration_in_s, 60)[0]
 
 
 class TweetInput(models.Model):
