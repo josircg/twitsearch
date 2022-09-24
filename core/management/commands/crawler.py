@@ -265,7 +265,7 @@ class Command(BaseCommand):
             print('Nenhum termo para processar')
             return
 
-        if reset_search:
+        if reset_search or not termo.ult_tweet:
             ultimo_tweet = None
             if termo.tipo_busca == PROC_PREMIUM:
                 ult_processamento = termo.dtinicio
@@ -273,10 +273,13 @@ class Command(BaseCommand):
                 ult_processamento = agora - timedelta(days=14)
         else:
             ultimo_tweet = termo.ult_tweet
-            if termo.ult_processamento:
-                ult_processamento = max(termo.ult_processamento, agora - timedelta(days=14))
+            if termo.tipo_busca == PROC_PREMIUM:
+                ult_processamento = termo.dtinicio
             else:
-                ult_processamento = max(termo.dtinicio, agora - timedelta(days=14))
+                if termo.ult_processamento:
+                    ult_processamento = max(termo.ult_processamento, agora - timedelta(days=14))
+                else:
+                    ult_processamento = max(termo.dtinicio, agora - timedelta(days=14))
 
             if ult_processamento > termo.dtfinal:
                 termo.status = 'C'
