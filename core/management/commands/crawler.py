@@ -93,16 +93,22 @@ class PremiumListener:
         termo = self.processo.termo
         if termo.ult_processamento:
             self.ultimo_tweet = str(termo.ult_tweet)
-            tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet)
+            tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
+            if not tweet:
+                tweet = Tweet.objects.filter(termo=termo, created_time__gte=termo.dtinicio).order_by('twit_id').first()
+
             if tweet:
-                self.menor_data = tweet[0].created_time
+                self.menor_data = tweet.created_time
+            else:
+                self.menor_data = termo.dtfinal
+
         else:
             self.ultimo_tweet = ''
             self.menor_data = termo.dtfinal
 
-        termo_busca = termo.busca
+        # A busca dos tweets é feita do mais recente para o mais antigo
+        # Desta forma, em caso de reprocessamento, a data final será deslocada para o primeiro tweet encontrado
         start_time = termo.dtinicio.strftime('%Y-%m-%d %H:%M')
-
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
         if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
@@ -111,7 +117,7 @@ class PremiumListener:
             print(f'Reload - Start: {start_time}  End: {end_time}')
         self.count = 0
 
-        query = gen_request_parameters(termo_busca, None,
+        query = gen_request_parameters(termo.busca, None,
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
                                                     'lang,in_reply_to_user_id,possibly_sensitive,'
                                                     'referenced_tweets',
@@ -253,6 +259,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         agora = timezone.now()
+        registros_lidos = 0
         if 'twit' in options and options['twit']:
             processa_item_unico(options['twit'], options['termo'])
             return
@@ -345,5 +352,6 @@ class Command(BaseCommand):
 
         except Exception as e:
             Termo.objects.filter(id=termo.id).update(status='E', ult_processamento=agora)
+            print('Erro no processamento: %s' % e)
 
         print('Processamento concluído: %d registros lidos' % registros_lidos)
