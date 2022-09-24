@@ -98,7 +98,7 @@ class PremiumListener:
                 self.menor_data = tweet[0].created_time
         else:
             self.menor_data = termo.dtinicio
-            self.ultimo_tweet = None
+            self.ultimo_tweet = ''
 
         termo_busca = termo.busca
         start_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
@@ -285,7 +285,7 @@ class Command(BaseCommand):
                 termo.status = 'C'
                 termo.save()
                 # TODO: Gravar no log do projeto
-                print('Busca fora do período possível')
+                print(f'Busca fora do período possível {termo.busca} {termo.dtfinal}')
                 return
 
         processo = Processamento.objects.create(termo=termo, dt=agora)
