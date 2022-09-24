@@ -97,17 +97,21 @@ class PremiumListener:
             if tweet:
                 self.menor_data = tweet[0].created_time
         else:
-            self.menor_data = termo.dtinicio
             self.ultimo_tweet = ''
+            self.menor_data = termo.dtfinal
 
         termo_busca = termo.busca
-        start_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
+        start_time = termo.dtinicio.strftime('%Y-%m-%d %H:%M')
+
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
-        if termo.dtfinal > limite_premium:
+        if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
         else:
-            end_time = termo.dtfinal.strftime('%Y-%m-%d %H:%M')
+            end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
         self.count = 0
+        print(f'Start: {start_time}  End: {end_time}')
+        self.status_proc = 'A'
+        return
 
         query = gen_request_parameters(termo_busca, None,
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
@@ -115,7 +119,7 @@ class PremiumListener:
                                                     'referenced_tweets',
                                        user_fields='id,name,username,created_at,public_metrics,verified',
                                        expansions='author_id,referenced_tweets.id,referenced_tweets.id.author_id',
-                                       results_per_call=200,
+                                       results_per_call=400,
                                        start_time=start_time, end_time=end_time)
         tweets = ResultStream(request_parameters=query, max_tweets=self.proc_limit, **auth)
         for dataset in tweets.stream():
@@ -167,6 +171,7 @@ class PremiumListener:
                 save_result(tweet, self.processo.id, True)
                 self.count += 1
             print(f'{self.count} tweets importados')
+            time.sleep(60)
 
         if self.count < self.proc_limit:
             self.status = 'C'
@@ -291,52 +296,56 @@ class Command(BaseCommand):
         processo = Processamento.objects.create(termo=termo, dt=agora)
         Termo.objects.filter(id=termo.id).update(status='P')
 
-        if termo.tipo_busca == PROC_PREMIUM:
-            listener = PremiumListener()
-            listener.processo = processo
-            listener.run()
-            proxima_data = agora
-            registros_lidos = listener.count
-            status_proc = listener.status
-            ultimo_tweet = listener.ultimo_tweet
-        else:
-            # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
-            if ult_processamento.date() < agora.date():
-                status_proc = 'A'
-                menor_data, registros_lidos, ultimo_tweet = \
-                    busca_periodo(termo, processo, ultimo_tweet, ult_processamento)
-            else:
-                # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
-                listener = SimpleListener()
+        try:
+            if termo.tipo_busca == PROC_PREMIUM:
+                listener = PremiumListener()
                 listener.processo = processo
-                listener.dtfinal = termo.dtfinal
-                busca_stream(termo, listener)
-                menor_data = listener.menor_data
+                listener.run()
+                proxima_data = agora
                 registros_lidos = listener.count
                 status_proc = listener.status
-
-            proxima_data = agora
-            # recalcula o status da busca em função da data final do projeto
-            if menor_data and termo.dtfinal < menor_data:
-                status_proc = 'C'
+                ultimo_tweet = listener.ultimo_tweet
             else:
-                # se não nenhum registro foi baixado, então agenda-se o próximo processamento para 1 hora depois
-                status_proc = 'A' if status_proc != 'I' else 'I'
-                if status_proc == 'A':
-                    if registros_lidos == 0:
-                        proxima_data = agora + timedelta(hours=1)
-                    else:
-                        proxima_data = agora + timedelta(hours=2)
+                # Se foi anterior que hoje ou nula, busca-se primeiro termos antigos
+                if ult_processamento.date() < agora.date():
+                    status_proc = 'A'
+                    menor_data, registros_lidos, ultimo_tweet = \
+                        busca_periodo(termo, processo, ultimo_tweet, ult_processamento)
+                else:
+                    # Se o último processamento foi hoje, a busca é feita via stream para obter novos tweets
+                    listener = SimpleListener()
+                    listener.processo = processo
+                    listener.dtfinal = termo.dtfinal
+                    busca_stream(termo, listener)
+                    menor_data = listener.menor_data
+                    registros_lidos = listener.count
+                    status_proc = listener.status
 
-        # Sinaliza o fim do processamento
-        Termo.objects.filter(id=termo.id).update(status=status_proc,
-                                                 ult_processamento=proxima_data,
-                                                 ult_tweet=ultimo_tweet)
-        processo.twit_id = ultimo_tweet
-        processo.save()
+                proxima_data = agora
+                # recalcula o status da busca em função da data final do projeto
+                if menor_data and termo.dtfinal < menor_data:
+                    status_proc = 'C'
+                else:
+                    # se não nenhum registro foi baixado, então agenda-se o próximo processamento para 1 hora depois
+                    status_proc = 'A' if status_proc != 'I' else 'I'
+                    if status_proc == 'A':
+                        if registros_lidos == 0:
+                            proxima_data = agora + timedelta(hours=1)
+                        else:
+                            proxima_data = agora + timedelta(hours=2)
 
-        # Revive qualquer projeto de busca simples em processamento há mais de 1 horas
-        uma_hora = agora - timedelta(hours=1)
-        Termo.objects.filter(status='P', tipo_busca=PROC_IMPORTACAO, ult_processamento__lt=uma_hora).update(status='A')
+            # Sinaliza o fim do processamento
+            Termo.objects.filter(id=termo.id).update(status=status_proc,
+                                                     ult_processamento=proxima_data,
+                                                     ult_tweet=ultimo_tweet)
+            processo.twit_id = ultimo_tweet
+            processo.save()
+
+            # Revive qualquer projeto de busca simples em processamento há mais de 1 horas
+            uma_hora = agora - timedelta(hours=1)
+            Termo.objects.filter(status='P', tipo_busca=PROC_IMPORTACAO, ult_processamento__lt=uma_hora).update(status='A')
+
+        except Exception as e:
+            Termo.objects.filter(id=termo.id).update(status='E', ult_processamento=agora)
 
         print('Processamento concluído: %d registros lidos' % registros_lidos)
