@@ -22,8 +22,8 @@ Versão 0.7: Utilização de várias credenciais para maximizar a coleta
 
 Versão 0.8: Integração com o Visão (visao.ibict.br)
 
-Versão 0.9: Recuperar Retweets a partir de um tweet
+Versão 0.9: Desidratar bases de tweets 
 
-Versão 1.0: Recupera tweets antigos a partir da integração da lib GetOldTweets
+Versão 1.0: Construção de visualizações em rede
 
 

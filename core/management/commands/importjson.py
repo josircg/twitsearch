@@ -41,9 +41,8 @@ def process_twitter(src, processo_pai=None):
         user = TweetUser(twit_id=src['user']['id'])
         user.username = src['user'].get('screen_name',None)
         user.name = src['user'].get('name', None)
-        if src['user'].get('location'):
-            user.location=src['user']['location']
-            user.verified=src['user']['verified']
+        user.verified=src['user'].get('verified',None)
+        if 'created_at' in src['user']:
             user.created_at=convert_date(src['user']['created_at']).date()
         user.save()
         COUNTER['users'] += 1

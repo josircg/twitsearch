@@ -84,7 +84,7 @@ class PremiumListener:
         self.count = 0
         self.ultimo_tweet = None  # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 10000   # Quantos registos traz por processamento
+        self.proc_limit = 1000000   # Quantos registos traz por processamento
 
     def run(self):
         auth = load_credentials(filename="twitsearch/credentials.yaml",
@@ -98,7 +98,7 @@ class PremiumListener:
                 self.menor_data = tweet[0].created_time
         else:
             self.menor_data = termo.dtinicio
-            self.ultimo_tweet = ''
+            self.ultimo_tweet = None
 
         termo_busca = termo.busca
         start_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
@@ -113,14 +113,19 @@ class PremiumListener:
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
                                                     'lang,in_reply_to_user_id,possibly_sensitive,'
                                                     'referenced_tweets',
+                                       user_fields='id,name,username,created_at,public_metrics,verified',
                                        expansions='author_id,referenced_tweets.id,referenced_tweets.id.author_id',
-                                       results_per_call=100, start_time=start_time, end_time=end_time)
+                                       results_per_call=200,
+                                       start_time=start_time, end_time=end_time)
         tweets = ResultStream(request_parameters=query, max_tweets=self.proc_limit, **auth)
         for dataset in tweets.stream():
             # Monta a matriz de usuários
             users = {}
             for user in dataset['includes']['users']:
-                users[user['id']] = {'id': user['id'], 'screen_name': user['username'], 'name': user['name']}
+                user['screen_name'] = user['username']
+                del user['username']
+                user['followers_count'] = user['public_metrics']['followers_count']
+                user['favourites_count'] = user['public_metrics']['following_count']
 
             # Converte o tweet para o formato da API v1
             for tweet in dataset['data']:
@@ -136,10 +141,10 @@ class PremiumListener:
                     tweet['user'] = {'id': tweet['author_id']}
                 for parent in tweet.get('referenced_tweets', []):
                     if 'public_metrics' in parent:
-                        parent[ 'retweet_count' ] = parent[ 'public_metrics' ][ 'retweet_count' ]
-                        parent[ 'reply_count' ] = parent[ 'public_metrics' ][ 'reply_count' ]
-                        parent[ 'favorite_count' ] = parent[ 'public_metrics' ][ 'like_count' ]
-                        del parent[ 'public_metrics' ]
+                        parent['retweet_count'] = parent['public_metrics']['retweet_count']
+                        parent['reply_count'] = parent['public_metrics']['reply_count']
+                        parent['favorite_count'] = parent['public_metrics']['like_count']
+                        del parent['public_metrics']
 
                     if 'author' in parent:
                         parent['user'] = parent['author']
@@ -276,7 +281,7 @@ class Command(BaseCommand):
             if ult_processamento > termo.dtfinal:
                 termo.status = 'C'
                 termo.save()
-                # TODO: Gravar no logo do projeto
+                # TODO: Gravar no log do projeto
                 print('Busca fora do período possível')
                 return
 

@@ -22,20 +22,26 @@ class Command(BaseCommand):
         auth = load_credentials(filename="twitsearch/credentials.yaml",
                                 yaml_key="oldimar",
                                 env_overwrite=False)
-        query = gen_request_parameters("from:CarlosBolsonaro", None,
+        query = gen_request_parameters("from:BolsonaroSP", None,
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
                                                     'lang,in_reply_to_user_id,possibly_sensitive,'
                                                     'referenced_tweets',
+                                       user_fields='id,name,username,created_at,public_metrics,verified',
                                        expansions='author_id,referenced_tweets.id,referenced_tweets.id.author_id',
-                                       results_per_call=100, start_time='2018-10-01 00:00')
+                                       results_per_call=100,
+                                       start_time='2018-10-01 00:00', end_time='2018-12-01 00:00')
         tweets = ResultStream(request_parameters=query,
-                              max_tweets=100, **auth)
+                              max_tweets=200, **auth)
         tot_registros = 0
         for dataset in tweets.stream():
             # Monta a matriz de usuários
             users = {}
             for user in dataset['includes']['users']:
-                users[user['id']] = {'id': user['id'], 'screen_name': user['username'], 'name': user['name']}
+                user['screen_name'] = user['username']
+                del user['username']
+                user['followers_count'] = user['public_metrics']['followers_count']
+                user['favourites_count'] = user['public_metrics']['following_count']
+                users[user['id']] = user
 
             # Converte o tweet para o formato da API v1
             for tweet in dataset['data']:
@@ -43,7 +49,6 @@ class Command(BaseCommand):
                 tweet['retweet_count'] = tweet['public_metrics']['retweet_count']
                 tweet['reply_count'] = tweet['public_metrics']['reply_count']
                 tweet['favorite_count'] = tweet['public_metrics']['like_count']
-                del tweet['public_metrics']
                 if tweet['author_id'] in users:
                     tweet['user'] = users[tweet['author_id']]
                 else:
