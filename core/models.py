@@ -138,7 +138,8 @@ class Projeto(models.Model):
         return result.most_common(total)
 
 
-STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('I', 'Interrompido'), ('C', 'Concluido'))
+STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
+                ('I', 'Interrompido'), ('C', 'Concluido'))
 
 
 class Termo(models.Model):

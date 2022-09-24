@@ -108,10 +108,8 @@ class PremiumListener:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
         else:
             end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
+            print(f'Reload - Start: {start_time}  End: {end_time}')
         self.count = 0
-        print(f'Start: {start_time}  End: {end_time}')
-        self.status_proc = 'A'
-        return
 
         query = gen_request_parameters(termo_busca, None,
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
