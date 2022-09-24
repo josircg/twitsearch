@@ -20,7 +20,7 @@ matplotlib
 networkx
 seaborn
 sqlparse
-reportlab==3.5.2
+reportlab==3.5.55
 git+https://bitbucket.org/josir/poweradmin.git@dev
 plotly
 gunicorn
