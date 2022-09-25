@@ -86,7 +86,7 @@ class RegularListener:
         self.count = 0
         self.ultimo_tweet = None  # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 5000   # Quantos registos traz por processamento
+        self.proc_limit = 100000  # Quantos registos traz por processamento
 
     def run(self):
         termo = self.processo
@@ -136,7 +136,7 @@ class PremiumListener:
         self.count = 0
         self.ultimo_tweet = ''     # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 100000   # Quantos registos traz por processamento
+        self.proc_limit = 1000   # Quantos registos traz por processamento
 
     def run(self):
         auth = load_credentials(filename="twitsearch/credentials.yaml",
@@ -169,7 +169,7 @@ class PremiumListener:
             end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
             print(f'Reload - Start: {start_time}  End: {end_time}')
         self.count = 0
-
+        tot_calls = 0
         query = gen_request_parameters(termo.busca, None,
                                        tweet_fields='id,text,public_metrics,author_id,conversation_id,created_at,'
                                                     'lang,in_reply_to_user_id,possibly_sensitive,'
@@ -228,7 +228,8 @@ class PremiumListener:
                 save_result(tweet, self.processo.id, True)
                 self.count += 1
             print(f'{self.count} tweets importados')
-            time.sleep(60)
+            time.sleep(15*tot_calls)
+            tot_calls += 1
 
         if self.count < self.proc_limit:
             self.status = 'C'

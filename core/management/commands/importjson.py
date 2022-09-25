@@ -50,7 +50,7 @@ def process_twitter(src, processo_pai=None):
     dt = convert_date(src['created_at'])
 
     # Indica que é um JSON da API v1
-    if 'location' in src['user']:
+    if 'followers_count' in src['user']:
         try:
             FollowersHistory.objects.get(user=user, dt=dt)
         except FollowersHistory.DoesNotExist:
