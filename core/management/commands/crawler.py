@@ -42,7 +42,7 @@ class SimpleListener(tweepy.StreamListener):
 
     def __init__(self):
         super(SimpleListener, self).__init__()
-        self.checkpoint = 20
+        self.checkpoint = 120 # 2 minutos para começar a receber algum tweet
         self.processo = None
         self.dtfinal = None
         self.menor_data = None
@@ -82,7 +82,6 @@ class RegularListener:
 
     def __init__(self):
         self.processo = None
-        self.dtfinal = None
         self.menor_data = None
         self.count = 0
         self.ultimo_tweet = None  # Último tweet capturado
@@ -133,35 +132,35 @@ class PremiumListener:
 
     def __init__(self):
         self.processo = None
-        self.dtfinal = None
         self.menor_data = None
         self.count = 0
-        self.ultimo_tweet = None  # Último tweet capturado
+        self.ultimo_tweet = ''     # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 1000000   # Quantos registos traz por processamento
+        self.proc_limit = 100000   # Quantos registos traz por processamento
 
     def run(self):
         auth = load_credentials(filename="twitsearch/credentials.yaml",
                                 yaml_key="oldimar",
                                 env_overwrite=False)
         termo = self.processo.termo
-        if termo.ult_processamento:
-            self.ultimo_tweet = str(termo.ult_tweet)
-            tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
-            if not tweet:
-                tweet = Tweet.objects.filter(termo=termo, created_time__gte=termo.dtinicio).order_by('twit_id').first()
+        if not self.menor_data:
+            if termo.ult_processamento:
+                # A busca dos tweets é feita do mais recente para o mais antigo
+                # Desta forma, em caso de reprocessamento, a data final será deslocada para o tweet mais recente
+                self.ultimo_tweet = str(termo.ult_tweet)
+                tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
+                if not tweet:
+                    tweet = Tweet.objects.filter(termo=termo, created_time__gte=termo.dtinicio).\
+                        order_by('twit_id').first()
 
-            if tweet:
-                self.menor_data = tweet.created_time
+                if tweet:
+                    self.menor_data = tweet.created_time
+                else:
+                    self.menor_data = termo.dtfinal
+
             else:
                 self.menor_data = termo.dtfinal
 
-        else:
-            self.ultimo_tweet = ''
-            self.menor_data = termo.dtfinal
-
-        # A busca dos tweets é feita do mais recente para o mais antigo
-        # Desta forma, em caso de reprocessamento, a data final será deslocada para o primeiro tweet encontrado
         start_time = termo.dtinicio.strftime('%Y-%m-%d %H:%M')
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
         if self.menor_data > limite_premium:
@@ -251,7 +250,7 @@ def busca_stream(termo, listener):
         agora = datetime.now(pytz.timezone(TIME_ZONE))
         # Verifica se o processo não foi interrompido pelo usuário
         listener.status = Termo.objects.get(id=termo.id).status
-        listener.checkpoint += listener.count - 10
+        listener.checkpoint -= 100
         print('Checkpoint %d' % listener.checkpoint)
 
     # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
@@ -317,6 +316,8 @@ class Command(BaseCommand):
             if termo.tipo_busca == PROC_PREMIUM:
                 listener = PremiumListener()
                 listener.processo = processo
+                if reset_search:
+                    listener.menor_data = processo.termo.dtfinal
                 listener.run()
                 proxima_data = agora
                 registros_lidos = listener.count
