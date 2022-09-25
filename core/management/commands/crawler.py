@@ -136,7 +136,7 @@ class PremiumListener:
         self.count = 0
         self.ultimo_tweet = ''     # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 1000   # Quantos registos traz por processamento
+        self.proc_limit = 100000   # Quantos registos traz por processamento
 
     def run(self):
         auth = load_credentials(filename="twitsearch/credentials.yaml",
@@ -191,7 +191,10 @@ class PremiumListener:
             # Converte o tweet para o formato da API v1
             for tweet in dataset['data']:
                 self.menor_data = min(self.menor_data, convert_date(tweet['created_at']))
-                self.ultimo_tweet = min(self.ultimo_tweet, tweet['id'])
+                if self.ultimo_tweet != '':
+                    self.ultimo_tweet = min(self.ultimo_tweet, tweet['id'])
+                else:
+                    self.ultimo_tweet = tweet['id']
                 tweet['retweet_count'] = tweet['public_metrics']['retweet_count']
                 tweet['reply_count'] = tweet['public_metrics']['reply_count']
                 tweet['favorite_count'] = tweet['public_metrics']['like_count']
