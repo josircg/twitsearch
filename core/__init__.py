@@ -1,11 +1,7 @@
 import os
 import re
 import shlex
-
-from django.apps import AppConfig
-
 import subprocess
-
 from twitsearch import settings
 
 # Mon Nov 25 23:56:33 +0000 2019	25/11/2019 23:56:33
@@ -63,3 +59,21 @@ def tokenize(self, line: str):
     tokens = self._split_on_punctuation(list(lexer))
     return tokens
 
+
+def log_message(instance, message, user=None):
+
+    from django.contrib.auth import get_user_model
+    from django.contrib.admin.models import LogEntry, CHANGE
+    from django.contrib.contenttypes.models import ContentType
+
+    if not user:
+        User = get_user_model()
+        user = User.objects.get_or_create(username='sys')[0]
+    LogEntry.objects.log_action(
+        user_id=user.pk,
+        content_type_id=ContentType.objects.get_for_model(instance).pk,
+        object_id=instance.pk,
+        object_repr=u'%s' % instance,
+        action_flag=CHANGE,
+        change_message=message
+    )
