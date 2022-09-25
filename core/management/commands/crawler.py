@@ -230,8 +230,9 @@ class PremiumListener:
 
                 save_result(tweet, self.processo.id, True)
                 self.count += 1
-            print(f'{self.count} tweets importados')
-            time.sleep(15*tot_calls)
+            sleep_count = min(10*tot_calls, 600)
+            print(f'{self.count} tweets importados (soneca:{sleep_count})')
+            time.sleep(sleep_count)
             tot_calls += 1
 
         if self.count < self.proc_limit:
