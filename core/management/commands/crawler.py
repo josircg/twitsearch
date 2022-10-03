@@ -83,44 +83,39 @@ class RegularListener:
     def __init__(self):
         self.processo = None
         self.menor_data = None
+        self.maior_data = None
         self.count = 0
-        self.ultimo_tweet = None  # Último tweet capturado
+        self.ultimo_tweet = 0    # Último tweet capturado
         self.status = 'A'
         self.proc_limit = 100000  # Quantos registos traz por processamento
 
     def run(self):
-        termo = self.processo
+        termo = self.processo.termo
         termo_busca = termo.busca
-        if termo.ultimo_tweet:
-            since_id = termo.ultimo_tweet
-            termo_busca += ' since_id:%d' % termo.ultimo_tweet
-            maior_data = termo.ult_processamento
-            menor_data = termo.ult_processamento or termo.dtfinal
+        if termo.ult_tweet:
+            since_id = termo.ult_tweet
+            termo_busca += ' since_id:%d' % termo.ult_tweet
         else:
             since_id = None
-            maior_data = termo.dt_final
-            menor_data = None
-        # results = tweepy.Cursor(api.search, q=termo.busca+extra_filter, since_id=ultimo,
-        #                         tweet_mode='extended', rpp=100, page=10).items()
 
         print('Search: "%s" %d %d since:%s' % (termo.busca, self.processo.id, termo.id, since_id))
         self.count = 0
         api = get_api()
         results = tweepy.Cursor(api.search, q=termo.busca, tweet_mode='extended', since_id=since_id).items()
-        for status in results:
-            if status.id > self.ultimo_tweet:
-                self.ultimo_tweet = status.id
-                created = status.created_at.replace(tzinfo=timezone.utc)
-                if not maior_data:
-                    maior_data = created
+        # results = tweepy.Cursor(api.search, q=termo.busca+extra_filter, since_id=ultimo,
+        #                         tweet_mode='extended', rpp=100, page=10).items()
+        for tweet in results:
+            created = tweet.created_at.replace(tzinfo=timezone.utc)
+            if tweet.id > self.ultimo_tweet:
+                self.ultimo_tweet = tweet.id
+                if not self.maior_data:
+                    self.maior_data = created
                 else:
-                    maior_data = max(maior_data, created)
-            else:
-                created = None
+                    self.maior_data = max(self.maior_data, created)
 
-            save_result(status._json, self.processo.id)
+            save_result(tweet._json, self.processo.id)
             self.count += 1
-            if not menor_data:
+            if not self.menor_data:
                 self.menor_data = created
             else:
                 self.menor_data = min(self.menor_data, created)
@@ -151,7 +146,7 @@ class PremiumListener:
                 tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
                 if not tweet:
                     tweet = Tweet.objects.filter(termo=termo, created_time__gte=termo.dtinicio).\
-                        order_by('twit_id').first()
+                        order_by('-twit_id').first()
 
                 if tweet:
                     self.menor_data = tweet.created_time
@@ -166,7 +161,7 @@ class PremiumListener:
         if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
         else:
-            end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
+            end_time = termo.dtfinal.strftime('%Y-%m-%d %H:%M')
             print(f'Reload - Start: {start_time}  End: {end_time}')
         self.count = 0
         tot_calls = 0
@@ -230,12 +225,17 @@ class PremiumListener:
 
                 save_result(tweet, self.processo.id, True)
                 self.count += 1
-            sleep_count = min(10*tot_calls, 600)
+            sleep_count = min(5*tot_calls, 300)
             print(f'{self.count} tweets importados (soneca:{sleep_count})')
             time.sleep(sleep_count)
             tot_calls += 1
 
-        if self.count < self.proc_limit:
+            # Verifica se o usuário interrompeu o processamento
+            self.status = Termo.objects.get(id=termo.id).status
+            if self.status == 'I':
+                break
+
+        if self.count < self.proc_limit and self.status != 'I':
             self.status = 'C'
 
         return
@@ -334,7 +334,6 @@ class Command(BaseCommand):
                     listener = RegularListener()
                     listener.processo = processo
                     listener.run()
-                    listener = RegularListener()
                     registros_lidos = listener.count
 
                 else:
@@ -347,7 +346,7 @@ class Command(BaseCommand):
 
                 proxima_data = agora
                 # recalcula o status da busca em função da data final do projeto
-                if self.menor_data and termo.dtfinal < listener.menor_data:
+                if listener.menor_data and termo.dtfinal < listener.menor_data:
                     status_proc = 'C'
                 else:
                     # se não nenhum registro foi baixado ou se o processo foi interrompido pelo usuário
