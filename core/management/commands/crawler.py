@@ -225,15 +225,16 @@ class PremiumListener:
 
                 save_result(tweet, self.processo.id, True)
                 self.count += 1
-            sleep_count = min(5*tot_calls, 300)
-            print(f'{self.count} tweets importados (soneca:{sleep_count})')
-            time.sleep(sleep_count)
-            tot_calls += 1
 
             # Verifica se o usuário interrompeu o processamento
             self.status = Termo.objects.get(id=termo.id).status
             if self.status == 'I':
                 break
+
+            sleep_count = min(5*tot_calls, 300)
+            print(f'{self.count} tweets importados (soneca:{sleep_count})')
+            time.sleep(sleep_count)
+            tot_calls += 1
 
         if self.count < self.proc_limit and self.status != 'I':
             self.status = 'C'
