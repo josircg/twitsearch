@@ -9,6 +9,13 @@ from twitsearch import settings
 #    return dt.strftime("%a %b %d %H:%M:%S %z %Y")
 
 
+def intdef(s: str, default: int = 0):
+    try:
+        return int(s)
+    except ValueError:
+        return default
+
+
 def OSRun(command, stop=False):
     out = u''
     try:

@@ -6,7 +6,7 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 
-from core import log_message
+from core import log_message, intdef
 from twitsearch.local import get_api
 
 import tweepy
@@ -360,6 +360,7 @@ class Command(BaseCommand):
                             proxima_data = agora + timedelta(hours=2)
 
             # Sinaliza o fim do processamento
+            print('Status atualizado (%d): %s %s' % (termo.id, status_proc, listener.ultimo_tweet))
             Termo.objects.filter(id=termo.id).update(status=status_proc,
                                                      ult_processamento=proxima_data,
                                                      ult_tweet=listener.ultimo_tweet)
@@ -373,7 +374,7 @@ class Command(BaseCommand):
 
         except Exception as e:
             if listener:
-                ultimo_tweet = listener.ultimo_tweet
+                ultimo_tweet = intdef(listener.ultimo_tweet, 0)
             else:
                 ultimo_tweet = termo.ult_tweet
             Termo.objects.filter(id=termo.id).update(status='E', ult_processamento=agora,
