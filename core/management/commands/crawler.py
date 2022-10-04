@@ -171,7 +171,7 @@ class PremiumListener:
                                                     'referenced_tweets',
                                        user_fields='id,name,username,created_at,public_metrics,verified',
                                        expansions='author_id,referenced_tweets.id,referenced_tweets.id.author_id',
-                                       results_per_call=400,
+                                       results_per_call=500,
                                        start_time=start_time, end_time=end_time)
         tweets = ResultStream(request_parameters=query, max_tweets=self.proc_limit, **auth)
         for dataset in tweets.stream():
@@ -231,7 +231,7 @@ class PremiumListener:
             if self.status == 'I':
                 break
 
-            sleep_count = min(5*tot_calls, 300)
+            sleep_count = min(2*tot_calls, 120)
             print(f'{self.count} tweets importados (soneca:{sleep_count})')
             time.sleep(sleep_count)
             tot_calls += 1

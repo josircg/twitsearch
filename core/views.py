@@ -55,7 +55,7 @@ def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
     top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
-    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.all()[0], tipo=PROC_TAGS)
+    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.first(), tipo=PROC_TAGS)
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
 
     alcance = 0
@@ -150,7 +150,7 @@ def stats(request, id):
     dias_sorted_formatter = []
     for dia in dias_sorted:
         date = datetime.datetime.strptime(dia, '%Y%m%d')
-        dias_sorted_formatter.append(datetime.datetime.strftime(date, '%d/%m%Y'))
+        dias_sorted_formatter.append(datetime.datetime.strftime(date, '%d/%m/%Y'))
 
     fig2 = graph_objs.Figure(graph_objs.Bar(
         x=dias_sorted_formatter,
