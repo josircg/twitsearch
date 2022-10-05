@@ -23,7 +23,7 @@ def save_result(data, processo, v2=False):
     arquivo = open(filename, 'w')
     json.dump(data, arquivo)
     arquivo.close()
-    print('%s saved' % filename)
+    # print('%s saved' % filename)
 
 
 def processa_item_unico(twitid, termo):
@@ -160,8 +160,9 @@ class PremiumListener:
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
         if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
+            print('Limit - Start: {start_time}  End: {end_time}')
         else:
-            end_time = termo.dtfinal.strftime('%Y-%m-%d %H:%M')
+            end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
             print(f'Reload - Start: {start_time}  End: {end_time}')
         self.count = 0
         tot_calls = 0
@@ -186,10 +187,11 @@ class PremiumListener:
             # Converte o tweet para o formato da API v1
             for tweet in dataset['data']:
                 self.menor_data = min(self.menor_data, convert_date(tweet['created_at']))
-                if self.ultimo_tweet != '':
-                    self.ultimo_tweet = min(self.ultimo_tweet, tweet['id'])
-                else:
+                if self.ultimo_tweet == '':
                     self.ultimo_tweet = tweet['id']
+                else:
+                    self.ultimo_tweet = min(self.ultimo_tweet, tweet['id'])
+
                 tweet['retweet_count'] = tweet['public_metrics']['retweet_count']
                 tweet['reply_count'] = tweet['public_metrics']['reply_count']
                 tweet['favorite_count'] = tweet['public_metrics']['like_count']
