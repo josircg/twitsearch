@@ -131,7 +131,7 @@ class PremiumListener:
         self.count = 0
         self.ultimo_tweet = ''     # Último tweet capturado
         self.status = 'A'
-        self.proc_limit = 100000   # Quantos registos traz por processamento
+        self.proc_limit = 1000000   # Quantos registos traz por processamento
 
     def run(self):
         auth = load_credentials(filename="twitsearch/credentials.yaml",

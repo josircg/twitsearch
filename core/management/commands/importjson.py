@@ -220,10 +220,11 @@ class Command(BaseCommand):
             termo.save()
         commit()
 
-        print('Arquivos processados: %d' % tot_files)
-        print('Arquivos com erro: %d' % tot_erros)
-        print('Novos Usuários: %d' % COUNTER['users'])
-        print('Novos Tweets: %d' % COUNTER['tweets'])
-        print('Novos Retweets: %d' % COUNTER['retweets'])
-
-# 1570863000864821248
+        if tot_files > 0:
+            print('Arquivos processados: %d' % tot_files)
+            print('Arquivos com erro: %d' % tot_erros)
+            print('Novos Usuários: %d' % COUNTER['users'])
+            print('Novos Tweets: %d' % COUNTER['tweets'])
+            print('Novos Retweets: %d' % COUNTER['retweets'])
+        else:
+            print('Nenhum arquivo processado %s' % timezone.now())
