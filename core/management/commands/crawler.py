@@ -289,7 +289,7 @@ class Command(BaseCommand):
             reset_search = False
 
         if not termo:
-            print('Nenhum termo para processar')
+            print('Nenhum termo para processar %s' % timezone.now())
             return
 
         # se for um reset ou primeiro processamento
