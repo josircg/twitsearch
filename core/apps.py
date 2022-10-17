@@ -2,6 +2,7 @@ import csv
 import os
 import zipfile
 import shlex
+import traceback
 
 from django.apps import AppConfig
 
@@ -11,6 +12,7 @@ from django.http import HttpResponse
 from django.contrib import messages
 
 from core.models import *
+
 
 class CoreConfig(AppConfig):
     name = 'core'
@@ -44,50 +46,54 @@ def export_tags_action(description=u"Exportar para Tags"):
 
 def generate_tags_file(queryset, project_id):
     path = settings.MEDIA_ROOT
-    prefixo = 'tags-%s' % project_id
-    csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
-    writer = csv.writer(csvfile)
-    writer.writerow(['id_str', 'from_user', 'text', 'created_at',
-                     'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
-                     'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
-                     'user_followers_count', 'user_friends_count', 'user_location',
-                     'status_url', 'entities_str'])
-    num_lines = 0
-    for obj in queryset:
-        if obj.text[0:1] != 'RT':
-            line = [obj.twit_id, obj.user.username, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
-                    obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
-                    '', '', '', '',
-                    obj.user.followers, 0, obj.user.location,
-                    '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-            writer.writerow(line)
-            num_lines += 1
-            for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
-                line = [retweet.retweet_id, retweet.user.username, 'RT ' + obj.text,
-                        obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+    filename_log = os.path.join(path,'tags.log')
+    logfile = open(filename_log, 'w')
+    logfile.write('Rotina iniciada: %s \n' % datetime.now())
+    try:
+        prefixo = 'tags-%s' % project_id
+        csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
+        writer = csv.writer(csvfile)
+        writer.writerow(['id_str', 'from_user', 'text', 'created_at',
+                         'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
+                         'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
+                         'user_followers_count', 'user_friends_count', 'user_location',
+                         'status_url', 'entities_str'])
+        num_lines = 0
+        for obj in queryset:
+            if obj.text[0:1] != 'RT':
+                line = [obj.twit_id, obj.user.username, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
                         obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
                         '', '', '', '',
                         obj.user.followers, 0, obj.user.location,
                         '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
                 writer.writerow(line)
                 num_lines += 1
+                for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
+                    line = [retweet.retweet_id, retweet.user.username, 'RT ' + obj.text,
+                            obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
+                            obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
+                            '', '', '', '',
+                            obj.user.followers, 0, obj.user.location,
+                            '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
+                    writer.writerow(line)
+                    num_lines += 1
 
-    csvfile.close()
-    # propositalmente estou enviando apenas o log
-    filename_log = BASE_DIR + '/media/tags.log'
-    logfile = open(filename_log, 'w')
-    logfile.writelines(['Linhas exportadas:%d' % num_lines])
-    logfile.close()
+        csvfile.close()
+        logfile.write('Linhas exportadas:%d\n' % num_lines)
 
-    print('Criando zip')
-    path_zip = os.path.join(path, '%s.zip' % prefixo)
-    with zipfile.ZipFile(path_zip, 'w') as zip:
-        zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
+        path_zip = os.path.join(path, '%s.zip' % prefixo)
+        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zip:
+            zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
-    print('zip criado')
-    termo = Termo.objects.filter(projeto_id=project_id)[0]
-    Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
-    return
+        logfile.write('Zip criado com sucesso %s\n' % datetime.now())
+        termo = Termo.objects.filter(projeto_id=project_id).first()
+        Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
+
+    except:
+        logfile.write(traceback.format_exc())
+
+    finally:
+        logfile.close()
 
 
 def export_extra_action(description=u"Exportar CSV com retweets"):

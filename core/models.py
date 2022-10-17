@@ -73,6 +73,7 @@ class Projeto(models.Model):
     objetivo = models.TextField('Objetivo')
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
+    alcance = models.BigIntegerField('Alcance Estimado', default=0)
 
     def __str__(self):
         return self.nome

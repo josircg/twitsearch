@@ -55,26 +55,34 @@ def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
     top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
-    proc_tags = Processamento.objects.filter(termo=projeto.termo_set.first(), tipo=PROC_TAGS)
-    proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO)
+    proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
+    proc_tags = proc_tags.pk if proc_tags else 0
 
-    alcance = 0
-    path = os.path.join(settings.MEDIA_ROOT, 'csv')
-    check_dir(path)
-    filename_csv = 'users-%s.csv' % id
-    csvfile = open(os.path.join(path, filename_csv), 'w')
-    writer = csv.writer(csvfile)
-    writer.writerow(['username','favorites','retweets','count'])
-    with connection.cursor() as cursor:
-        cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
-                       '  from core_tweet t, core_termo p, core_tweetuser u'
-                       ' where p.projeto_id = %s and t.termo_id = p.id and t.user_id = u.twit_id'
-                       '   and created_time between p.dtinicio and p.dtfinal + 1'
-                       '       group by t.user_id order by fav desc', [id])
-        for rec in cursor.fetchall():
-            writer.writerow(rec)
-            alcance += max(int(rec[1]), int(rec[2]))
-    csvfile.close()
+    proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO).last()
+    proc_importacao = proc_importacao.pk if proc_importacao else 0
+
+    if proc_tags > proc_importacao:
+        alcance = projeto.alcance
+    else:
+        alcance = 0
+        path = os.path.join(settings.MEDIA_ROOT, 'csv')
+        check_dir(path)
+        filename_csv = 'users-%s.csv' % id
+        csvfile = open(os.path.join(path, filename_csv), 'w')
+        writer = csv.writer(csvfile)
+        writer.writerow(['username','favorites','retweets','count'])
+        with connection.cursor() as cursor:
+            cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
+                           '  from core_tweet t, core_termo p, core_tweetuser u'
+                           ' where p.projeto_id = %s and t.termo_id = p.id and t.user_id = u.twit_id'
+                           '   and created_time between p.dtinicio and p.dtfinal + 1'
+                           '       group by t.user_id order by fav desc', [id])
+            for rec in cursor.fetchall():
+                writer.writerow(rec)
+                alcance += max(int(rec[1]), int(rec[2]))
+        csvfile.close()
+        projeto.alcance = alcance
+        projeto.save()
 
     dataset = []
     dias = Counter()
@@ -92,8 +100,9 @@ def stats(request, id):
 
     dias_sorted = sorted([dia for dia, _ in dias.most_common()])
 
+    # Achar a melhor faixa para mostrar o heatmap
+    '''
     if len(dias_sorted) > 30:
-        # Achar a melhor faixa para mostrar o heatmap
         dias_np = np.array([total for _, total in dias.most_common()])
         media = np.average(dias_np)
         base = media - np.std(dias_np)
@@ -108,19 +117,19 @@ def stats(request, id):
         dias_sorted = dias_sorted[idx_inicial:]
     else:
         inicio = 0
+    '''
 
     dias_valores = []
     for dia in dias_sorted:
         dias_valores.append(dias[ dia ])
 
+    '''
     heatmap = np.empty((24, len(dias_sorted)))
     heatmap[:] = 0
     for rec in dataset:
         if rec[0] in dias_sorted:
             hora = int(rec[1])
             heatmap[hora, dias_sorted.index(rec[0])] = int(rec[2])
-
-    #days = np.array(range(0, len(dias_sorted), 10))
 
     fig = graph_objs.Figure(data=graph_objs.Heatmap(
         z=heatmap,
@@ -147,6 +156,9 @@ def stats(request, id):
         )
     )
     heatmap_div = plot(fig, output_type='div')
+    '''
+    heatmap_div = ''
+
     dias_sorted_formatter = []
     for dia in dias_sorted:
         date = datetime.datetime.strptime(dia, '%Y%m%d')
@@ -173,7 +185,7 @@ def stats(request, id):
     grafico_div = plot(fig2, output_type='div')
 
     try:
-        if proc_tags[0].pk > proc_importacao[0].pk:
+        if proc_tags > proc_importacao:
             exportacao = 'tags-%d.zip' % projeto.id
         else:
             exportacao = None
