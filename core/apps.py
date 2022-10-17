@@ -82,7 +82,7 @@ def generate_tags_file(queryset, project_id):
         logfile.write('Linhas exportadas:%d\n' % num_lines)
 
         path_zip = os.path.join(path, '%s.zip' % prefixo)
-        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zip:
+        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
             zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
         logfile.write('Zip criado com sucesso %s\n' % datetime.now())

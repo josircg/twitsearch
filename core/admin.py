@@ -63,7 +63,7 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
+    fields = ('nome', 'objetivo', 'tot_twits', 'alcance', 'tot_retwits', 'usuario', 'grupo')
     inlines = [TermoInline]
 
     def get_actions(self, request):
@@ -76,11 +76,11 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo'
             else:
-                return ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario')
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario'
         else:
-            return ('nome', 'objetivo', )
+            return 'nome', 'objetivo',
 
     def save_model(self, request, obj, form, change):
         if not change:
