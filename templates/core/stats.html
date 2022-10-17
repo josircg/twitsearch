@@ -1,6 +1,5 @@
 {% extends "admin/base_site.html" %}
 {% load humanize %}
-{% load l10n %}
 {% block title %}{{block.super}}{% endblock %}
 {% block extrahead %}<meta charset="UTF-8">{% endblock %}
 {% block extrastyle %}{{ block.super }}
@@ -15,8 +14,12 @@
 {% block content %}
 <div id="content-main">
     <ul class="object-tools">
+
+        {% if download %}
+        <li><a href="/media/{{ download }}">Download CSV</a></li>
+        {% else %}
         <li><a href="{% url 'solicitar_csv' projeto.pk %}">Solicitar CSV</a></li>
-        {% if download %}<li><a href="/media/{{ download }}">Download CSV</a></li>{% endif %}
+        {% endif %}
         <li><a href="/media/csv/{{ csv }}">User CSV</a></li>
         <li><a href="/nuvem/{{ projeto.pk }}">Nuvem</a></li>
         <li><a href="/gerar_gephi/{{ projeto.pk }}">Gephi</a></li>

@@ -3,6 +3,7 @@ import os
 import zipfile
 import shlex
 import traceback
+import logging
 
 from django.apps import AppConfig
 
@@ -47,11 +48,19 @@ def export_tags_action(description=u"Exportar para Tags"):
 def generate_tags_file(queryset, project_id):
     path = settings.MEDIA_ROOT
     filename_log = os.path.join(path,'tags.log')
-    logfile = open(filename_log, 'w')
-    logfile.write('Rotina iniciada: %s \n' % datetime.now())
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        handlers=[
+            logging.FileHandler(filename_log),
+            logging.StreamHandler()
+        ]
+    )
+    logging.info('Rotina iniciada')
     try:
         prefixo = 'tags-%s' % project_id
-        csvfile = open(os.path.join(path, '%s.csv' % prefixo), 'w')
+        filename = os.path.join(path, '%s.csv' % prefixo)
+        csvfile = open(filename, 'w')
         writer = csv.writer(csvfile)
         writer.writerow(['id_str', 'from_user', 'text', 'created_at',
                          'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
@@ -79,21 +88,18 @@ def generate_tags_file(queryset, project_id):
                     num_lines += 1
 
         csvfile.close()
-        logfile.write('Linhas exportadas:%d\n' % num_lines)
+        logging.info('Linhas exportadas:%d' % num_lines)
 
         path_zip = os.path.join(path, '%s.zip' % prefixo)
         with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
             zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
-        logfile.write('Zip criado com sucesso %s\n' % datetime.now())
+        logging.info('Zip %s criado com sucesso' % path_zip)
         termo = Termo.objects.filter(projeto_id=project_id).first()
         Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
 
     except:
-        logfile.write(traceback.format_exc())
-
-    finally:
-        logfile.close()
+        logging.error('Erro fatal', exc_info=True)
 
 
 def export_extra_action(description=u"Exportar CSV com retweets"):
