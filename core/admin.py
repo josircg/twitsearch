@@ -48,7 +48,7 @@ class TermoInline(admin.TabularInline):
             readonly = False
 
         if not readonly:
-            return ('tot_twits', )
+            return 'tot_twits',
         else:
             return 'busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',
 
@@ -63,7 +63,7 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'tot_twits', 'alcance', 'tot_retwits', 'usuario', 'grupo')
+    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
     inlines = [TermoInline]
 
     def get_actions(self, request):
@@ -76,9 +76,9 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo'
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'grupo'
             else:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario'
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario'
         else:
             return 'nome', 'objetivo',
 
@@ -124,11 +124,11 @@ class ProjetoAdmin(PowerModelAdmin):
 
         if not readonly:
             if request.user.is_superuser:
-                return 'usuario', 'tot_twits', 'tot_retwits'
+                return 'usuario', 'tot_twits', 'tot_retwits', 'alcance'
             else:
-                return 'usuario', 'tot_twits', 'tot_retwits', 'grupo'
+                return 'usuario', 'tot_twits', 'tot_retwits', 'alcance', 'grupo'
         else:
-            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits'
+            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits', 'alcance'
 
     def visao(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)

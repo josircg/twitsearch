@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
-
+{% load humanize %}
+{% load l10n %}
 {% block title %}{{block.super}}{% endblock %}
 {% block extrahead %}<meta charset="UTF-8">{% endblock %}
 {% block extrastyle %}{{ block.super }}
@@ -38,7 +39,7 @@
 				<div><label>Total de Tweets Coletados: {{projeto.tot_twits}}</label></div>
 				<div><label>Total de Retweets: {{projeto.tot_retwits}}</label></div>
 				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
-				<div><label>Alcance Total: {{alcance}}</label></div>
+				<div><label>Alcance Total: {{projeto.alcance|intcomma}}</label></div>
 			</div>
             <label style="margin-top: 10px; display: block"><b>Top 3 - Tweets mais favoritados:</b></label>
             <p></p>

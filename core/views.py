@@ -60,14 +60,12 @@ def stats(request, id):
 
     proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO).last()
     proc_importacao = proc_importacao.pk if proc_importacao else 0
+    filename_csv = 'users-%s.csv' % id
 
-    if proc_tags > proc_importacao:
-        alcance = projeto.alcance
-    else:
+    if proc_tags <= proc_importacao:
         alcance = 0
         path = os.path.join(settings.MEDIA_ROOT, 'csv')
         check_dir(path)
-        filename_csv = 'users-%s.csv' % id
         csvfile = open(os.path.join(path, filename_csv), 'w')
         writer = csv.writer(csvfile)
         writer.writerow(['username','favorites','retweets','count'])
@@ -197,7 +195,6 @@ def stats(request, id):
         'projeto': projeto,
         'palavras': palavras,
         'top_tweets': top_tweets,
-        'alcance' : alcance,
         'download': exportacao,
         'heatmap_div': heatmap_div,
         'grafico_div':grafico_div,
