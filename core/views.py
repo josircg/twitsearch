@@ -119,7 +119,7 @@ def stats(request, id):
 
     dias_valores = []
     for dia in dias_sorted:
-        dias_valores.append(dias[ dia ])
+        dias_valores.append(dias[dia])
 
     '''
     heatmap = np.empty((24, len(dias_sorted)))

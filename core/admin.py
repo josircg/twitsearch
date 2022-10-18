@@ -38,8 +38,7 @@ def projeto_readonly(usuario, projeto):
 class TermoInline(admin.TabularInline):
     model = Termo
     extra = 0
-    fields = ('busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',)
-    readonly_fields = ('tot_twits', )
+    fields = ('busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'last_count',)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -48,9 +47,9 @@ class TermoInline(admin.TabularInline):
             readonly = False
 
         if not readonly:
-            return 'tot_twits',
+            return 'last_count',
         else:
-            return 'busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'tot_twits',
+            return 'busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'last_count'
 
     def has_add_permission(self, request):
         projeto = get_object_from_path(request, Projeto)
@@ -63,7 +62,7 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'usuario', 'grupo')
+    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'tot_favorites', 'usuario', 'grupo')
     inlines = [TermoInline]
 
     def get_actions(self, request):

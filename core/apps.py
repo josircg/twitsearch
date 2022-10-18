@@ -2,7 +2,6 @@ import csv
 import os
 import zipfile
 import shlex
-import traceback
 import logging
 
 from django.apps import AppConfig
@@ -95,6 +94,7 @@ def generate_tags_file(queryset, project_id):
             zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
 
         logging.info('Zip %s criado com sucesso' % path_zip)
+        os.remove(os.path.join(path, '%s.csv' % prefixo))
         termo = Termo.objects.filter(projeto_id=project_id).first()
         Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
 

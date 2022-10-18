@@ -25,6 +25,12 @@ class Command(BaseCommand):
             termo.last_count = termo.tot_twits
             termo.save()
             cnt += 1
-
         print('Revived: %d' % cnt)
+
+        for termo in Termo.objects.filter(status='C'):
+            if termo.last_count != termo.tot_twits:
+                termo.last_count = termo.tot_twits
+                termo.save()
+        print('Recounted: %d' % cnt)
+
         return

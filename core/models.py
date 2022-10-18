@@ -161,7 +161,7 @@ class Termo(models.Model):
 
     @property
     def tot_twits(self):
-        if self.tipo_busca == PROC_IMPORTACAO:
+        if self.tipo_busca in (PROC_IMPORTACAO, PROC_PREMIUM):
             return self.tweet_set.count() or 0
         else:
             return self.tweetinput_set.count() or 0
@@ -169,6 +169,11 @@ class Termo(models.Model):
     @property
     def tot_retwits(self):
         total = Tweet.objects.filter(termo=self).aggregate(Sum('retweets'))['retweets__sum']
+        return total or 0
+
+    @property
+    def tot_favorites(self):
+        total = Tweet.objects.filter(termo=self).aggregate(Sum('favorites'))['favorites__sum']
         return total or 0
 
     @property
