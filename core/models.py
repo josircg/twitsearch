@@ -10,16 +10,18 @@ from django.utils.safestring import mark_safe
 
 from twitsearch.settings import BASE_DIR
 
-PROC_IMPORTACAO = 'I'  # Importação via busca regular
-PROC_PREMIUM = 'A'     # Importação Premium
-PROC_HISTORICO = 'H'   # Importação via busca histórica (GetOldTweets)
-PROC_IMPORTUSER = 'U'  # Busca na rede tweets de um determinado usuário
-PROC_RETWEET = 'R'     # Busca na rede retweets de um determinado tweet
-PROC_BUSCAGLOBAL = 'G' # Busca na base de dados, tweets que atendam a um critério
-PROC_FILTROPROJ = 'P'  # Filtro dentro do projeto
-PROC_MATCH = 'M'       # Faz o match de tweets orfãos de projeto
-PROC_TAGS = 'T'        # Geração de arquivo CSV com as TAGs
-PROC_NETWORK = 'N'     # Geração de Grafo
+PROC_IMPORTACAO = 'I'   # Importação via busca regular
+PROC_PREMIUM = 'A'      # Importação Premium
+PROC_HISTORICO = 'H'    # Importação via busca histórica (GetOldTweets)
+PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
+PROC_RETWEET = 'R'      # Busca na rede retweets de um determinado tweet
+PROC_BUSCAGLOBAL = 'G'  # Busca na base de dados, tweets que atendam a um critério
+PROC_FILTROPROJ = 'P'   # Filtro dentro do projeto
+PROC_MATCH = 'M'        # Faz o match de tweets orfãos de projeto
+PROC_TAGS = 'T'         # Geração de arquivo CSV com as TAGs
+PROC_NETWORK = 'N'      # Geração de Grafo
+PROC_JSON_IMPORT = 'J'  # Importação dos JSONs pendentes
+PROC_FECHAMENTO = 'F'   # Fechamento do Projeto e cálculo das estatísticas
 
 TIPO_BUSCA = (
     (PROC_IMPORTACAO, 'Importação Regular'),
@@ -38,6 +40,7 @@ TIPO_PROCESSAMENTO = (
     (PROC_FILTROPROJ,   'Busca no Projeto'),
     (PROC_MATCH,        'Match de Tweets orfãos'),
     (PROC_TAGS,         'Exportação Tags'),
+    (PROC_JSON_IMPORT,  'Importação JSON'),
     (PROC_NETWORK,      'Montagem Rede')
 )
 
@@ -201,10 +204,18 @@ class Termo(models.Model):
 
 
 class Processamento(models.Model):
+
+    AGENDADO = 'A'
+    PROCESSANDO = 'P'
+    CONCLUIDO = 'C'
+
     dt = models.DateTimeField()
     tipo = models.CharField(max_length=1, choices=TIPO_PROCESSAMENTO, default=PROC_IMPORTACAO)
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
     twit_id = models.CharField('Último Tweet associado', max_length=21, blank=True, null=True)
+    status = models.CharField(max_length=1, choices=((AGENDADO, 'Agendado'),
+                                                     (PROCESSANDO, 'Em processamento'),
+                                                     (CONCLUIDO, 'Concluído')), default=CONCLUIDO, db_index=True)
 
     def __str__(self):
         return '%s: %s' % (self.dt, self.termo if self.termo else self.tipo)
@@ -221,11 +232,6 @@ class Credencial(models.Model):
     token = models.CharField(max_length=30)
     token_secret = models.CharField(max_length=30)
     last_conn = models.DateTimeField(null=True)
-
-
-class LockProcessamento(models.Model):
-    locked = models.BooleanField(default=False)
-    dt_inicio = models.DateTimeField(auto_now=True)
 
 
 class TweetUser(models.Model):

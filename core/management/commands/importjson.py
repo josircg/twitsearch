@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
-from django.core.management.base import BaseCommand
 import json
-import pytz
-import shlex
 
 from os import scandir, rename, makedirs
 from os.path import isfile, join, exists
@@ -10,6 +7,8 @@ from os.path import isfile, join, exists
 from core.models import *
 from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback
+from django.core.management.base import BaseCommand
+from twitsearch.settings import TIME_ZONE
 
 COUNTER = {}
 # from typing import Dict, Any - só python 3.6
@@ -184,11 +183,17 @@ class Command(BaseCommand):
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
-            if not force:
-                if LockProcessamento.objects.filter(locked=True):
+            if force:
+                Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT).\
+                    update(status=Processamento.CONCLUIDO)
+                print('Force Update')
+            else:
+                if Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT):
                     print('Importação pendente')
                     return
-            LockProcessamento.objects.update(locked=True)
+            agora = datetime.now(pytz.timezone(TIME_ZONE))
+            proc = Processamento.objects.create(status=Processamento.PROCESSANDO,
+                                                tipo=PROC_JSON_IMPORT, dt=agora)
             commit()
             try:
                 cached_dir = dest_dir + '/cached'
@@ -211,7 +216,8 @@ class Command(BaseCommand):
                             tot_erros += 1
                         tot_files += 1
             finally:
-                LockProcessamento.objects.update(locked=False)
+                proc.status = Processamento.CONCLUIDO
+                proc.save()
                 commit()
 
         # Atualiza o contador de tweets de cada termo em aberto

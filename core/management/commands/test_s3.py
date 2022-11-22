@@ -11,6 +11,7 @@ from core.models import Termo
 from core.apps import generate_tags_file
 import boto3
 
+
 class Command(BaseCommand):
     label = 'Generate csv tags file'
 

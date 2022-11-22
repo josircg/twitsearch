@@ -5,6 +5,7 @@ import time
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
+from django.db.transaction import set_autocommit, commit, rollback
 
 from core import log_message, intdef
 from twitsearch.local import get_api
@@ -317,8 +318,11 @@ class Command(BaseCommand):
                 print(mensagem)
                 return
 
-        processo = Processamento.objects.create(termo=termo, dt=agora)
+        set_autocommit(False)
+        processo = Processamento.objects.create(termo=termo, dt=agora,
+                                                tipo=termo.tipo_busca, status=Processamento.PROCESSANDO)
         Termo.objects.filter(id=termo.id).update(status='P')
+        commit()
 
         try:
             if termo.tipo_busca == PROC_PREMIUM:
@@ -367,12 +371,15 @@ class Command(BaseCommand):
                                                      ult_processamento=proxima_data,
                                                      ult_tweet=listener.ultimo_tweet)
             processo.twit_id = listener.ultimo_tweet
+            processo.status = Processamento.CONCLUIDO
             processo.save()
+            commit()
 
             # Revive qualquer projeto de busca simples em processamento há mais de 1 horas
             uma_hora = agora - timedelta(hours=1)
             Termo.objects.filter(status='P', tipo_busca=PROC_IMPORTACAO, ult_processamento__lt=uma_hora).\
                 update(status='A')
+            commit()
 
         except Exception as e:
             if listener:
@@ -381,6 +388,9 @@ class Command(BaseCommand):
                 ultimo_tweet = termo.ult_tweet
             Termo.objects.filter(id=termo.id).update(status='E', ult_processamento=agora,
                                                      ult_tweet=ultimo_tweet)
+            processo.status = Processamento.CONCLUIDO
+            processo.save()
+            commit()
             mensagem = 'Erro no processamento: %s' % e
             log_message(termo.projeto, mensagem)
             print(mensagem)
