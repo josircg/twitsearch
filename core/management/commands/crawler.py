@@ -2,6 +2,7 @@
 import json
 import pytz
 import time
+import traceback
 from django.utils import timezone
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
@@ -394,6 +395,7 @@ class Command(BaseCommand):
             mensagem = 'Erro no processamento: %s' % e
             log_message(termo.projeto, mensagem)
             print(mensagem)
+            traceback.print_exc()
             return
 
         print('Processamento concluído: %d registros lidos' % registros_lidos)

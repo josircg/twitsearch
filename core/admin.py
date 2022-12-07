@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib import admin
+from django.conf import settings
 
 from core.models import *
 
@@ -106,6 +107,13 @@ class ProjetoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
                             label=u'Visão'))
+            if settings.AWS_PROFILE:
+                buttons.append(
+                    PowerButton(url=reverse('admin:core_backup_json', kwargs={'id': object_id, }),
+                                label=u'Backup'))
+            buttons.append(
+                PowerButton(url=reverse('admin:core_exclui_json', kwargs={'id': object_id, }),
+                            label=u'Exclui JSON'))
             buttons.append(
                 PowerButton(url='https://developer.twitter.com/en/docs/twitter-api/v1/rules-and-filtering/overview/standard-operators', label=u'Como utilizar a busca', attrs={'target': '_blank'})
             )

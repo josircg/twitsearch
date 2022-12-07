@@ -20,6 +20,7 @@ PROC_FILTROPROJ = 'P'   # Filtro dentro do projeto
 PROC_MATCH = 'M'        # Faz o match de tweets orfãos de projeto
 PROC_TAGS = 'T'         # Geração de arquivo CSV com as TAGs
 PROC_NETWORK = 'N'      # Geração de Grafo
+PROC_BACKUP = 'B'       # Backup JSON
 PROC_JSON_IMPORT = 'J'  # Importação dos JSONs pendentes
 PROC_FECHAMENTO = 'F'   # Fechamento do Projeto e cálculo das estatísticas
 
@@ -38,6 +39,7 @@ TIPO_PROCESSAMENTO = (
     (PROC_BUSCAGLOBAL,  'Busca Global'),
     (PROC_HISTORICO,    'Busca Histórica'),
     (PROC_FILTROPROJ,   'Busca no Projeto'),
+    (PROC_BACKUP,       'Backup JSON'),
     (PROC_MATCH,        'Match de Tweets orfãos'),
     (PROC_TAGS,         'Exportação Tags'),
     (PROC_JSON_IMPORT,  'Importação JSON'),

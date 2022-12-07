@@ -2,6 +2,8 @@ import datetime
 import os
 import csv
 import random
+import pytz
+import requests
 from threading import Thread
 from collections import Counter
 
@@ -14,15 +16,15 @@ from django.shortcuts import get_object_or_404, render_to_response, redirect
 
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
-import requests
 from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
 from core import check_dir
 from core.apps import generate_tags_file, busca_local
-from core.models import Projeto, Tweet, Processamento, PROC_TAGS, PROC_IMPORTACAO, TweetUser, Retweet
-from twitsearch.settings import BASE_DIR
+from core.models import Projeto, Termo, Tweet, Processamento, TweetUser, Retweet, \
+    PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO
+from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -203,6 +205,22 @@ def stats(request, id):
         'csv': filename_csv,
 
     }, RequestContext(request, ))
+
+
+def backup_json(request, id):
+    # Agenda processo de backup para o projeto
+    agora = datetime.now(pytz.timezone(TIME_ZONE))
+    termo = Termo.objects.first(project_id=id)
+    # Verifica primeiro se já não existe um backup agendado
+    Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status='A')
+    messages.success(request, 'A montagem do backup foi iniciada. '
+                              'Visualize se o processo foi concluído diretamente no S3')
+    return redirect(reverse('core_projeto', kwargs={'id': id}))
+
+
+def exclui_json(request, id):
+    # Agenda processo de exclusão dos jsons de um projeto
+    return
 
 
 def nuvem(request, id):
