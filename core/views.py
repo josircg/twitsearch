@@ -82,7 +82,7 @@ def stats(request, id):
                 writer.writerow(rec)
                 alcance += max(int(rec[1]), int(rec[2]))
         csvfile.close()
-        projeto.alcance = max(alcance, int(projeto.tot_retwits))
+        projeto.alcance = max(alcance, int(projeto.tot_retwits.replace('.','')))
         projeto.save()
 
     dataset = []
