@@ -71,6 +71,7 @@ def stats(request, id):
         csvfile = open(os.path.join(path, filename_csv), 'w')
         writer = csv.writer(csvfile)
         writer.writerow(['username','favorites','retweets','count'])
+        # TODO: Rever o cálculo
         with connection.cursor() as cursor:
             cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
                            '  from core_tweet t, core_termo p, core_tweetuser u'
@@ -81,7 +82,7 @@ def stats(request, id):
                 writer.writerow(rec)
                 alcance += max(int(rec[1]), int(rec[2]))
         csvfile.close()
-        projeto.alcance = alcance
+        projeto.alcance = max(alcance, projeto.tot_retwits)
         projeto.save()
 
     dataset = []
