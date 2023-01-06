@@ -283,6 +283,7 @@ class TermoAdmin(PowerModelAdmin):
 class ProcessamentoAdmin(PowerModelAdmin):
     list_display = ('termo', 'tipo', 'dt', 'twit_id', 'tot_twits')
     raw_id_fields = ('termo', )
+    list_filter = ('tipo', 'dt')
 
     def get_buttons(self, request, object_id):
         buttons = super(ProcessamentoAdmin, self).get_buttons(request, object_id)

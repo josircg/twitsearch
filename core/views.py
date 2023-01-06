@@ -12,10 +12,8 @@ from django.conf import settings
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, render_to_response, redirect
 
-# Create your views here.
-
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponse
+from django.http import HttpResponse
 from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
@@ -23,7 +21,7 @@ from wordcloud import WordCloud
 from core import check_dir
 from core.apps import generate_tags_file, busca_local
 from core.models import Projeto, Termo, Tweet, Processamento, TweetUser, Retweet, \
-    PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO
+    PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
 from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
 import numpy as np
@@ -56,11 +54,13 @@ def visao(request):
 def stats(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
     palavras = projeto.most_common()
-    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:3]
+    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:5]
     proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
     proc_tags = proc_tags.pk if proc_tags else 0
 
-    proc_importacao = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_IMPORTACAO).last()
+    proc_importacao = Processamento.objects.filter(
+        termo__projeto=projeto,
+        tipo__in=(PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL)).last()
     proc_importacao = proc_importacao.pk if proc_importacao else 0
     filename_csv = 'users-%s.csv' % id
 
