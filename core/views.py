@@ -235,12 +235,14 @@ def nuvem(request, id, modelo=None):
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens'))  # path
 
     # modelo espera nulo (modelo padrão), 1 ou 2 da view.
-    modelo = intdef(modelo,0)
+    modelo = intdef(modelo, 0)
     palavras = None
+    debug = ''
     if modelo != 0:
         filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
         if not os.path.exists(filename):
             modelo = 0
+            debug = 'csv não encontrado'
 
     if modelo != 0:
         with open(os.path.join(path, filename), 'r') as csvfile:
@@ -248,19 +250,20 @@ def nuvem(request, id, modelo=None):
             next(reader, None)
             palavras = dict((rows[0], int(rows[1])) for rows in reader)
 
-        filename = os.path.join(BASE_DIR, 'templates', 'nuvem', f'modelo{modelo}.png')
+        modelo_filename = os.path.join(BASE_DIR, 'templates', 'nuvem', f'modelo{modelo}.png')
         try:
-            image = Image.open(filename)
+            image = Image.open(modelo_filename)
             mask = np.array(image)
-        except:
+        except Exception as e:
             mask = None
             palavras = None
+            debug = e.__str__()
 
     if not palavras:
         palavras = dict(projeto.most_common())
         # Grava o CSV
-        filename = 'nuvem-%s.csv' % projeto.pk
-        with open(os.path.join(path, filename), 'w') as csvfile:
+        filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
+        with open(filename, 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['word', 'frequency', ])
             writer.writerows(palavras.items())
@@ -284,6 +287,7 @@ def nuvem(request, id, modelo=None):
         'projeto': projeto,
         'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
         'modelo': modelo + 1 if modelo < 2 else 0,
+        'debug': debug
     }, RequestContext(request, ))
 
 
