@@ -242,7 +242,7 @@ def nuvem(request, id, modelo=None):
         filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
         if not os.path.exists(filename):
             modelo = 0
-            debug = 'csv não encontrado'
+            debug = f'csv não encontrado {filename}'
 
     if modelo != 0:
         with open(os.path.join(path, filename), 'r') as csvfile:
