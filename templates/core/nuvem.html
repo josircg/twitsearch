@@ -34,15 +34,21 @@
 			</div>
 
             <p></p>
-            <div><b>Observação: </b>Somente os tweets em português foram incluídos na formação da nuvem.</div>
-            <br>
-            <label><b>Palavras mais utilizadas:</b></label>
+            <div>
+                <b>Observações:</b>
+                <ul>
+                    <li>Somente os tweets em português foram incluídos na formação da nuvem.</li>
+                    <li>A contagem das palavras é multiplicada pelo número de likes de cada tweet</li>
+                </ul>
+            </div>
             <p></p>
 			<div class="form-row palavra">
 				<div>
                     <img src="{{ nuvem }}" alt="" height="500">
 				</div>
 			</div>
+            <br>
+            <label><a href="/media/nuvens/nuvem-{{ projeto.id }}.csv">Baixe o arquivo CSV</a></label>
 
 		</fieldset>
 	</div>

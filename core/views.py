@@ -6,6 +6,7 @@ import pytz
 import requests
 from threading import Thread
 from collections import Counter
+from PIL import Image
 
 from django.db import connection
 from django.conf import settings
@@ -224,9 +225,26 @@ def exclui_json(request, id):
     return
 
 
-def nuvem(request, id):
+def nuvem(request, id, modelo=None):
     projeto = get_object_or_404(Projeto, pk=id)
-    cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white')
+
+    if modelo in ('1','2'):
+        filename = os.path.join(BASE_DIR, 'templates', 'nuvem', f'modelo{modelo}.png')
+        try:
+            image = Image.open(filename)
+            mask = np.array(image)
+        except:
+            mask = None
+    else:
+        mask = None
+
+    if modelo == '2':
+        font_path = os.path.join(BASE_DIR, 'templates', 'nuvem', f'Comfortaa Bold.ttf')
+    else:
+        font_path = None
+
+    cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white', mask=mask,
+                      font_path=font_path)
     palavras = dict(projeto.most_common())
     cloud.generate_from_frequencies(palavras)
     path = os.path.join(BASE_DIR, 'media', 'nuvens')
@@ -236,11 +254,20 @@ def nuvem(request, id):
             os.mkdir(settings.MEDIA_ROOT)  # dir media
         os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens'))  # path
 
+    # Grava o CSV
+    filename = 'nuvem-%s.csv' % projeto.pk
+    csvfile = open(os.path.join(path, filename), 'w')
+    writer = csv.writer(csvfile)
+    writer.writerow(['word', 'frequency',])
+    writer.writerows(palavras.items())
+    csvfile.close()
+
+    # Grava a imagem da nuvem
     filename = 'nuvem-%s.png' % projeto.pk
     cloud.to_file(os.path.join(path, filename))
 
     return render_to_response('core/nuvem.html', {
-        'title': u'Estatísticas dos Twitters Obtidos',
+        'title': u'Nuvem de Palavras dos tweets obtidos',
         'projeto': projeto,
         'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
     }, RequestContext(request, ))

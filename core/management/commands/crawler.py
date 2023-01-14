@@ -162,7 +162,7 @@ class PremiumListener:
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
         if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
-            print('Limit - Start: {start_time}  End: {end_time}')
+            print(f'Limit - Start: {start_time}  End: {end_time}')
         else:
             end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
             print(f'Reload - Start: {start_time}  End: {end_time}')

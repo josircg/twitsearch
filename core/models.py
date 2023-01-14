@@ -68,7 +68,7 @@ def stopwords() -> list:
 def clean_pontuation(s) -> str:
     result = ''
     for letter in s:
-        if letter not in ['.', ',', '?', '!', '"', "'"]:
+        if letter not in ['.', ',', ':', '?', '!', '"', "'", "”"]:
             result += letter
     return result
 
@@ -124,7 +124,7 @@ class Projeto(models.Model):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
-    def most_common(self, total=40, language='pt'):
+    def most_common(self, total=100, language='pt'):
         result = Counter()
         excecoes = stopwords()
         for termo in self.termo_set.all():
@@ -133,14 +133,16 @@ class Projeto(models.Model):
                 excecoes.append(busca)
 
             # para cada tweet na linguagem definida, montar matriz de ocorrências
-            for tweet in termo.tweet_set.filter(language=language):
+            for tweet in termo.tweet_set.filter(retwit_id__isnull=True):
+                if tweet.language is not None and tweet.language != language:
+                    continue
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
                     if not palavra.startswith('http') and not palavra.startswith('@'):
                         palavra_limpa = clean_pontuation(palavra)
                         if palavra_limpa not in excecoes:
                             if len(palavra_limpa) > 3:
-                                result[palavra_limpa] += 1
+                                result[palavra_limpa] += tweet.favorites
         return result.most_common(total)
 
 
