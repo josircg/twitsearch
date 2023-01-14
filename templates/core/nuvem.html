@@ -13,6 +13,11 @@
 
 {% block content %}
 <div id="content-main">
+    <ul class="object-tools">
+        <li><a href="/media/nuvens/nuvem-{{ projeto.id }}.csv">Download CSV</a></li>
+        <li><a href="/nuvem/{{ projeto.id }}/{{ modelo }}/">Alterar Layout</a></li>
+        <li><a href="/stats/{{ projeto.pk }}">Estatística</a></li>
+    </ul>
 	<div>
 		<fieldset class="module aligned ">
 			<div class="form-row texto">
@@ -48,8 +53,6 @@
 				</div>
 			</div>
             <br>
-            <label><a href="/media/nuvens/nuvem-{{ projeto.id }}.csv">Baixe o arquivo CSV</a></label>
-
 		</fieldset>
 	</div>
 </div>

@@ -19,7 +19,7 @@ from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
-from core import check_dir
+from core import check_dir, intdef
 from core.apps import generate_tags_file, busca_local
 from core.models import Projeto, Termo, Tweet, Processamento, TweetUser, Retweet, \
     PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
@@ -228,39 +228,52 @@ def exclui_json(request, id):
 def nuvem(request, id, modelo=None):
     projeto = get_object_or_404(Projeto, pk=id)
 
-    if modelo in ('1','2'):
+    path = os.path.join(BASE_DIR, 'media', 'nuvens')
+    if not os.path.exists(path):
+        if not os.path.exists(settings.MEDIA_ROOT):
+            os.mkdir(settings.MEDIA_ROOT)  # dir media
+        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens'))  # path
+
+    # modelo espera nulo (modelo padrão), 1 ou 2 da view.
+    modelo = intdef(modelo,0)
+    palavras = None
+    if modelo != 0:
+        filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
+        if not os.path.exists(filename):
+            modelo = 0
+
+    if modelo != 0:
+        with open(os.path.join(path, filename), 'r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader, None)
+            palavras = dict((rows[0], int(rows[1])) for rows in reader)
+
         filename = os.path.join(BASE_DIR, 'templates', 'nuvem', f'modelo{modelo}.png')
         try:
             image = Image.open(filename)
             mask = np.array(image)
         except:
             mask = None
-    else:
+            palavras = None
+
+    if not palavras:
+        palavras = dict(projeto.most_common())
+        # Grava o CSV
+        filename = 'nuvem-%s.csv' % projeto.pk
+        with open(os.path.join(path, filename), 'w') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(['word', 'frequency', ])
+            writer.writerows(palavras.items())
         mask = None
 
-    if modelo == '2':
-        font_path = os.path.join(BASE_DIR, 'templates', 'nuvem', f'Comfortaa Bold.ttf')
+    if modelo == 2:
+        font_path = os.path.join(BASE_DIR, 'templates', 'nuvem', 'Comfortaa Bold.ttf')
     else:
         font_path = None
 
     cloud = WordCloud(width=1200, height=800, max_words=60, scale=2, background_color='white', mask=mask,
                       font_path=font_path)
-    palavras = dict(projeto.most_common())
     cloud.generate_from_frequencies(palavras)
-    path = os.path.join(BASE_DIR, 'media', 'nuvens')
-
-    if not os.path.exists(path):
-        if not os.path.exists(settings.MEDIA_ROOT):
-            os.mkdir(settings.MEDIA_ROOT)  # dir media
-        os.mkdir(os.path.join(settings.MEDIA_ROOT, 'nuvens'))  # path
-
-    # Grava o CSV
-    filename = 'nuvem-%s.csv' % projeto.pk
-    csvfile = open(os.path.join(path, filename), 'w')
-    writer = csv.writer(csvfile)
-    writer.writerow(['word', 'frequency',])
-    writer.writerows(palavras.items())
-    csvfile.close()
 
     # Grava a imagem da nuvem
     filename = 'nuvem-%s.png' % projeto.pk
@@ -270,6 +283,7 @@ def nuvem(request, id, modelo=None):
         'title': u'Nuvem de Palavras dos tweets obtidos',
         'projeto': projeto,
         'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
+        'modelo': modelo + 1 if modelo < 2 else 0,
     }, RequestContext(request, ))
 
 

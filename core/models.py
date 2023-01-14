@@ -68,7 +68,7 @@ def stopwords() -> list:
 def clean_pontuation(s) -> str:
     result = ''
     for letter in s:
-        if letter not in ['.', ',', ':', '?', '!', '"', "'", "”"]:
+        if letter not in ['.', ',', ':', '?', '!', '"', "'", "”", '“']:
             result += letter
     return result
 
