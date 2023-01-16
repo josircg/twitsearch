@@ -1,8 +1,8 @@
-import datetime
 import os
 import csv
 import random
 import pytz
+from datetime import datetime, timedelta
 import requests
 from threading import Thread
 from collections import Counter
@@ -131,7 +131,7 @@ def stats(request, id):
 
     fig = graph_objs.Figure(data=graph_objs.Heatmap(
         z=heatmap,
-        x=[datetime.datetime.strftime(datetime.datetime.strptime(data, '%Y%m%d'), '%d/%m/%Y') for data in dias_sorted],
+        x=[datetime.strftime(datetime.strptime(data, '%Y%m%d'), '%d/%m/%Y') for data in dias_sorted],
         colorscale='Viridis'
     ))
     fig.update_layout(
@@ -159,8 +159,8 @@ def stats(request, id):
 
     dias_sorted_formatter = []
     for dia in dias_sorted:
-        date = datetime.datetime.strptime(dia, '%Y%m%d')
-        dias_sorted_formatter.append(datetime.datetime.strftime(date, '%d/%m/%Y'))
+        date = datetime.strptime(dia, '%Y%m%d')
+        dias_sorted_formatter.append(datetime.strftime(date, '%d/%m/%Y'))
 
     fig2 = graph_objs.Figure(graph_objs.Bar(
         x=dias_sorted_formatter,
@@ -208,7 +208,7 @@ def stats(request, id):
 def backup_json(request, id):
     # Agenda processo de backup para o projeto
     agora = datetime.now(pytz.timezone(TIME_ZONE))
-    termo = Termo.objects.order_by('id').first(project_id=id)
+    termo = Termo.objects.filter(projeto_id=id).order_by('id').first()
     # Verifica primeiro se já não existe um backup agendado
     proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP).first()
     if proc:
@@ -221,7 +221,7 @@ def backup_json(request, id):
         messages.success(request, 'A montagem do backup foi iniciada. '
                                   'Verifique se o processo foi concluído diretamente no S3'
                                   'ou clicando no botão de Backup novamente')
-    return redirect(reverse('core_projeto', kwargs={'id': id}))
+    return redirect(reverse('admin:core_projeto_change', args=[id]))
 
 
 def exclui_json(request, id):
@@ -230,9 +230,9 @@ def exclui_json(request, id):
     if proc:
         remove_json(projeto)
     else:
-        messages.error('O backup deve ser realizado antes da exclusão')
+        messages.error(request, 'O backup deve ser realizado antes da exclusão')
 
-    return redirect(reverse('core_projeto', kwargs={'id': id}))
+    return redirect(reverse('admin:core_projeto_change', args=[id]))
 
 
 def nuvem(request, id, modelo=None):

@@ -26,6 +26,7 @@ class Command(BaseCommand):
 
         # alterar o TweetUser com os dados obtidos
         if response.status_code == 200:
+            user_saved = []
             user_data = response.json()['data']
             for user_record in user_data:
                 user = TweetUser.objects.get(twit_id=user_record['id'])
@@ -36,6 +37,7 @@ class Command(BaseCommand):
                     user.location = user_record['location']
                 user.created_at = convert_date(user_record['created_at']).date()
                 user.save()
+                user_saved.append(user_record['id'])
                 self.tot_updates += 1
 
                 try:
@@ -50,6 +52,9 @@ class Command(BaseCommand):
                 if user.followers != follow.followers:
                     user.followers = follow.followers
                     user.save()
+
+                missed = set(user_list) - set(user_saved)
+                print(missed)
 
     def handle(self, *args, **options):
         auth = load_credentials(filename="twitsearch/credentials.yaml",

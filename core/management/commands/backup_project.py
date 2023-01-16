@@ -16,7 +16,7 @@ def export_s3(projeto):
         bucket = settings.AWS_PROFILE + settings.AWS_BUCKET
     except:
         log_message(projeto, 'AWS Profile or Bucket not defined')
-        exit(1)
+        return -1
 
     root_path = os.path.split(settings.MEDIA_ROOT)[:-1][0]
     root_path = os.path.join(root_path, 'data')
@@ -61,7 +61,7 @@ def export_s3(projeto):
             s3.meta.client.upload_file(path_zip, settings.AWS_BUCKET, '%s/%s' % (projeto.nome, zip_filename))
             print('Arquivo copiado com sucesso %s' % zip_filename)
         log_message(projeto, 'Arquivos enviados para o S3')
-    return
+    return 0
 
 
 class Command(BaseCommand):
