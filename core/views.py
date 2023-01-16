@@ -21,7 +21,7 @@ from wordcloud import WordCloud
 
 from core import check_dir, intdef
 from core.apps import generate_tags_file, busca_local
-from core.models import Projeto, Termo, Tweet, Processamento, TweetUser, Retweet, \
+from core.models import Projeto, Termo, Tweet, Processamento, Retweet, \
     PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
 from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
@@ -43,13 +43,8 @@ def visao(request):
                       headers=headers,
                       json={'j_username': 'josir', 'j_password': '123@mudar',
                             'remember-me': True})
-
-    # r = requests.get("http://beta.visao.ibict.br/api/authentication/",
-    #                  params={'j_username': 'josir', 'j_password': '123@mudar',
-    #                          'remember-me': 'undefined', 'submit': 'Login'})
     r.headers
     return r
-    # return r JsonResponse({'data': 'ok'})
 
 
 def stats(request, id):

@@ -59,12 +59,15 @@ class Command(BaseCommand):
         self.header = {'Authorization': 'Bearer %s' % auth['bearer_token']}
 
         user_list = []
+        total = TweetUser.objects.filter(username__isnull=True).count()
+        print(f'Usuários sem info: {total} - Buscando apenas 2000')
         for empty_user in TweetUser.objects.filter(username__isnull=True).only('twit_id'):
 
             user_list.append(str(empty_user.twit_id))
             self.tot_registros += 1
             if self.tot_registros % 100 == 0:
                 self.update_users(user_list)
+                print(f'{self.tot_updates}')
                 user_list = []
 
                 if self.tot_registros % 2000 == 0:
