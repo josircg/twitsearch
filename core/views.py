@@ -209,9 +209,17 @@ def backup_json(request, id):
     agora = datetime.now(pytz.timezone(TIME_ZONE))
     termo = Termo.objects.first(project_id=id)
     # Verifica primeiro se já não existe um backup agendado
-    Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status='A')
-    messages.success(request, 'A montagem do backup foi iniciada. '
-                              'Visualize se o processo foi concluído diretamente no S3')
+    proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP)
+    if proc:
+        if proc[0].status == Processamento.CONCLUIDO:
+            messages.success(request, 'O backup já foi concluído. Verifique no S3')
+        else:
+            messages.warning(request, 'Backup não concluído')
+    else:
+        Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status='A')
+        messages.success(request, 'A montagem do backup foi iniciada. '
+                                  'Verifique se o processo foi concluído diretamente no S3'
+                                  'ou clicando no botão de Backup novamente')
     return redirect(reverse('core_projeto', kwargs={'id': id}))
 
 
