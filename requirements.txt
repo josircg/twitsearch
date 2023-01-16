@@ -14,3 +14,4 @@ reportlab==3.6.6
 git+https://bitbucket.org/josir/poweradmin.git@django22
 plotly
 gunicorn
+boto3

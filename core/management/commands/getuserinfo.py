@@ -27,7 +27,7 @@ class Command(BaseCommand):
         # alterar o TweetUser com os dados obtidos
         if response.status_code == 200:
             user_saved = []
-            user_data = response.json()['data']
+            user_data = response.json().get('data',[])
             for user_record in user_data:
                 user = TweetUser.objects.get(twit_id=user_record['id'])
                 user.name = user_record['name']
@@ -53,7 +53,16 @@ class Command(BaseCommand):
                     user.followers = follow.followers
                     user.save()
 
-                missed = set(user_list) - set(user_saved)
+            json_data = response.json()
+            user_data = json_data.get('errors',[])
+            for user_record in user_data:
+                user = TweetUser.objects.get(twit_id=user_record['value'])
+                user.username = '<Deleted>'
+                user.save()
+                user_saved.append(user_record['value'])
+
+            missed = set(user_list) - set(user_saved)
+            if len(missed) > 0:
                 print(missed)
 
     def handle(self, *args, **options):

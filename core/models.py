@@ -240,7 +240,7 @@ class Credencial(models.Model):
 
 class TweetUser(models.Model):
     twit_id = models.BigIntegerField(primary_key=True)
-    username = models.CharField(max_length=100, null=True)
+    username = models.CharField(max_length=100, null=True, db_index=True)
     name = models.CharField(max_length=200, null=True)
     location = models.CharField(max_length=200, null=True)
     verified = models.BooleanField(default=False)
@@ -289,8 +289,7 @@ class Tweet(models.Model):
 
     @property
     def url(self):
-        return mark_safe("<a href='https://www.twitter.com/%s/statuses/%s' target='_blank'>Link</a>" % (
-            self.user.username, self.twit_id))
+        return mark_safe("<a href='https://twitter.com/i/web/status/%s' target='_blank'>Link</a>" % self.twit_id)
 
 
 # Aqui estão os retweet, reply_to (comentários) ou quote (retweet com comentário)

@@ -158,17 +158,21 @@ class HistoryInline(admin.TabularInline):
 class TwitInline(admin.TabularInline):
     model = Tweet
     extra = 0
-    fields = ('text', 'created_time', 'retweets', 'favorites')
+    fields = ('url_str', 'text', 'created_time', 'retweets', 'favorites')
     readonly_fields = fields
 
     def has_add_permission(self, request):
         return False
 
+    def url_str(self, obj):
+        return obj.url
+    url_str.short_description = 'Link'
+
 
 class RetweetInline(admin.TabularInline):
     model = Retweet
     extra = 0
-    fields = ('tweet', 'created_time',)
+    fields = ('id', 'tweet', 'created_time',)
     readonly_fields = ('tweet', 'created_time',)
 
     def has_add_permission(self, request):
