@@ -12,7 +12,7 @@ from searchtweets import load_credentials
 
 
 class Command(BaseCommand):
-    label = 'Teste API v2 - User data'
+    label = 'Get User data'
     agora = datetime.now(pytz.timezone(TIME_ZONE))
     header = None
     tot_registros = 0

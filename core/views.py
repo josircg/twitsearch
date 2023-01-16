@@ -279,7 +279,7 @@ def nuvem(request, id, modelo=None):
     cloud.generate_from_frequencies(palavras)
 
     # Grava a imagem da nuvem
-    filename = 'nuvem-%s.png' % projeto.pk
+    filename = f'nuvem-{projeto.pk}-{modelo}.png'
     cloud.to_file(os.path.join(path, filename))
 
     return render_to_response('core/nuvem.html', {
