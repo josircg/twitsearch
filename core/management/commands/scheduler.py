@@ -20,7 +20,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for proc in Processamento.objects.filter(status=Processamento.AGENDADO).order_by('dt'):
             if proc.tipo == PROC_BACKUP:
-                export_s3(proc.projeto)
+                export_s3(proc.termo.projeto)
 
         print(f'Total de usuários lidos: {self.tot_registros}')
         print(f'Total de usuários atualizados: {self.tot_updates}')

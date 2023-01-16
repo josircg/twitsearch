@@ -23,6 +23,7 @@ from core import check_dir, intdef
 from core.apps import generate_tags_file, busca_local
 from core.models import Projeto, Termo, Tweet, Processamento, Retweet, \
     PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
+from core.management.commands.remove_json import remove_json
 from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
 import numpy as np
@@ -207,16 +208,16 @@ def stats(request, id):
 def backup_json(request, id):
     # Agenda processo de backup para o projeto
     agora = datetime.now(pytz.timezone(TIME_ZONE))
-    termo = Termo.objects.first(project_id=id)
+    termo = Termo.objects.order_by('id').first(project_id=id)
     # Verifica primeiro se já não existe um backup agendado
-    proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP)
+    proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP).first()
     if proc:
-        if proc[0].status == Processamento.CONCLUIDO:
+        if proc.status == Processamento.CONCLUIDO:
             messages.success(request, 'O backup já foi concluído. Verifique no S3')
         else:
             messages.warning(request, 'Backup não concluído')
     else:
-        Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status='A')
+        Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status=Processamento.AGENDADO)
         messages.success(request, 'A montagem do backup foi iniciada. '
                                   'Verifique se o processo foi concluído diretamente no S3'
                                   'ou clicando no botão de Backup novamente')
@@ -224,8 +225,14 @@ def backup_json(request, id):
 
 
 def exclui_json(request, id):
-    # Agenda processo de exclusão dos jsons de um projeto
-    return
+    projeto = get_object_or_404(Projeto, pk=id)
+    proc = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_BACKUP, status=Processamento.CONCLUIDO)
+    if proc:
+        remove_json(projeto)
+    else:
+        messages.error('O backup deve ser realizado antes da exclusão')
+
+    return redirect(reverse('core_projeto', kwargs={'id': id}))
 
 
 def nuvem(request, id, modelo=None):
