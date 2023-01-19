@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
-import json
-import requests
 import pytz
 
 from datetime import datetime
 from django.core.management.base import BaseCommand
 from twitsearch.settings import TIME_ZONE
-from core.models import convert_date, Processamento, PROC_BACKUP, PROC_FECHAMENTO
+from core import convert_date
+from core.models import Processamento, PROC_BACKUP, PROC_FECHAMENTO
 from core.management.commands.backup_project import export_s3
 from django.db.transaction import set_autocommit, commit, rollback
+
 
 class Command(BaseCommand):
     label = 'Execute scheduled tasks'
@@ -33,6 +32,3 @@ class Command(BaseCommand):
                 proc.status = 'C' if result == 0 else 'E'
                 proc.save()
                 commit()
-
-
-

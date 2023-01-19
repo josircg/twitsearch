@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 from django.core.management.base import BaseCommand
-from core.models import convert_date
+from core import convert_date
 
 from searchtweets import ResultStream, gen_request_parameters, load_credentials, collect_results
 

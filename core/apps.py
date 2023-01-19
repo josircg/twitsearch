@@ -3,6 +3,7 @@ import os
 import zipfile
 import shlex
 import logging
+from threading import Thread
 
 from django.apps import AppConfig
 
@@ -11,6 +12,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.contrib import messages
 
+from core import intdef
 from core.models import *
 
 
@@ -31,10 +33,10 @@ def detach_action(description=u"Desassociar tweet do Projeto"):
     return detach
 
 
-def export_tags_action(description=u"Exportar para Tags"):
+def export_tags_action(description=u"Exportar CSV Completo"):
     def export_tags(modeladmin, request, queryset):
-        generate_tags_file(project_id='tags', queryset=queryset)
-        with open(os.path.join(settings.MEDIA_ROOT, 'tags.zip'), 'rb') as f:
+        generate_tags_file(queryset, 'admin')
+        with open(os.path.join(settings.MEDIA_ROOT, 'full-admin.zip'), 'rb') as f:
             file_data = f.read()
         response = HttpResponse(file_data, content_type='application/octet-stream')
         response['Content-Disposition'] = 'attachment; filename=tags_%s.zip' % modeladmin.opts.db_table
@@ -57,24 +59,30 @@ def generate_tags_file(queryset, project_id):
     )
     logging.info('Rotina iniciada')
     try:
-        prefixo = 'tags-%s' % project_id
-        filename = os.path.join(path, '%s.csv' % prefixo)
-        csvfile = open(filename, 'w')
-        writer = csv.writer(csvfile)
-        writer.writerow(['id_str', 'from_user', 'text', 'created_at',
+        tags_filename = os.path.join(path, 'tags-%s.csv' % project_id)
+        csv_filename = os.path.join(path, 'full-%s.csv' % project_id)
+        tagsfile = open(tags_filename, 'w')
+        csvfile = open(csv_filename, 'w')
+        writer_tags = csv.writer(tagsfile)
+        writer_tags.writerow(['id_str', 'from_user', 'text', 'created_at',
                          'time', 'geo_coordinates', 'user_lang', 'in_reply_to_user_id', 'in_reply_to_screen_name',
                          'from_user_id_str', 'in_reply_to_status_id_str', 'source', 'profile_image_url',
                          'user_followers_count', 'user_friends_count', 'user_location',
                          'status_url', 'entities_str'])
+
+        writer_full = csv.writer(csvfile)
+        writer_full.writerow(['id_str', 'from_user', 'text', 'created_at', 'user_lang', 'from_user_id_str',
+                              'favorites', 'retweets', 'retweet_id', 'url'])
+
         num_lines = 0
         for obj in queryset:
             if obj.text[0:1] != 'RT':
                 line = [obj.twit_id, obj.user.username, obj.text, obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"),
-                        obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, '', '',
+                        obj.created_time.strftime("%d/%m/%Y %H:%M:%S"), '', obj.language, obj.user.twit_id, '',
                         '', '', '', '',
                         obj.user.followers, 0, obj.user.location,
                         '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-                writer.writerow(line)
+                writer_tags.writerow(line)
                 num_lines += 1
                 for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
                     line = [retweet.retweet_id, retweet.user.username, 'RT ' + obj.text,
@@ -83,20 +91,32 @@ def generate_tags_file(queryset, project_id):
                             '', '', '', '',
                             obj.user.followers, 0, obj.user.location,
                             '', '{"hashtags":[],"symbols":[],"user_mentions":[],"urls":[]}']
-                    writer.writerow(line)
+                    writer_tags.writerow(line)
                     num_lines += 1
 
+            writer_full.writerow([
+                "%s" % obj.twit_id, obj.user.username, obj.text, obj.created_time.strftime("%Y-%m-%d %H:%M:%S"),
+                obj.language, "%s" % obj.user.twit_id, obj.favorites, obj.retweets, "%s" % obj.retwit_id,
+                "https://twitter.com/i/web/status/%s" % obj.twit_id
+            ])
         csvfile.close()
+        tagsfile.close()
         logging.info('Linhas exportadas:%d' % num_lines)
 
-        path_zip = os.path.join(path, '%s.zip' % prefixo)
+        path_zip = os.path.join(path, 'tags-%s.zip' % project_id)
         with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
-            zip.write(os.path.join(path, '%s.csv' % prefixo), '%s.csv' % prefixo)
+            zip.write(os.path.join(path, 'tags-%s.csv' % project_id), 'tags-%s.csv' % project_id)
+
+        path_zip = os.path.join(path, 'full-%s.zip' % project_id)
+        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
+            zip.write(os.path.join(path, 'full-%s.csv' % project_id), 'full-%s.csv' % project_id)
 
         logging.info('Zip %s criado com sucesso' % path_zip)
-        os.remove(os.path.join(path, '%s.csv' % prefixo))
-        termo = Termo.objects.filter(projeto_id=project_id).first()
-        Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
+        os.remove(os.path.join(path, 'tags-%s.csv' % project_id))
+        os.remove(os.path.join(path, 'full-%s.csv' % project_id))
+        if intdef(project_id,0) != 0:
+            termo = Termo.objects.filter(projeto_id=project_id).first()
+            Processamento.objects.create(termo=termo, dt=timezone.now(), tipo=PROC_TAGS)
 
     except:
         logging.error('Erro fatal', exc_info=True)
@@ -117,7 +137,7 @@ def export_extra_action(description=u"Exportar CSV com retweets"):
                     obj.retweets, obj.favorites, ]
             writer.writerow(line)
             for retweet in obj.retweet_set.filter(retweet_id__isnull=False):
-                line = [retweet.retweet_id, 'RT '+retweet.tweet.text, retweet.user, retweet.user.twit_id,
+                line = [retweet.retweet_id, retweet.tweet.text, retweet.user, retweet.user.twit_id,
                         obj.created_time.strftime("%a %b %d %H:%M:%S %z %Y"), 0, 0, retweet.tweet.twit_id]
                 writer.writerow(line)
         return response

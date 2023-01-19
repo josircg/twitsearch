@@ -1,6 +1,3 @@
-import time
-import pytz
-from datetime import datetime
 from collections import Counter
 
 from django.db import models, connection
@@ -45,16 +42,6 @@ TIPO_PROCESSAMENTO = (
     (PROC_JSON_IMPORT,  'Importação JSON'),
     (PROC_NETWORK,      'Montagem Rede')
 )
-
-
-# Converte datas que venham no formato do Twitter
-def convert_date(date_str) -> datetime:
-    if 'Z' in date_str:
-        '2022-03-05T13:17:21.000Z'
-        time_struct = time.strptime(date_str, '%Y-%m-%dT%H:%M:%S.000Z')
-    else:
-        time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
-    return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
 
 
 def stopwords() -> list:

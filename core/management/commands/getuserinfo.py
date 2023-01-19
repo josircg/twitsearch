@@ -6,7 +6,8 @@ import pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand
 from twitsearch.settings import TIME_ZONE
-from core.models import convert_date, TweetUser, FollowersHistory
+from core import convert_date
+from core.models import TweetUser, FollowersHistory
 
 from searchtweets import load_credentials
 

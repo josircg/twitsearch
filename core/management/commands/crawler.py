@@ -8,20 +8,22 @@ from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit, rollback
 
-from core import log_message, intdef
+from core import log_message, intdef, convert_date
 from twitsearch.local import get_api
 
 import tweepy
 from searchtweets import ResultStream, gen_request_parameters, load_credentials
 
 from twitsearch.settings import TIME_ZONE
-from core.models import Termo, Tweet, Processamento, convert_date, PROC_PREMIUM, PROC_IMPORTACAO
+from core.models import Termo, Tweet, Processamento, PROC_PREMIUM, PROC_IMPORTACAO
 
 
 def save_result(data, processo, v2=False):
     data['process'] = processo
-    extension = '_.json' if v2 else '.json'
-    filename = 'data/%s%s' % (data['id'], extension)
+    if v2:
+        filename = 'data/%s_.json' % data['id']
+    else:
+        filename = 'data/%s.json' % data['id']
     arquivo = open(filename, 'w')
     json.dump(data, arquivo)
     arquivo.close()
@@ -178,6 +180,7 @@ class PremiumListener:
                                        start_time=start_time, end_time=end_time)
         tweets = ResultStream(request_parameters=query, max_tweets=self.proc_limit, **auth)
         for dataset in tweets.stream():
+
             # Monta a matriz de usuários
             users = {}
             for user in dataset['includes']['users']:
@@ -188,6 +191,7 @@ class PremiumListener:
 
             # Converte o tweet para o formato da API v1
             for tweet in dataset['data']:
+                # save_result(tweet, self.processo.id, True)
                 self.menor_data = min(self.menor_data, convert_date(tweet['created_at']))
                 if self.ultimo_tweet == '':
                     self.ultimo_tweet = tweet['id']
@@ -202,6 +206,7 @@ class PremiumListener:
                     tweet['user'] = users[tweet['author_id']]
                 else:
                     tweet['user'] = {'id': tweet['author_id']}
+
                 for parent in tweet.get('referenced_tweets', []):
                     if 'public_metrics' in parent:
                         parent['retweet_count'] = parent['public_metrics']['retweet_count']
@@ -227,7 +232,7 @@ class PremiumListener:
                     else:
                         tweet['retweeted_status'] = parent
 
-                save_result(tweet, self.processo.id, True)
+                save_result(tweet, self.processo.id, False)
                 self.count += 1
 
             # Verifica se o usuário interrompeu o processamento

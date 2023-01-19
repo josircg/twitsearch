@@ -1,5 +1,6 @@
 import os
 import csv
+import re
 import random
 import pytz
 from datetime import datetime, timedelta
@@ -11,6 +12,7 @@ from PIL import Image
 from django.db import connection
 from django.conf import settings
 from django.contrib import messages
+from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render_to_response, redirect
 
 from django.shortcuts import render
@@ -19,7 +21,7 @@ from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
-from core import check_dir, intdef
+from core import check_dir, intdef, find_urls
 from core.apps import generate_tags_file, busca_local
 from core.models import Projeto, Termo, Tweet, Processamento, Retweet, \
     PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
@@ -67,7 +69,7 @@ def stats(request, id):
         check_dir(path)
         csvfile = open(os.path.join(path, filename_csv), 'w')
         writer = csv.writer(csvfile)
-        writer.writerow(['username','favorites','retweets','count'])
+        writer.writerow(['username', 'favorites', 'retweets', 'count'])
         # TODO: Rever o cálculo
         with connection.cursor() as cursor:
             cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
@@ -185,10 +187,13 @@ def stats(request, id):
     try:
         if proc_tags > proc_importacao:
             exportacao = 'tags-%d.zip' % projeto.id
+            csv_completo = 'csv-%d.zip' % projeto.id
         else:
+            csv_completo = None
             exportacao = None
     except:
         exportacao = None
+        csv_completo = None
 
     return render(request, 'core/stats.html', {
         'title': u'Estatísticas do Projeto',
@@ -196,6 +201,7 @@ def stats(request, id):
         'palavras': palavras,
         'top_tweets': top_tweets,
         'download': exportacao,
+        'fullcsv' : csv_completo,
         'heatmap_div': heatmap_div,
         'grafico_div':grafico_div,
         # 'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
@@ -203,6 +209,17 @@ def stats(request, id):
         'csv': filename_csv,
 
     }, RequestContext(request, ))
+
+
+def most_used_urls(request, id):
+    # Para cada tweet do projeto (sem considerar os retweets), montar um Counter com as URLs encontradas
+    projeto = get_object_or_404(Projeto, pk=id)
+    url_counter = Counter()
+    for tweet in Tweet.objects.filter(termo__projeto=projeto):
+        urls = find_urls(tweet.text)
+        for url in urls:
+            url_counter[url] += 1
+    return url_counter.most_common()
 
 
 def backup_json(request, id):
@@ -381,6 +398,19 @@ def solicita_busca(request, id):
     messages.success(request, 'A busca local foi iniciada. Aguarde que o status do Termo apareça como concluído.')
     return redirect(reverse('admin:core_termo_change', args=[id]))
 
+
+def get_source(request, tweet_id):
+    filename = os.path.join(settings.BASE_DIR, 'data', 'cached', '%s.json2' % tweet_id)
+    if not os.path.exists(filename):
+        filename = os.path.join(settings.BASE_DIR, 'data', 'cached', '%s.json' % tweet_id)
+        if not os.path.exists(filename):
+            return HttpResponseNotFound("Arquivo não encontrado")
+
+    with open(filename, 'r') as f:
+        file_data = f.read()
+    response = HttpResponse(file_data, content_type='application/json')
+    response['Content-Disposition'] = 'attachment; filename=%s.json' % tweet_id
+    return response
 
 # def use_seaborn(request):
 #     import seaborn as sb

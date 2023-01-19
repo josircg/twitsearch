@@ -2,6 +2,10 @@ import os
 import re
 import shlex
 import subprocess
+import time
+import pytz
+from datetime import datetime
+
 from twitsearch import settings
 
 # Mon Nov 25 23:56:33 +0000 2019	25/11/2019 23:56:33
@@ -16,6 +20,21 @@ def intdef(s, default: int = 0) -> int:
         return default
     except TypeError:
         return default
+
+
+def find_urls(text):
+    urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\), ]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',text)
+    return urls
+
+
+# Converte datas que venham no formato do Twitter
+def convert_date(date_str) -> datetime:
+    if 'Z' in date_str:
+        '2022-03-05T13:17:21.000Z'
+        time_struct = time.strptime(date_str, '%Y-%m-%dT%H:%M:%S.000Z')
+    else:
+        time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
+    return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
 
 
 def OSRun(command, stop=False):
