@@ -229,11 +229,12 @@ class Command(BaseCommand):
             termo.save()
         commit()
 
-        if tot_files > 0:
+        if tot_files == 0:
+            proc.delete()
+            print('Nenhum arquivo processado %s' % timezone.now())
+        else:
             print('Arquivos processados: %d' % tot_files)
             print('Arquivos com erro: %d' % tot_erros)
             print('Novos Usuários: %d' % COUNTER['users'])
             print('Novos Tweets: %d' % COUNTER['tweets'])
             print('Novos Retweets: %d' % COUNTER['retweets'])
-        else:
-            print('Nenhum arquivo processado %s' % timezone.now())
