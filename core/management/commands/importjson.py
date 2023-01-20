@@ -193,7 +193,7 @@ class Command(BaseCommand):
                 if Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT):
                     print('Importação pendente')
                     return
-            agora = timezone.now(pytz.timezone(TIME_ZONE))
+            agora = timezone.now()
             proc = Processamento.objects.create(status=Processamento.PROCESSANDO,
                                                 tipo=PROC_JSON_IMPORT, dt=agora)
             commit()
