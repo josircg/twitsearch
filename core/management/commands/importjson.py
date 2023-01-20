@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import json
-import datetime
 import pytz
 
 from os import scandir, rename, makedirs
@@ -194,7 +193,7 @@ class Command(BaseCommand):
                 if Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT):
                     print('Importação pendente')
                     return
-            agora = datetime.now(pytz.timezone(TIME_ZONE))
+            agora = timezone.now(pytz.timezone(TIME_ZONE))
             proc = Processamento.objects.create(status=Processamento.PROCESSANDO,
                                                 tipo=PROC_JSON_IMPORT, dt=agora)
             commit()
