@@ -120,6 +120,7 @@ def generate_tags_file(queryset, project_id):
         with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
             zip.write(os.path.join(path, 'tags-%s.csv' % project_id), 'tags-%s.csv' % project_id)
 
+
         path_zip = os.path.join(path, 'full-%s.zip' % project_id)
         with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
             zip.write(os.path.join(path, 'full-%s.csv' % project_id), 'full-%s.csv' % project_id)

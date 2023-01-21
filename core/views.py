@@ -186,7 +186,7 @@ def stats(request, id):
 
     if proc_tags > proc_importacao:
         csv_tags = 'tags-%d.zip' % projeto.id
-        csv_completo = 'csv-%d.zip' % projeto.id
+        csv_completo = 'full-%d.zip' % projeto.id
     else:
         csv_completo = None
         csv_tags = None
