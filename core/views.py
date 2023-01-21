@@ -184,24 +184,20 @@ def stats(request, id):
     )
     grafico_div = plot(fig2, output_type='div')
 
-    try:
-        if proc_tags > proc_importacao:
-            exportacao = 'tags-%d.zip' % projeto.id
-            csv_completo = 'csv-%d.zip' % projeto.id
-        else:
-            csv_completo = None
-            exportacao = None
-    except:
-        exportacao = None
+    if proc_tags > proc_importacao:
+        csv_tags = 'tags-%d.zip' % projeto.id
+        csv_completo = 'csv-%d.zip' % projeto.id
+    else:
         csv_completo = None
+        csv_tags = None
 
     return render(request, 'core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
         'palavras': palavras,
         'top_tweets': top_tweets,
-        'download': exportacao,
-        'fullcsv' : csv_completo,
+        'csv_tags': csv_tags,
+        'csv_completo': csv_completo,
         'heatmap_div': heatmap_div,
         'grafico_div':grafico_div,
         # 'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),

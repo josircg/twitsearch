@@ -50,7 +50,7 @@
     <ul class="object-tools">
         {% if csv_completo %}
         <li><a href="/media/{{ csv_completo }}">Download Full CSV</a></li>
-        <li><a href="/media/{{ download }}">Download TAGS CSV</a></li>
+        <li><a href="/media/{{ csv_tags }}">Download TAGS CSV</a></li>
         {% else %}
         <li><a href="{% url 'solicitar_csv' projeto.pk %}">Solicitar CSV</a></li>
         {% endif %}
