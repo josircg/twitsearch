@@ -20,6 +20,19 @@ class CoreConfig(AppConfig):
     name = 'core'
 
 
+def update_stats_action(description=u"Recalcular estatísticas"):
+    def recalcular(modeladmin, request, queryset):
+        alterados = 0
+        for projeto in queryset:
+            for termo in projeto.termo_set.all():
+                termo.last_count = termo.tot_twits
+                termo.save()
+            alterados += 1
+        messages.info(request, u'%d termos alterados' % alterados)
+
+    recalcular.short_description = description
+    return recalcular
+
 def detach_action(description=u"Desassociar tweet do Projeto"):
     def detach(modeladmin, request, queryset):
         alterados = 0

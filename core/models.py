@@ -264,9 +264,10 @@ class Tweet(models.Model):
     created_time = models.DateTimeField()
     retweets = models.IntegerField()
     favorites = models.IntegerField()
-    user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
+    # quotes = models.IntegerField()
+    user = models.ForeignKey(TweetUser, qon_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True)
-    retwit_id = models.CharField(max_length=21, null=True)
+    retwit_id = models.CharField(max_length=21, null=True) # Parent Tweet
     language = models.CharField(max_length=5, null=True)
     location = models.TextField(null=True, blank=True)
     geo = models.CharField(max_length=150, null=True, blank=True)
@@ -283,13 +284,16 @@ class Tweet(models.Model):
 # O tweet original pode ser importado após o retweet. Dessa forma, nem todo retweet tem associação com o Tweet
 # Desta forma, uma rotina pós-exportação deve regularmente verificar se já é possível realizar a associação
 class Retweet(models.Model):
+    REPLY = 'C'    # Comentário
+    QUOTE = 'Q'    # Retweet com comentário
+    RETWEET = 'R'  # Retweet sem comentário
     retweet_id = models.CharField(max_length=21, null=True, blank=True, db_index=True)    # id do retweet
     parent_id = models.CharField(max_length=21, null=True, blank=True, db_index=True)     # parent id
     user = models.ForeignKey(TweetUser, on_delete=models.PROTECT)          # user do retweet
     tweet = models.ForeignKey(Tweet, on_delete=models.SET_NULL, null=True) # Tweet original que gerou o retweet
     created_time = models.DateTimeField(null=True)
     type = models.CharField(max_length=1,
-                            choices=(('C', 'Reply'), ('Q', 'Quote'), ('R', 'Retweet')),
+                            choices=((REPLY, 'Reply'), (QUOTE, 'Quote'), (RETWEET, 'Retweet')),
                             null=True, blank=True)
 
     def __str__(self):

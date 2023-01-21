@@ -26,7 +26,8 @@ class Command(BaseCommand):
                 original = Tweet.objects.get(twit_id=tweet.retwit_id)
                 Retweet.objects.get_or_create(tweet=original, user=tweet.user, created_time=tweet.created_time,
                                               retweet_id=tweet.twit_id)
-                tweet.delete()
+                if original.text == tweet.text:
+                    tweet.delete()
                 if tot_files % 100 == 0:
                     commit()
                 tot_files += 1

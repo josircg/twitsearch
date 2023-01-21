@@ -4,7 +4,7 @@ from django.conf import settings
 
 from core.models import *
 
-from core.apps import export_tags_action, export_extra_action, detach_action
+from core.apps import export_tags_action, export_extra_action, detach_action, update_stats_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
@@ -71,6 +71,10 @@ class ProjetoAdmin(PowerModelAdmin):
         if not request.user.is_superuser:
             if 'delete_selected' in actions:
                 del actions['delete_selected']
+
+        update_stats = update_stats_action()
+        actions['update_stats'] = (update_stats, 'update_stats', update_stats.short_description)
+
         return actions
 
     def get_fields(self, request, obj=None):
