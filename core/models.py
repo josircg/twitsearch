@@ -265,7 +265,7 @@ class Tweet(models.Model):
     retweets = models.IntegerField()
     favorites = models.IntegerField()
     # quotes = models.IntegerField()
-    user = models.ForeignKey(TweetUser, qon_delete=models.CASCADE)
+    user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True)
     retwit_id = models.CharField(max_length=21, null=True) # Parent Tweet
     language = models.CharField(max_length=5, null=True)
