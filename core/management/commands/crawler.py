@@ -372,11 +372,12 @@ class Command(BaseCommand):
                             proxima_data = agora + timedelta(hours=2)
 
             # Sinaliza o fim do processamento
+            ultimo_tweet = intdef(listener.ultimo_tweet,None)
             print('Status atualizado (%d): %s %s' % (termo.id, status_proc, listener.ultimo_tweet))
             Termo.objects.filter(id=termo.id).update(status=status_proc,
                                                      ult_processamento=proxima_data,
-                                                     ult_tweet=listener.ultimo_tweet)
-            processo.twit_id = intdef(listener.ultimo_tweet,0)
+                                                     ult_tweet=ultimo_tweet)
+            processo.twit_id = ultimo_tweet
             processo.status = Processamento.CONCLUIDO
             processo.save()
             commit()
