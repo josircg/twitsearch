@@ -376,7 +376,7 @@ class Command(BaseCommand):
             Termo.objects.filter(id=termo.id).update(status=status_proc,
                                                      ult_processamento=proxima_data,
                                                      ult_tweet=listener.ultimo_tweet)
-            processo.twit_id = listener.ultimo_tweet or 0
+            processo.twit_id = intdef(listener.ultimo_tweet,0)
             processo.status = Processamento.CONCLUIDO
             processo.save()
             commit()
