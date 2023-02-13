@@ -164,10 +164,10 @@ class PremiumListener:
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)
         if self.menor_data > limite_premium:
             end_time = limite_premium.strftime('%Y-%m-%d %H:%M')
-            print(f'Limit - Start: {start_time}  End: {end_time}')
+            print(f'Limit ({termo.id}) Start: {start_time}  End: {end_time}')
         else:
             end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
-            print(f'Reload - Start: {start_time}  End: {end_time}')
+            print(f'Reload ({termo.id}) Start: {start_time}  End: {end_time}')
         self.count = 0
         tot_calls = 0
         query = gen_request_parameters(termo.busca, None,
@@ -280,26 +280,12 @@ class Command(BaseCommand):
         parser.add_argument('--twit', type=str, help='Twitter ID')
         parser.add_argument('--proc', type=str, help='Processo')
         parser.add_argument('--termo', type=str, help='Termo ID')
+        parser.add_argument('--limite', type=str, help='Limite de Tweets')
+        parser.add_argument('--todos', help='Processa todos os termos em aberto', nargs='?')
 
-    def handle(self, *args, **options):
-        agora = timezone.now()
-        registros_lidos = 0
-        if 'twit' in options and options['twit']:
-            processa_item_unico(options['twit'], options['termo'])
-            return
-
-        if 'termo' in options and options['termo']:
-            termo = Termo.objects.filter(id=options['termo']).first()
-            reset_search = True
-        else:
-            termo = Termo.objects.filter(status='A').order_by('ult_processamento').first()
-            reset_search = False
-
-        if not termo:
-            print('Nenhum termo para processar %s' % timezone.now())
-            return
-
+    def processa_termo(self, termo, reset_search, limite):
         # se for um reset ou primeiro processamento
+        agora = timezone.now()
         if reset_search or not termo.ult_tweet:
             ultimo_tweet = None
             if termo.tipo_busca == PROC_PREMIUM:
@@ -334,6 +320,8 @@ class Command(BaseCommand):
             if termo.tipo_busca == PROC_PREMIUM:
                 listener = PremiumListener()
                 listener.processo = processo
+                if limite > 0:
+                    listener.proc_limit = limite
                 if reset_search:
                     listener.menor_data = processo.termo.dtfinal
                 listener.run()
@@ -372,7 +360,7 @@ class Command(BaseCommand):
                             proxima_data = agora + timedelta(hours=2)
 
             # Sinaliza o fim do processamento
-            ultimo_tweet = intdef(listener.ultimo_tweet,None)
+            ultimo_tweet = intdef(listener.ultimo_tweet, None)
             print('Status atualizado (%d): %s %s' % (termo.id, status_proc, listener.ultimo_tweet))
             Termo.objects.filter(id=termo.id).update(status=status_proc,
                                                      ult_processamento=proxima_data,
@@ -380,12 +368,6 @@ class Command(BaseCommand):
             processo.twit_id = ultimo_tweet
             processo.status = Processamento.CONCLUIDO
             processo.save()
-            commit()
-
-            # Revive qualquer projeto de busca simples em processamento há mais de 1 horas
-            uma_hora = agora - timedelta(hours=1)
-            Termo.objects.filter(status='P', tipo_busca=PROC_IMPORTACAO, ult_processamento__lt=uma_hora).\
-                update(status='A')
             commit()
 
         except Exception as e:
@@ -402,6 +384,38 @@ class Command(BaseCommand):
             log_message(termo.projeto, mensagem)
             print(mensagem)
             traceback.print_exc()
+
+    def handle(self, *args, **options):
+        registros_lidos = 0
+        if 'twit' in options and options['twit']:
+            processa_item_unico(options['twit'], options['termo'])
             return
+
+        limite = 0
+        if 'limite' in options:
+            limite = intdef(options['limite'], 0)
+
+        if 'termo' in options and options['termo']:
+            termo = Termo.objects.filter(id=options['termo']).first()
+            reset_search = True
+        else:
+            termo = Termo.objects.filter(status='A').order_by('ult_processamento').first()
+            reset_search = False
+
+        if not termo:
+            print('Nenhum termo para processar %s' % timezone.now())
+            return
+
+        if 'todos' in options:
+            for termo in Termo.objects.filter(status='A').order_by('ult_processamento'):
+                self.processa_termo(termo, reset_search, limite)
+        else:
+            self.processa_termo(termo, reset_search, limite)
+
+        # Revive qualquer projeto de busca simples em processamento há mais de 1 horas
+        uma_hora = timezone.now() - timedelta(hours=1)
+        Termo.objects.filter(status='P', tipo_busca=PROC_IMPORTACAO, ult_processamento__lt=uma_hora). \
+            update(status='A')
+        commit()
 
         print('Processamento concluído: %d registros lidos' % registros_lidos)

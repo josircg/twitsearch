@@ -64,14 +64,16 @@
 			    {% if projeto.texto %}
 				<div><label>Texto Explicativo:</label><p>{{projeto.objetivo}}</p></div>
 			    {% endif %}
-                <label><b>Termos:</b></label>
-                {% for termo in projeto.termo_set.all %}
-                <div class="form-row instituicao">
-                    <div>
-                        <p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+                {% if projeto.termo_set.count < 10 %}
+                    <label><b>Termos:</b></label>
+                    {% for termo in projeto.termo_set.all %}
+                    <div class="form-row instituicao">
+                        <div>
+                            <p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+                        </div>
                     </div>
-                </div>
-                {%  endfor %}
+                    {%  endfor %}
+                {% endif %}
                 <p></p>
 				<div><label>Total de Tweets Coletados: {{projeto.tot_twits}}</label></div>
 				<div><label>Total de Retweets Coletados: {{projeto.tot_retwits}}</label></div>
