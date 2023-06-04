@@ -210,6 +210,8 @@ class Command(BaseCommand):
                         if optimize and isfile(join(cached_dir,arquivo.name)):
                             os.remove(filename)
                             tot_dup += 1
+                            if tot_dup % 100 == 0:
+                                print(f'Duplicados {tot_dup}')
                             continue
 
                         try:
