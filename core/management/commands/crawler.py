@@ -147,7 +147,8 @@ class PremiumListener:
         if not self.menor_data:
             if termo.ult_processamento:
                 # A busca dos tweets é feita do mais recente para o mais antigo
-                # Desta forma, em caso de reprocessamento, a data final será deslocada para o tweet mais recente
+                # Desta forma, em caso de reprocessamento, a data final será deslocada para o
+                # tweet mais recente que já foi recuperado
                 self.ultimo_tweet = str(termo.ult_tweet)
                 if self.ultimo_tweet:
                     tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
@@ -163,9 +164,11 @@ class PremiumListener:
                     self.menor_data = tweet.created_time
                 else:
                     self.menor_data = termo.dtfinal
+                    print('Nenhum processamento anterior encontrado')
 
             else:
                 self.menor_data = termo.dtfinal
+                print('Menor tweet não encontrado')
 
         start_time = termo.dtinicio.strftime('%Y-%m-%d %H:%M')
         limite_premium = datetime.now(pytz.timezone(TIME_ZONE)) - timedelta(days=1)

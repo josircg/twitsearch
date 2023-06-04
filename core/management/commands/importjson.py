@@ -208,7 +208,6 @@ class Command(BaseCommand):
                 for arquivo in os.scandir(dest_dir):
                     if arquivo.name.endswith(".json"):
                         filename = join(dest_dir, arquivo.name)
-                        print(filename)
                         if optimize and isfile(join(cached_dir,arquivo.name)):
                             os.remove(filename)
                             tot_dup += 1
