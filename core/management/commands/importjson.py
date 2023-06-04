@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
 import json
+import os
 import pytz
 
 from os import scandir, rename, makedirs
@@ -150,6 +150,7 @@ class Command(BaseCommand):
         parser.add_argument('twit', type=str, help='Twitter File',)
         parser.add_argument('-p', '--processo', type=str, help='Processo Default', nargs='?')
         parser.add_argument('-f', '--force', help='Accept multiple imports running', nargs='?')
+        parser.add_argument('-o', '--optimize', help='Do not import duplicate files', nargs='?')
         parser.add_argument('-x', '--fixo', type=str, help='Processo Fixo')
 
     def handle(self, *args, **options):
@@ -158,6 +159,7 @@ class Command(BaseCommand):
         COUNTER['retweets'] = 0
 
         force = options.get('force')
+        optimize = options.get('optimize')
 
         if options['processo']:
             try:
@@ -171,6 +173,7 @@ class Command(BaseCommand):
 
         tot_files = 0
         tot_erros = 0
+        tot_dup = 0
         dest_dir = BASE_DIR + '/data'
         set_autocommit(False)
         if options['twit'] != 'data':
@@ -179,9 +182,9 @@ class Command(BaseCommand):
                 with open(filename, 'r') as file:
                     texto = file.read()
                     twit = json.loads(texto)
-                process_twitter(twit, proc)
-                commit()
-                tot_files = 1
+                    process_twitter(twit, proc)
+                    commit()
+                    tot_files = 1
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
@@ -201,9 +204,14 @@ class Command(BaseCommand):
                 cached_dir = dest_dir + '/cached'
                 if not exists(cached_dir):
                     makedirs(cached_dir)
-                for arquivo in scandir(dest_dir):
+                for arquivo in os.scandir(dest_dir):
                     if arquivo.name.endswith(".json"):
                         filename = join(dest_dir, arquivo.name)
+                        if optimize and isfile(join(cached_dir,arquivo.name)):
+                            os.remove(filename)
+                            tot_dup += 1
+                            continue
+
                         try:
                             with open(filename, 'r') as file:
                                 texto = file.read()
@@ -218,9 +226,15 @@ class Command(BaseCommand):
                             tot_erros += 1
                         tot_files += 1
             finally:
-                proc.status = Processamento.CONCLUIDO
-                proc.save()
+                if tot_files == 0:
+                    proc.delete()
+                    print('Nenhum arquivo processado %s' % timezone.now())
+                else:
+                    proc.status = Processamento.CONCLUIDO
+                    proc.tot_registros = tot_files
+                    proc.save()
                 commit()
+                print('Processamento concluído')
 
         # Atualiza o contador de tweets de cada termo em aberto
         for termo in Termo.objects.exclude(status='C'):
@@ -228,11 +242,11 @@ class Command(BaseCommand):
             termo.save()
         commit()
 
-        if tot_files == 0:
-            proc.delete()
-            print('Nenhum arquivo processado %s' % timezone.now())
-        else:
+        if tot_files != 0:
             print('Arquivos processados: %d' % tot_files)
+            if optimize:
+                print('Arquivos duplicados: %d' % tot_dup)
+
             print('Arquivos com erro: %d' % tot_erros)
             print('Novos Usuários: %d' % COUNTER['users'])
             print('Novos Tweets: %d' % COUNTER['tweets'])
