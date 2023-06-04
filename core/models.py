@@ -66,6 +66,8 @@ class Projeto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     alcance = models.BigIntegerField('Alcance Estimado', default=0)
+    # language = models.CharField(max_length=4, null=True, blank=True)  # Linguagem default
+    # tot_twits = models.IntegerField('Total de Tweets', null=True, blank=True)
 
     def __str__(self):
         return self.nome
@@ -73,19 +75,34 @@ class Projeto(models.Model):
     @property
     def tot_twits(self):
         soma = 0
-        for termo in self.termo_set.all():
-            soma += termo.last_count
-        return '{:,}'.format(soma).replace(',','.')
+        if self.termo_set.count() > 50:
+            return 'Calculating...'
+        else:
+            for termo in self.termo_set.all():
+                soma += termo.last_count
+            return '{:,}'.format(soma).replace(',','.')
 
     @property
     def tot_retwits(self):
         soma = 0
-        for termo in self.termo_set.all():
-            soma += termo.tot_retwits
-        return '{:,}'.format(soma).replace(',','.')
+        if self.termo_set.count() > 50:
+            return 'Calculating...'
+        else:
+            for termo in self.termo_set.all():
+                soma += termo.tot_retwits
+            return '{:,}'.format(soma).replace(',','.')
 
     def top_tweets(self):
         return None
+
+    @property
+    def termos_processados(self):
+        return self.termo_set.filter(status='C').count()
+
+    @property
+    def termos_ativos(self):
+        return self.termo_set.filter(status='A').count()
+    termos_ativos.fget.short_description = 'Termos Ativos'
 
     @property
     def unique_users(self):
@@ -111,7 +128,7 @@ class Projeto(models.Model):
                 _status = termo.status
         return dict(STATUS_TERMO).get(_status)
 
-    def most_common(self, total=100, language='pt'):
+    def most_common(self, total=100):
         result = Counter()
         excecoes = stopwords()
         for termo in self.termo_set.all():
@@ -121,7 +138,7 @@ class Projeto(models.Model):
 
             # para cada tweet na linguagem definida, montar matriz de ocorrências
             for tweet in termo.tweet_set.filter(retwit_id__isnull=True):
-                if tweet.language is not None and tweet.language != language:
+                if tweet.language is not None and tweet.language != self.language or 'pt':
                     continue
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
@@ -207,13 +224,17 @@ class Processamento(models.Model):
     status = models.CharField(max_length=1, choices=((AGENDADO, 'Agendado'),
                                                      (PROCESSANDO, 'Em processamento'),
                                                      (CONCLUIDO, 'Concluído')), default=CONCLUIDO, db_index=True)
+    tot_registros = models.IntegerField(blank=True, null=True)
 
     def __str__(self):
         return '%s: %s' % (self.dt, self.termo if self.termo else self.tipo)
 
     @property
     def tot_twits(self):
-        return self.tweetinput_set.count() or 0
+        if self.tot_registros:
+            return self.tot_registros
+        else:
+            return self.tweetinput_set.count() or 0
 
 
 class Credencial(models.Model):

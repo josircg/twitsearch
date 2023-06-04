@@ -48,7 +48,7 @@ class Command(BaseCommand):
 
         if len(user_list) > 0:
             Termo.objects.create(projeto_id=projeto_id, busca=user_list,
-                                 dt_inicial=dt_inicial, dt_final=dt_final,
+                                 dtinicio=dt_inicial, dtfinal=dt_final,
                                  tipo_busca=PROC_PREMIUM, status='A')
 
         print(f'Total de usuários lidos: {self.tot_registros}')

@@ -142,15 +142,22 @@ class PremiumListener:
                                 yaml_key="oldimar",
                                 env_overwrite=False)
         termo = self.processo.termo
+
+        # O primeiro passo é obter a menor data já recuperada
         if not self.menor_data:
             if termo.ult_processamento:
                 # A busca dos tweets é feita do mais recente para o mais antigo
                 # Desta forma, em caso de reprocessamento, a data final será deslocada para o tweet mais recente
                 self.ultimo_tweet = str(termo.ult_tweet)
-                tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
+                if self.ultimo_tweet:
+                    tweet = Tweet.objects.filter(twit_id=self.ultimo_tweet, created_time__gte=termo.dtinicio).first()
+                else:
+                    tweet = None
+
+                # se o último tweet não for encontrado, deve-se buscar o menor tweet do termo
                 if not tweet:
                     tweet = Tweet.objects.filter(termo=termo, created_time__gte=termo.dtinicio).\
-                        order_by('-twit_id').first()
+                        order_by('twit_id').first()
 
                 if tweet:
                     self.menor_data = tweet.created_time
@@ -167,7 +174,7 @@ class PremiumListener:
             print(f'Limit ({termo.id}) Start: {start_time}  End: {end_time}')
         else:
             end_time = self.menor_data.strftime('%Y-%m-%d %H:%M')
-            print(f'Reload ({termo.id}) Start: {start_time}  End: {end_time}')
+            print(f'Reload ({termo.id}) Start: {start_time}  End: {end_time}  Ultimo: {self.ultimo_tweet}')
         self.count = 0
         tot_calls = 0
         query = gen_request_parameters(termo.busca, None,
@@ -238,14 +245,19 @@ class PremiumListener:
             # Verifica se o usuário interrompeu o processamento
             self.status = Termo.objects.get(id=termo.id).status
             if self.status == 'I':
-                break
+                print('Interrompido pelo usuário')
+                return
 
-            sleep_count = min(2*tot_calls, 120)
-            print(f'{self.count} tweets importados (soneca:{sleep_count})')
-            time.sleep(sleep_count)
-            tot_calls += 1
+            if tot_calls == 100:
+                print(f'{self.count} tweets importados. Finalizado para dar espaço a outros projetos')
+                return
+            else:
+                sleep_count = min(2 * tot_calls, 120)
+                print(f'{self.count} tweets importados (soneca:{sleep_count})')
+                time.sleep(sleep_count)
+                tot_calls += 1
 
-        if self.count < self.proc_limit and self.status != 'I':
+        if self.count < self.proc_limit:
             self.status = 'C'
 
         return
@@ -366,6 +378,7 @@ class Command(BaseCommand):
                                                      ult_processamento=proxima_data,
                                                      ult_tweet=ultimo_tweet)
             processo.twit_id = ultimo_tweet
+            processo.tot_registros = registros_lidos
             processo.status = Processamento.CONCLUIDO
             processo.save()
             commit()
@@ -373,11 +386,14 @@ class Command(BaseCommand):
         except Exception as e:
             if listener:
                 ultimo_tweet = intdef(listener.ultimo_tweet, 0)
+                tot_registros = listener.count
             else:
                 ultimo_tweet = termo.ult_tweet
+                tot_registros = None
             Termo.objects.filter(id=termo.id).update(status='E', ult_processamento=agora,
                                                      ult_tweet=ultimo_tweet)
             processo.status = Processamento.CONCLUIDO
+            processo.tot_registros = tot_registros
             processo.save()
             commit()
             mensagem = 'Erro no processamento: %s' % e

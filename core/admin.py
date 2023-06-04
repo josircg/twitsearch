@@ -63,8 +63,13 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_twits',)
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'tot_favorites', 'usuario', 'grupo')
-    inlines = [TermoInline]
+    fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'tot_favorites', )
+
+    def get_inlines(self, request, obj):
+        if obj.termo_set.count() < 50:
+            return [TermoInline]
+        else:
+            return []
 
     def get_actions(self, request):
         actions = super(ProjetoAdmin, self).get_actions(request)
@@ -80,7 +85,8 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'grupo'
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', \
+                    'termos_ativos', 'termos_processados', 'usuario', 'grupo'
             else:
                 return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario'
         else:
@@ -135,11 +141,12 @@ class ProjetoAdmin(PowerModelAdmin):
 
         if not readonly:
             if request.user.is_superuser:
-                return 'usuario', 'tot_twits', 'tot_retwits', 'alcance'
+                return 'usuario', 'tot_twits', 'tot_retwits', 'alcance', 'termos_ativos', 'termos_processados',
             else:
                 return 'usuario', 'tot_twits', 'tot_retwits', 'alcance', 'grupo'
         else:
-            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits', 'alcance'
+            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits', 'alcance', \
+                'termos_ativos', 'termos_processados',
 
     def visao(self, request, id):
         projeto = get_object_or_404(Projeto, pk=id)

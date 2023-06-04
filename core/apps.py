@@ -33,6 +33,7 @@ def update_stats_action(description=u"Recalcular estatísticas"):
     recalcular.short_description = description
     return recalcular
 
+
 def detach_action(description=u"Desassociar tweet do Projeto"):
     def detach(modeladmin, request, queryset):
         alterados = 0
