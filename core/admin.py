@@ -65,11 +65,31 @@ class ProjetoAdmin(PowerModelAdmin):
     search_fields = ('nome',)
     fields = ('nome', 'objetivo', 'tot_twits', 'tot_retwits', 'tot_favorites', )
 
-    def get_inlines(self, request, obj):
+    inlines = [TermoInline]
+
+    def get_inline_instances(self, request, obj=None):
+        inline_instances = []
+
         if obj.termo_set.count() < 50:
-            return [TermoInline]
+            inlines = self.inlines
         else:
-            return []
+            inlines = []
+
+        for inline_class in inlines:
+            inline = inline_class(self.model, self.admin_site)
+            if request:
+                if not (inline.has_add_permission(request) or
+                        inline.has_change_permission(request) or
+                        inline.has_delete_permission(request)):
+                    continue
+                if not inline.has_add_permission(request):
+                    inline.max_num = 0
+            inline_instances.append(inline)
+        return inline_instances
+
+    def get_formsets(self, request, obj=None):
+        for inline in self.get_inline_instances(request, obj):
+            yield inline.get_formset(request, obj)
 
     def get_actions(self, request):
         actions = super(ProjetoAdmin, self).get_actions(request)
