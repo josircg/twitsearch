@@ -138,7 +138,7 @@ class Projeto(models.Model):
 
             # para cada tweet na linguagem definida, montar matriz de ocorrências
             for tweet in termo.tweet_set.filter(retwit_id__isnull=True):
-                if tweet.language is not None and tweet.language != self.language or 'pt':
+                if tweet.language is not None and tweet.language != termo.language or 'pt':
                     continue
                 palavras = tweet.text.lower().split()
                 for palavra in palavras:
