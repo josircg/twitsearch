@@ -4,7 +4,8 @@ from django.conf import settings
 
 from core.models import *
 
-from core.apps import export_tags_action, export_extra_action, detach_action, update_stats_action
+from core.apps import export_tags_action, export_extra_action, detach_action, \
+    update_stats_action, stop_process_action, reactivate_project_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton
 
@@ -97,8 +98,11 @@ class ProjetoAdmin(PowerModelAdmin):
             if 'delete_selected' in actions:
                 del actions['delete_selected']
 
-        update_stats = update_stats_action()
-        actions['update_stats'] = (update_stats, 'update_stats', update_stats.short_description)
+        action = reactivate_project_action()
+        actions['reactivate_project'] = (action, 'reactivate_project', action.short_description)
+
+        action = update_stats_action()
+        actions['update_stats'] = (action, 'update_stats', action.short_description)
 
         return actions
 
@@ -313,6 +317,15 @@ class TermoAdmin(PowerModelAdmin):
                 PowerButton(url=reverse('solicita_busca', kwargs={'id': object_id, }),
                             label=u'Busca Local'))
         return buttons
+
+    def get_actions(self, request):
+        actions = super(TermoAdmin, self).get_actions(request)
+        if request.user.is_superuser:
+            stop_process = stop_process_action()
+            actions['stop_process'] = (stop_process, 'stop_process', stop_process.short_description)
+            if 'delete_selected' in actions:
+                del actions['delete_selected']
+        return actions
 
 
 class ProcessamentoAdmin(PowerModelAdmin):
