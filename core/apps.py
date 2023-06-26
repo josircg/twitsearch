@@ -42,6 +42,8 @@ def reactivate_project_action(description=u"Reativar Projeto"):
                 termo.last_count = termo.tot_twits
                 termo.save()
                 alterados += 1
+                if alterados == 1000:
+                    break
         messages.info(request, u'%d termos reativados' % alterados)
     recalcular.short_description = description
     return recalcular
@@ -54,6 +56,8 @@ def stop_process_action(description=u"Interromper processo"):
             termo.status = 'I'
             termo.save()
             alterados += 1
+            if alterados == 1000:
+                break
         messages.info(request, u'%d termos interrompidos' % alterados)
 
     recalcular.short_description = description
