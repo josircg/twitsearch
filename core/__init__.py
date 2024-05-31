@@ -12,6 +12,8 @@ from twitsearch import settings
 # def convert_date(dt):
 #    return dt.strftime("%a %b %d %H:%M:%S %z %Y")
 
+from twitsearch.settings import BASE_DIR
+
 
 def intdef(s, default: int = 0) -> int:
     try:
@@ -20,6 +22,22 @@ def intdef(s, default: int = 0) -> int:
         return default
     except TypeError:
         return default
+
+
+def clean_pontuation(s) -> str:
+    result = ''
+    for letter in s:
+        if letter not in ['.', ',', ':', '?', '!', '"', "'", "”", '“', ')', '(','-']:
+            result += letter
+    return result
+
+
+def stopwords() -> list:
+    excecoes = []
+    for line in open(BASE_DIR+'/excecoes.txt').readlines():
+        for words in line.split(','):
+            excecoes.append(words.strip().lower())
+    return excecoes
 
 
 def find_urls(text):
@@ -53,7 +71,7 @@ def OSRun(command, stop=False):
         out += 'Command:%s\n' % command
         out += "OS error: {0}".format(err)
         if stop:
-            raise Exception(stderr)
+            raise Exception(out)
     return out
 
 
@@ -95,8 +113,8 @@ def log_message(instance, message, user=None):
     from django.contrib.contenttypes.models import ContentType
 
     if not user:
-        User = get_user_model()
-        user = User.objects.get_or_create(username='sys')[0]
+        user_model = get_user_model()
+        user = user_model.objects.get_or_create(username='sys')[0]
     LogEntry.objects.log_action(
         user_id=user.pk,
         content_type_id=ContentType.objects.get_for_model(instance).pk,

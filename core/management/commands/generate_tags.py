@@ -19,6 +19,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         id_projeto = options['projeto']
-        tweets = Tweet.objects.filter(termo__projeto_id=id_projeto)
+        tweets = Tweet.objects.filter(tweetinput__termo__projeto_id=id_projeto)
         generate_tags_file(tweets, id_projeto)
         return

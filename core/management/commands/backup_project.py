@@ -1,4 +1,5 @@
 import os
+import json
 import zipfile
 import boto3
 
@@ -23,12 +24,22 @@ def export_s3(projeto):
     tot_zips = 1
     tot_geral = 0
     tot_files = 0
-    for tweet in Tweet.objects.filter(termo__projeto_id=projeto.id). \
+    header = {'projeto': projeto.nome, 'objetivo': projeto.objetivo, 'language': projeto.language,
+              'termos': []}
+    for termo in projeto.termo_set.all():
+        header['termos'].append({'busca': termo.busca,
+                                 'dtinicio': termo.dtinicio, 'dtfinal': termo.dtfinal})
+    filename = os.path.join(root_path, 'projeto.json')
+    with open(filename, 'w') as arquivo:
+        json.dump(header, arquivo)
+
+    for tweet in Tweet.objects.filter(tweetinput__termo__projeto__id=projeto.id). \
             select_related('twit_id').values_list('twit_id'):
 
         if tot_files == 0:
             path_zip = os.path.join(root_path, 'projeto-%s-%d.zip' % (projeto.id, tot_zips))
             zipf = zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED)
+            zipf.write(filename, 'projeto.json')
 
         tweet_id = tweet[0]
         json_filename = os.path.join(root_path, 'cached', '%s.json' % tweet_id)

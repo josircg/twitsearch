@@ -1,8 +1,13 @@
-Django<3
+Django<4
 mysqlclient==2.1.0
+git+https://bitbucket.org/josir/poweradmin.git@django32
+django-crispy-forms
+django-select2
+django-smart-selects
 pytz
-tweepy<4
+tweepy
 searchtweets-v2
+openpyxl
 django-admin-tools
 numpy
 wordcloud
@@ -11,7 +16,6 @@ networkx
 seaborn
 sqlparse
 reportlab==3.6.6
-git+https://bitbucket.org/josir/poweradmin.git@django22
 plotly
 gunicorn
 boto3

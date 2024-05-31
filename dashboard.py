@@ -11,9 +11,11 @@ And to activate the app index dashboard::
     ADMIN_TOOLS_APP_INDEX_DASHBOARD = 'radix.dashboard.CustomAppIndexDashboard'
 """
 
+from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from admin_tools.dashboard import modules, Dashboard, AppIndexDashboard
 from admin_tools.utils import get_admin_site_name
+
 
 
 class CustomIndexDashboard(Dashboard):
@@ -29,13 +31,24 @@ class CustomIndexDashboard(Dashboard):
         self.children += [
             modules.ModelList(
                 u'Projetos',
-                models=('core.models.Projeto', 'core.models.Tweet', 'core.models.TweetUser', 'core.models.Retweet',
-                        'core.models.Processamento', 'core.models.Termo')
+                models=('core.models.Projeto', 'core.models.Termo',
+                        'core.models.Tweet', 'core.models.TweetUser', 'core.models.Retweet',
+                        'core.models.TweetInput'
+                        )
             ),
             modules.ModelList(
                 u'Adminstração',
-                models=('django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
+                models=('core.models.Processamento',
+                        'django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
             ),
+            modules.ModelList(
+                'Rotinas de Importação', [
+                    '',
+                ], children=[ {'title': u'Importação de Arquivos',
+                               'change_url': reverse('importacao_arquivo'), },
+                            ]
+            ),
+
         ]
 
 

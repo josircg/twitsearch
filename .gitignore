@@ -6,13 +6,12 @@
 *.fuse_hidden*
 .ipynb_checkpoints
 twitest.py
-Untitled.ipynb
+*.ipynb
 data/*
 twitsearch/*.yaml
 twitsearch/local.py
 twitsearch/test.py
 twitsearch/media/*
-twitsearch/static/*
 Untitled.ipynb
 venv*
 media/*

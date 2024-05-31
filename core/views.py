@@ -1,36 +1,32 @@
 import os
 import csv
-import re
 import random
 import pytz
-from datetime import datetime, timedelta
-import requests
+import traceback
+
+from datetime import datetime
 from threading import Thread
-from collections import Counter
 from PIL import Image
 
-from django.db import connection
 from django.conf import settings
 from django.contrib import messages
+from django.utils import timezone
 from django.http import HttpResponseNotFound
-from django.shortcuts import get_object_or_404, render_to_response, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 
-from django.shortcuts import render
 from django.http import HttpResponse
 from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
 from core import check_dir, intdef, find_urls
-from core.apps import generate_tags_file, busca_local
-from core.models import Projeto, Termo, Tweet, Processamento, Retweet, \
-    PROC_BACKUP, PROC_TAGS, PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL
+from core.actions import generate_tags_file, busca_local, import_xlsx, import_list
+from core.forms import ImportForm
+from core.models import *
 from core.management.commands.remove_json import remove_json
 from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sb
 
 from plotly.offline import plot
 from plotly import graph_objs
@@ -41,59 +37,69 @@ def index(request):
 
 
 def visao(request):
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-    r = requests.post("http://beta.visao.ibict.br/api/authenticate/",
-                      headers=headers,
-                      json={'j_username': 'josir', 'j_password': '123@mudar',
-                            'remember-me': True})
-    r.headers
-    return r
+    return
 
 
-def stats(request, id):
-    projeto = get_object_or_404(Projeto, pk=id)
+def stats(request, project_id):
+    agora = timezone.now()
+    projeto = get_object_or_404(Projeto, pk=project_id)
+    termo_base = projeto.termo_set.all().first()
     palavras = projeto.most_common()
-    top_tweets = Tweet.objects.filter(termo__projeto_id=id).order_by('-favorites')[:5]
-    proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
-    proc_tags = proc_tags.pk if proc_tags else 0
+    top_tweets = Tweet.objects.filter(tweetinput__termo__projeto_id=project_id).order_by('-favorites')[:5]
 
+    proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
     proc_importacao = Processamento.objects.filter(
         termo__projeto=projeto,
-        tipo__in=(PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_BUSCAGLOBAL)).last()
-    proc_importacao = proc_importacao.pk if proc_importacao else 0
-    filename_csv = 'users-%s.csv' % id
+        tipo__in=(PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_MATCH, PROC_BUSCAGLOBAL)).last()
+    if not proc_importacao:
+        proc_importacao = Processamento.objects.create(tipo=PROC_MATCH, termo=termo_base,
+                                                       dt=agora, status=Processamento.CONCLUIDO)
 
-    if proc_tags <= proc_importacao:
+    filename_csv = 'users-%s.csv' % project_id
+
+    if not proc_tags or proc_tags.dt <= proc_importacao.dt:
         alcance = 0
+        tot_registros = 0
         path = os.path.join(settings.MEDIA_ROOT, 'csv')
         check_dir(path)
         csvfile = open(os.path.join(path, filename_csv), 'w')
         writer = csv.writer(csvfile)
         writer.writerow(['username', 'favorites', 'retweets', 'count'])
-        # TODO: Rever o cálculo
         with connection.cursor() as cursor:
-            cursor.execute('select u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
-                           '  from core_tweet t, core_termo p, core_tweetuser u'
-                           ' where p.projeto_id = %s and t.termo_id = p.id and t.user_id = u.twit_id'
-                           '   and created_time between p.dtinicio and p.dtfinal + 1'
-                           '       group by t.user_id order by fav desc', [id])
+            cursor.execute('select u.twit_id, u.username, max(t.favorites) fav, max(t.retweets) rt, count(*) count'
+                           '  from core_termo p, core_tweetinput  i, core_tweet t, core_tweetuser u'
+                           ' where p.projeto_id = %s and p.id = i.termo_id and i.tweet_id = t.twit_id'
+                           '   and t.user_id = u.twit_id'
+                           '   and t.created_time between p.dtinicio and p.dtfinal + 1'
+                           '       group by u.twit_id, u.username order by fav desc', [project_id])
             for rec in cursor.fetchall():
                 writer.writerow(rec)
-                alcance += max(int(rec[1]), int(rec[2]))
+                alcance += max(int(rec[2]), int(rec[3]), int(rec[4]))
+                tot_registros += 1
         csvfile.close()
-        projeto.alcance = max(alcance, int(projeto.tot_retwits.replace('.','')))
+        projeto.alcance = alcance
         projeto.save()
+        proc_tags, created = Processamento.objects.get_or_create(
+                                termo__projeto=projeto, tipo=PROC_TAGS,
+                                defaults={'dt': agora,
+                                          'status': Processamento.AGENDADO,
+                                          'tot_registros': tot_registros})
+        if not created:
+            proc_tags.dt = agora
+            proc_tags.status = Processamento.AGENDADO
+            proc_tags.tot_registros = tot_registros
+            proc_tags.save()
 
     dataset = []
     dias = Counter()
     with connection.cursor() as cursor:
         cursor.execute("select DATE_FORMAT(created_time, '%%Y%%m%%d') as dia, "
                        "       DATE_FORMAT(created_time, '%%H') as hora, count(*) as total"
-                       "  from core_tweet t, core_termo p" 
-                       " where p.projeto_id = %s and t.termo_id = p.id " 
-                       "   and created_time between p.dtinicio and p.dtfinal + 1"
+                       "  from core_termo p, core_tweetinput i, core_tweet t" 
+                       " where p.projeto_id = %s and p.id = i.termo_id and i.tweet_id = t.twit_id" 
+                       "   and created_time between ifnull(p.dtinicio,t.created_time) and p.dtfinal + 1"
                        "       group by dia, hora order by dia, hora",
-                       [id])
+                       [project_id])
         for rec in cursor.fetchall():
             dataset.append(rec)
             dias[rec[0]] += rec[2]
@@ -159,13 +165,13 @@ def stats(request, id):
     '''
     heatmap_div = ''
 
-    dias_sorted_formatter = []
+    dias_formatted = []
     for dia in dias_sorted:
         date = datetime.strptime(dia, '%Y%m%d')
-        dias_sorted_formatter.append(datetime.strftime(date, '%d/%m/%Y'))
+        dias_formatted.append(datetime.strftime(date, '%d/%m/%Y'))
 
     fig2 = graph_objs.Figure(graph_objs.Bar(
-        x=dias_sorted_formatter,
+        x=dias_formatted,
         y=dias_valores
     ))
 
@@ -184,7 +190,7 @@ def stats(request, id):
     )
     grafico_div = plot(fig2, output_type='div')
 
-    if proc_tags > proc_importacao:
+    if proc_tags.status == Processamento.CONCLUIDO:
         csv_tags = 'tags-%d.zip' % projeto.id
         csv_completo = 'full-%d.zip' % projeto.id
     else:
@@ -211,7 +217,7 @@ def most_used_urls(request, id):
     # Para cada tweet do projeto (sem considerar os retweets), montar um Counter com as URLs encontradas
     projeto = get_object_or_404(Projeto, pk=id)
     url_counter = Counter()
-    for tweet in Tweet.objects.filter(termo__projeto=projeto):
+    for tweet in Tweet.objects.filter(tweetinput__termo__projeto=projeto):
         urls = find_urls(tweet.text)
         for url in urls:
             url_counter[url] += 1
@@ -239,7 +245,8 @@ def backup_json(request, id):
 
 def exclui_json(request, id):
     projeto = get_object_or_404(Projeto, pk=id)
-    proc = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_BACKUP, status=Processamento.CONCLUIDO)
+    proc = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_BACKUP,
+                                        status=Processamento.CONCLUIDO)
     if proc:
         remove_json(projeto)
     else:
@@ -260,6 +267,8 @@ def nuvem(request, id, modelo=None):
     # modelo espera nulo (modelo padrão), 1 ou 2 da view.
     modelo = intdef(modelo, 0)
     palavras = None
+    mask = None
+    csv_lido = False
     debug = ''
     if modelo != 0:
         filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
@@ -272,6 +281,7 @@ def nuvem(request, id, modelo=None):
             reader = csv.reader(csvfile)
             next(reader, None)
             palavras = dict((rows[0], int(rows[1])) for rows in reader)
+        csv_lido = True
 
         modelo_filename = os.path.join(BASE_DIR, 'templates', 'nuvem', f'modelo{modelo}.png')
         try:
@@ -284,13 +294,18 @@ def nuvem(request, id, modelo=None):
 
     if not palavras:
         palavras = dict(projeto.most_common())
-        # Grava o CSV
+
+    if len(palavras) == 0:
+        messages.error(request,'Nenhuma palavra encontrada para a montagem da nuvem')
+        return redirect(reverse('admin:core_projeto_change', args=(id)))
+
+    # Grava o CSV caso ele não tenha sido lido
+    if not csv_lido:
         filename = os.path.join(path, f'nuvem-{projeto.id}.csv')
         with open(filename, 'w') as csvfile:
             writer = csv.writer(csvfile)
             writer.writerow(['word', 'frequency', ])
             writer.writerows(palavras.items())
-        mask = None
 
     if modelo == 2:
         font_path = os.path.join(BASE_DIR, 'templates', 'nuvem', 'Comfortaa Bold.ttf')
@@ -305,7 +320,7 @@ def nuvem(request, id, modelo=None):
     filename = f'nuvem-{projeto.pk}-{modelo}.png'
     cloud.to_file(os.path.join(path, filename))
 
-    return render_to_response('core/nuvem.html', {
+    return render('core/nuvem.html', {
         'title': u'Nuvem de Palavras dos tweets obtidos',
         'projeto': projeto,
         'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
@@ -314,23 +329,23 @@ def nuvem(request, id, modelo=None):
     }, RequestContext(request, ))
 
 
-def solicitar_csv(request, id):
-    get_object_or_404(Projeto, pk=id)
-    tweets = Tweet.objects.filter(termo__projeto_id=id)
-    th = Thread(target=generate_tags_file, args=(tweets, id,))
+def solicitar_csv(request, project_id):
+    get_object_or_404(Projeto, pk=project_id)
+    tweets = Tweet.objects.filter(tweetinput__termo__projeto_id=project_id)
+    th = Thread(target=generate_tags_file, args=(tweets, project_id,))
     th.start()
     messages.success(request,
                      'A geração do csv foi iniciada. Atualize essa página (teclando F5) '
                      'até que apareça o botão de Download CSV')
-    return redirect(reverse('core_projeto_stats', kwargs={'id': id}))
+    return redirect(reverse('core_projeto_stats', kwargs={'id': project_id}))
 
 
-def create_graph(request, id_projeto):
-    get_object_or_404(Projeto, pk=id_projeto)
+def create_graph(request, project_id):
+    get_object_or_404(Projeto, pk=project_id)
     g = nx.DiGraph()
 
     # A rede é formada pelos usuários e não pelos tweets.
-    tweets = Tweet.objects.filter(termo__projeto_id__exact=id_projeto).order_by('-retweets')[:200]
+    tweets = Tweet.objects.filter(termo__projeto_id__exact=project_id).order_by('-retweets')[:200]
     for tweet in tweets:
         g.add_node(tweet.user.name, )
         for retweet in tweet.retweet_set.all():
@@ -357,7 +372,7 @@ def create_graph(request, id_projeto):
 
     # Gerando o arquivo gexf para ser utilizado no sigma
     # TODO: Habilitar botão no template para que o usuário possa fazer o download do GEXF para outros programas
-    filename = 'grafo-%s.gexf' % id_projeto
+    filename = 'grafo-%s.gexf' % project_id
     path = os.path.join(settings.MEDIA_ROOT, 'grafos')
     if not os.path.exists(path):
         if not os.path.exists(settings.MEDIA_ROOT):
@@ -381,18 +396,23 @@ def gerar_gephi(request, id_projeto):
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
     csv_file = csv.writer(response)
     csv_file.writerow(['source', 'target'])
-    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).select_related().values_list('tweet__user__username', 'user__username'))
+    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).
+                   select_related().values_list('tweet__user__username', 'user__username'))
     for data in dataset:
         csv_file.writerow(data)
 
     return response
 
 
-def solicita_busca(request, id):
-    th = Thread(target=busca_local, args=(id,))
+def solicita_busca(request, termo_id):
+    if Termo.objects.filter(id=termo_id, tipo_busca__in=(PROC_BUSCAGLOBAL, PROC_FILTROPROJ), status='A').count() == 0:
+        messages.error(request, 'Utilize esta opção apenas para buscas locais')
+        return redirect(reverse('admin:core_termo_change', args=[termo_id]))
+
+    th = Thread(target=busca_local, args=(termo_id,))
     th.start()
     messages.success(request, 'A busca local foi iniciada. Aguarde que o status do Termo apareça como concluído.')
-    return redirect(reverse('admin:core_termo_change', args=[id]))
+    return redirect(reverse('admin:core_termo_change', args=[termo_id]))
 
 
 def get_source(request, tweet_id):
@@ -407,6 +427,38 @@ def get_source(request, tweet_id):
     response = HttpResponse(file_data, content_type='application/json')
     response['Content-Disposition'] = 'attachment; filename=%s.json' % tweet_id
     return response
+
+
+
+def importacao_arquivo(request):
+
+    if request.method == 'POST':
+        form = ImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            arquivo = request.FILES.get('arquivo')
+            termo = request.POST.get('termo')
+            try:
+                if arquivo:
+                    if arquivo.name.lower().endswith('.txt'):
+                        result = import_list(termo, arquivo)
+                    else:
+                        result = import_xlsx(termo, arquivo)
+                    messages.info(request, result)
+                else:
+                    messages.error(request, 'Nenhum arquivo enviado. Tente utilizar outro navegador.')
+
+            except Exception as e:
+                message = ''.join(traceback.TracebackException.from_exception(e).format())
+                print(message)
+                # sendmail('Erro Importação Lattes', [settings.REPLY_TO_EMAIL], message=message)
+                messages.error(request, 'Houve um erro durante a importação. Já estamos averiguando o problema')
+
+            return redirect('importacao_arquivo')
+    else:
+        form = ImportForm()
+
+    return render(request, 'core/import_tweets.html', {'form': form, })
+
 
 # def use_seaborn(request):
 #     import seaborn as sb

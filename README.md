@@ -22,8 +22,21 @@ Versão 0.7: Utilização de várias credenciais para maximizar a coleta
 
 Versão 0.8: Integração com o Visão (visao.ibict.br)
 
-Versão 0.9: Desidratar bases de tweets 
+Versão 0.9: Backup S3 (Ok)
+
+Versão 0.9: Desidratar bases de tweets (Importação Tweet ID) (Ok) 
 
 Versão 1.0: Construção de visualizações em rede
 
+# Tarefas a realizar
+
+* Construir a rotina importjson --restore que irá criar o projeto e baixar os tweets no projeto 
+* Importar retweets após a Importação de Tweets
+
+# Planejamento de como realizar o restore de uma base
+
+* Backup da base no S3
+* Em outra instalação, baixar o backup na pasta "restore"
+* Executar: python manage.py importjson --restore
+ 
 

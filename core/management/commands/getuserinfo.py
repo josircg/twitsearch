@@ -1,20 +1,18 @@
-# -*- coding: utf-8 -*-
 import json
 import requests
 import pytz
-
 from datetime import datetime
+
+from django.conf import settings
 from django.core.management.base import BaseCommand
-from twitsearch.settings import TIME_ZONE
+
 from core import convert_date
 from core.models import TweetUser, FollowersHistory
-
-from searchtweets import load_credentials
 
 
 class Command(BaseCommand):
     label = 'Get User data'
-    agora = datetime.now(pytz.timezone(TIME_ZONE))
+    agora = datetime.now(pytz.timezone(settings.TIME_ZONE))
     header = None
     tot_registros = 0
     tot_updates = 0
@@ -67,11 +65,8 @@ class Command(BaseCommand):
                 print(missed)
 
     def handle(self, *args, **options):
-        auth = load_credentials(filename="twitsearch/credentials.yaml",
-                                yaml_key="oldimar",
-                                env_overwrite=False)
 
-        self.header = {'Authorization': 'Bearer %s' % auth['bearer_token']}
+        self.header = {'Authorization': 'Bearer %s' % settings.BEARED_TOKEN}
 
         user_list = []
         total = TweetUser.objects.filter(username__isnull=True).count()

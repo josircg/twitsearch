@@ -1,0 +1,8 @@
+{% extends 'base_site.html' %}
+
+{% block content %}
+  <div id="content-main">
+    {% block titulo %}<h1>{{ titulo }}</h1>{% endblock titulo %}
+    {% block texto %}<p>{{ texto }}</p>{% endblock texto %}
+  </div>
+{% endblock %}

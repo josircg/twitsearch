@@ -3,7 +3,7 @@ from django.conf.urls import url
 from django.conf.urls.static import static
 
 from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
-    nuvem, create_graph, gerar_gephi, solicita_busca, get_source
+    nuvem, create_graph, gerar_gephi, solicita_busca, get_source, importacao_arquivo
 
 urlpatterns = [
     url(r'^$', index),
@@ -18,5 +18,6 @@ urlpatterns = [
     url(r'^grafo/(?P<id_projeto>\d+)/$', create_graph, name='graph'),
     url(r'^gerar_gephi/(?P<id_projeto>\d+)/$', gerar_gephi, name='gerar_gephi'),
     url(r'^source/(?P<tweet_id>\d+)/$', get_source, name='get_source'),
-    # url(r'^exemplo/$', use_seaborn, name='exemplo'),
+    url(r'^importacao_arquivo/', importacao_arquivo, name='importacao_arquivo'),
+
 ]

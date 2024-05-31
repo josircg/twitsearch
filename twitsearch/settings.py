@@ -27,6 +27,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.humanize',
     'django.contrib.staticfiles',
+    'crispy_forms',
+    'django_select2',
+    'smart_selects',
     'core',
 ]
 
@@ -128,5 +131,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 ADMIN_TOOLS_MENU = 'menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'dashboard.CustomIndexDashboard'
 ADMIN_TOOLS_APP_INDEX_DASHBOARD = 'dashboard.CustomAppIndexDashboard'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 AWS_PROFILE = None
