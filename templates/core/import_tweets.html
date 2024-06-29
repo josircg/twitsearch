@@ -1,0 +1,26 @@
+{% extends "base_form.html" %}
+{% block title %}Importação de Tweets{% endblock %}
+
+{% block content %}
+    {% if total_registros %}
+    <h2>Resumo da Importação:</h2>
+    <p>Total de Registros Incluídos: {{ total_registros }}</p>
+
+    {% if erros %}
+      <h3>Erros:</h3>
+      <ul>
+        {% for erro in erros %}
+          <li>{{ erro }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <div class="form-row submit-row">
+        <div class="col"><a href="/admin/" class="buttonlink">Voltar</a></div>
+    </div>
+  {% else %}
+    <h2>Importação de Tweets Communicalytics</h2>
+    <p>Selecione o termo associado aos tweets, selecione o arquivo e clique no botão Enviar</p>
+    <p>O arquivo XLSX deve estar no formato do Communicalytics e o TXT deve ser uma lista de tweetid</p>    
+  {% endif %}
+  {{ block.super }}
+{% endblock %}

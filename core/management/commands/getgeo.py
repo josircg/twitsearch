@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
-from django.core.management.base import BaseCommand
+import os
 import json
 
-from os.path import isfile, join, walk
-
+from django.db.transaction import set_autocommit, commit
+from django.core.management.base import BaseCommand
 from twitsearch.settings import BASE_DIR
 from core.models import *
-from django.db.transaction import set_autocommit, commit
 
 
 class Command(BaseCommand):
-    label = 'Update Twitter Language'
+    label = 'Update Twitter Language and Geo Location'
 
     def handle(self, *args, **options):
 
@@ -18,7 +16,7 @@ class Command(BaseCommand):
         tot_notfound = 0
         dest_dir = BASE_DIR + '/data/cached'
         set_autocommit(False)
-        for root, dirs, files in walk(dest_dir, topdown=True):
+        for root, dirs, files in os.walk(dest_dir, topdown=True):
             tot_files += 1
             print(files)
             with open(files, 'r') as file:

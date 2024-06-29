@@ -25,7 +25,11 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'django.contrib.humanize',
     'django.contrib.staticfiles',
+    'crispy_forms',
+    'django_select2',
+    'smart_selects',
     'core',
 ]
 
@@ -100,7 +104,7 @@ TIME_ZONE = 'America/Sao_Paulo'
 LANGUAGE_CODE = 'pt-BR'
 USE_I18N = True
 USE_TZ = True
-USE_L10N = False
+USE_L10N = True
 DATE_FORMAT = 'd/m/Y'
 DATETIME_FORMAT = 'd/m/Y H:i:s'
 
@@ -127,3 +131,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 ADMIN_TOOLS_MENU = 'menu.CustomMenu'
 ADMIN_TOOLS_INDEX_DASHBOARD = 'dashboard.CustomIndexDashboard'
 ADMIN_TOOLS_APP_INDEX_DASHBOARD = 'dashboard.CustomAppIndexDashboard'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+AWS_PROFILE = None

@@ -1,9 +1,43 @@
 {% extends "admin/base_site.html" %}
-
+{% load humanize %}
 {% block title %}{{block.super}}{% endblock %}
 {% block extrahead %}<meta charset="UTF-8">{% endblock %}
 {% block extrastyle %}{{ block.super }}
 {#    <link rel="stylesheet" type="text/css" href="{{ admin_media_prefix }}css/forms.css" />#}
+<style>
+*[data-tooltip] {
+    position: relative;
+}
+
+*[data-tooltip]::after {
+    content: attr(data-tooltip);
+
+    position: relative;
+    top: 0px;
+    right: 0px;
+    width: 180px;
+
+    pointer-events: none;
+    opacity: 0;
+    -webkit-transition: opacity .15s ease-in-out;
+    -moz-transition: opacity .15s ease-in-out;
+    -ms-transition: opacity .15s ease-in-out;
+    -o-transition: opacity .15s ease-in-out;
+    transition: opacity .15s ease-in-out;
+
+    display: block;
+    font-size: 12px;
+    line-height: 16px;
+    background: #fefdcd;
+    padding: 2px 2px;
+    border: 1px solid #c0c0c0;
+    box-shadow: 2px 4px 5px rgba(0, 0, 0, 0.4);
+}
+
+*[data-tooltip]:hover::after {
+    opacity: 1;
+}
+</style>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -14,9 +48,14 @@
 {% block content %}
 <div id="content-main">
     <ul class="object-tools">
-        <li><a href="{% url 'solicitar_csv' projeto.pk  %}">Solicitar CSV</a></li>
-        {% if download %}<li><a href="/media/{{ download }}">Download CSV</a></li>{% endif %}
+        {% if csv_completo %}
+        <li><a href="/media/{{ csv_completo }}">Download Full CSV</a></li>
+        <li><a href="/media/{{ csv_tags }}">Download TAGS CSV</a></li>
+        {% else %}
+        <li><a href="{% url 'solicitar_csv' projeto.pk %}">Solicitar CSV</a></li>
+        {% endif %}
         <li><a href="/media/csv/{{ csv }}">User CSV</a></li>
+        <li><a href="/nuvem/{{ projeto.pk }}">Nuvem</a></li>
         <li><a href="/gerar_gephi/{{ projeto.pk }}">Gephi</a></li>
     </ul>
 	<div>
@@ -25,21 +64,23 @@
 			    {% if projeto.texto %}
 				<div><label>Texto Explicativo:</label><p>{{projeto.objetivo}}</p></div>
 			    {% endif %}
-                <label><b>Termos:</b></label>
-                {% for termo in projeto.termo_set.all %}
-                <div class="form-row instituicao">
-                    <div>
-                        <p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+                {% if projeto.termo_set.count < 10 %}
+                    <label><b>Termos:</b></label>
+                    {% for termo in projeto.termo_set.all %}
+                    <div class="form-row instituicao">
+                        <div>
+                            <p>{% if termo.busca %}{{ termo.busca }}{% else %}Todas{% endif %}</p>
+                        </div>
                     </div>
-                </div>
-                {%  endfor %}
+                    {%  endfor %}
+                {% endif %}
                 <p></p>
 				<div><label>Total de Tweets Coletados: {{projeto.tot_twits}}</label></div>
-				<div><label>Total de Retweets: {{projeto.tot_retwits}}</label></div>
+				<div><label>Total de Retweets Coletados: {{projeto.tot_retwits}}</label></div>
 				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
-				<div><label>Alcance Total: {{alcance}}</label></div>
+				<div data-tooltip="Total de interações (Favoritos e Retweets) máxima"><label>Alcance Máximo: {{projeto.alcance|intcomma}}</label></div>
 			</div>
-            <label style="margin-top: 10px; display: block"><b>Top 3 - Tweets mais favoritados:</b></label>
+            <label style="margin-top: 10px; display: block"><b>Top 5 - Tweets mais favoritados:</b></label>
             <p></p>
             <ol>
                 {% for tweet in top_tweets %}
