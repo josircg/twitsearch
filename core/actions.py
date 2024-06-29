@@ -12,6 +12,8 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.contrib import messages
 
+from .apps import calcula_estimativa, save_result
+from .models import *
 from core import intdef
 
 from twitsearch.local import get_api_client
@@ -25,7 +27,7 @@ def update_stats_action(description=u"Recalcular estatísticas"):
         for projeto in queryset:
             for termo in projeto.termo_set.all():
                 if termo.status != 'C':
-                    termo.last_count = termo.tot_twits
+                    termo.last_count = termo.tweetinput_set.count()
                     if not termo.estimativa:
                         last_estimate = None
                         termo.estimativa = 0
@@ -189,12 +191,12 @@ def generate_tags_file(queryset, project_id):
         logging.info('Linhas exportadas:%d' % num_lines)
 
         path_zip = os.path.join(path, 'tags-%s.zip' % project_id)
-        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
-            zip.write(os.path.join(path, 'tags-%s.csv' % project_id), 'tags-%s.csv' % project_id)
+        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as ziph:
+            ziph.write(os.path.join(path, 'tags-%s.csv' % project_id), 'tags-%s.csv' % project_id)
 
         path_zip = os.path.join(path, 'full-%s.zip' % project_id)
-        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zip:
-            zip.write(os.path.join(path, 'full-%s.csv' % project_id), 'full-%s.csv' % project_id)
+        with zipfile.ZipFile(path_zip, 'w', compression=zipfile.ZIP_DEFLATED) as ziph:
+            ziph.write(os.path.join(path, 'full-%s.csv' % project_id), 'full-%s.csv' % project_id)
 
         logging.info('Zip %s criado com sucesso' % path_zip)
         os.remove(os.path.join(path, 'tags-%s.csv' % project_id))
@@ -252,7 +254,7 @@ def busca_local(id):
     # Buscar em cada tweet da base se a descrição faz match com o termo selecionado e associa ao termo
     if termo.status == PROC_FILTROPROJ:
         dataset = Tweet.objects.filter(tweetinput__termo__projeto_id=termo.projeto_id)
-    elif termo.dtinicio:
+    else:
         dataset = Tweet.objects.filter(created_time__gte=termo.dtinicio)
 
     if termo.language:
@@ -346,7 +348,7 @@ def import_xlsx(termo_id, arquivo):
                 'type': row['referenced_tweet_type'],
             }
         tot_registros += 1
-        tweet, user = processo.load_twitter(src)
+        processo.load_twitter(src)
 
     processo_db.tot_registros = tot_registros
     processo_db.status = 'C'

@@ -129,33 +129,33 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def get_urls(self):
         return [
-            url(r'^visao/(?P<id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
+            url(r'^visao/(?P<project_id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             ] + super(ProjetoAdmin, self).get_urls()
 
     def get_buttons(self, request, object_id=None):
         buttons = super(ProjetoAdmin, self).get_buttons(request, object_id)
         if object_id:
             buttons.append(
-                PowerButton(url=reverse('core_projeto_stats', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('core_projeto_stats', kwargs={'project_id': object_id, }),
                             label=u'Estatísticas'))
             buttons.append(
-                PowerButton(url=reverse('core_projeto_nuvem', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('core_projeto_nuvem', kwargs={'project_id': object_id, }),
                             label=u'Nuvem de Palavras'))
             buttons.append(
-                PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('admin:core_projeto_visao', kwargs={'project_id': object_id, }),
                             label=u'Visão'))
             if settings.AWS_PROFILE:
                 buttons.append(
-                    PowerButton(url=reverse('backup_json', kwargs={'id': object_id, }),
+                    PowerButton(url=reverse('backup_json', kwargs={'project_id': object_id, }),
                                 label=u'Backup'))
             buttons.append(
-                PowerButton(url=reverse('exclui_json', kwargs={'id': object_id, }),
+                PowerButton(url=reverse('exclui_json', kwargs={'project_id': object_id, }),
                             label=u'Exclui JSON'))
             buttons.append(
                 PowerButton(url='https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query', label=u'Como utilizar a busca', attrs={'target': '_blank'})
             )
             buttons.append(
-                PowerButton(url=reverse('graph', kwargs={'id_projeto': object_id}), label='Grafo')
+                PowerButton(url=reverse('graph', kwargs={'project_id': object_id}), label='Grafo')
             )
 
         return buttons

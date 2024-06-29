@@ -329,7 +329,8 @@ class Command(BaseCommand):
 
         # Estatísticas
         if len(processo.termos) == 1:
-            processo_ativo.termo = processo.termos[0]
+            termo = Termo.objects.filter(id=processo.termos[0]).first()
+            processo_ativo.termo = termo
             processo_ativo.save()
 
         # Atualiza o contador de tweets de cada termo trabalhado

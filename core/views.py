@@ -208,9 +208,7 @@ def stats(request, project_id):
         'grafico_div':grafico_div,
         # 'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
         # 'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
-        'csv': filename_csv,
-
-    }, RequestContext(request, ))
+        'csv': filename_csv })
 
 
 def most_used_urls(request, id):
@@ -224,10 +222,10 @@ def most_used_urls(request, id):
     return url_counter.most_common()
 
 
-def backup_json(request, id):
+def backup_json(request, project_id):
     # Agenda processo de backup para o projeto
     agora = datetime.now(pytz.timezone(TIME_ZONE))
-    termo = Termo.objects.filter(projeto_id=id).order_by('id').first()
+    termo = Termo.objects.filter(projeto_id=project_id).order_by('id').first()
     # Verifica primeiro se já não existe um backup agendado
     proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP).first()
     if proc:
@@ -240,11 +238,11 @@ def backup_json(request, id):
         messages.success(request, 'A montagem do backup foi iniciada. '
                                   'Verifique se o processo foi concluído diretamente no S3'
                                   'ou clicando no botão de Backup novamente')
-    return redirect(reverse('admin:core_projeto_change', args=[id]))
+    return redirect(reverse('admin:core_projeto_change', args=[project_id]))
 
 
-def exclui_json(request, id):
-    projeto = get_object_or_404(Projeto, pk=id)
+def exclui_json(request, project_id):
+    projeto = get_object_or_404(Projeto, pk=project_id)
     proc = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_BACKUP,
                                         status=Processamento.CONCLUIDO)
     if proc:
@@ -252,11 +250,11 @@ def exclui_json(request, id):
     else:
         messages.error(request, 'O backup deve ser realizado antes da exclusão')
 
-    return redirect(reverse('admin:core_projeto_change', args=[id]))
+    return redirect(reverse('admin:core_projeto_change', args=[project_id]))
 
 
-def nuvem(request, id, modelo=None):
-    projeto = get_object_or_404(Projeto, pk=id)
+def nuvem(request, project_id, modelo=None):
+    projeto = get_object_or_404(Projeto, pk=project_id)
 
     path = os.path.join(BASE_DIR, 'media', 'nuvens')
     if not os.path.exists(path):
@@ -297,7 +295,7 @@ def nuvem(request, id, modelo=None):
 
     if len(palavras) == 0:
         messages.error(request,'Nenhuma palavra encontrada para a montagem da nuvem')
-        return redirect(reverse('admin:core_projeto_change', args=(id)))
+        return redirect(reverse('admin:core_projeto_change', args=(project_id)))
 
     # Grava o CSV caso ele não tenha sido lido
     if not csv_lido:
@@ -320,13 +318,12 @@ def nuvem(request, id, modelo=None):
     filename = f'nuvem-{projeto.pk}-{modelo}.png'
     cloud.to_file(os.path.join(path, filename))
 
-    return render('core/nuvem.html', {
+    return render(request, 'core/nuvem.html', {
         'title': u'Nuvem de Palavras dos tweets obtidos',
         'projeto': projeto,
         'nuvem': os.path.join(settings.MEDIA_URL + 'nuvens', filename),
         'modelo': modelo + 1 if modelo < 2 else 0,
-        'debug': debug
-    }, RequestContext(request, ))
+        'debug': debug})
 
 
 def solicitar_csv(request, project_id):
@@ -337,7 +334,7 @@ def solicitar_csv(request, project_id):
     messages.success(request,
                      'A geração do csv foi iniciada. Atualize essa página (teclando F5) '
                      'até que apareça o botão de Download CSV')
-    return redirect(reverse('core_projeto_stats', kwargs={'id': project_id}))
+    return redirect(reverse('core_projeto_stats', kwargs={'project_id': project_id}))
 
 
 def create_graph(request, project_id):
@@ -391,12 +388,12 @@ def create_graph(request, project_id):
     })
 
 
-def gerar_gephi(request, id_projeto):
+def gerar_gephi(request, project_id):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
     csv_file = csv.writer(response)
     csv_file.writerow(['source', 'target'])
-    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=id_projeto).
+    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=project_id).
                    select_related().values_list('tweet__user__username', 'user__username'))
     for data in dataset:
         csv_file.writerow(data)
