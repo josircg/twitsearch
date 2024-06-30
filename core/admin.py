@@ -316,10 +316,11 @@ class TermoAdmin(PowerModelAdmin):
 
     def get_buttons(self, request, object_id=None):
         buttons = super(TermoAdmin, self).get_buttons(request, object_id)
-        if object_id:
-            buttons.append(
-                PowerButton(url=reverse('solicita_busca', kwargs={'id': object_id, }),
-                            label=u'Busca Local'))
+        # TODO: corrigir solicita_busca
+        # if object_id:
+        #    buttons.append(
+        #        PowerButton(url=reverse('solicita_busca', kwargs={'id': object_id, }),
+        #                    label=u'Busca Local'))
         return buttons
 
     def get_actions(self, request):
