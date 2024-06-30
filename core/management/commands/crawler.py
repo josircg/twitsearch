@@ -152,7 +152,8 @@ class Crawler:
                                               'following_count': user['public_metrics']['following_count'],
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
-                print('No includes found', tweets.source.keys())
+                print('No includes found', tweets.source)
+                break
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
             for tweet in tweets.source['data']:
