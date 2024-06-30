@@ -145,7 +145,7 @@ class Crawler:
                          max_results=100)
 
             users = {}
-            if tweets.source['includes']:
+            if tweets.source.get('includes'):
                 for user in tweets.source['includes']['users']:
                     users[str(user['id'])] = {'username': user['username'], 'name': user['name'], 'verified': user['verified'],
                                               'followers_count': user['public_metrics']['followers_count'],
