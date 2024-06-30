@@ -153,6 +153,7 @@ class Crawler:
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
                 print('No includes found', tweets.source)
+                print(self.since_id, self.until_id, inicio_processamento)
                 break
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
