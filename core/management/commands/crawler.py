@@ -111,7 +111,12 @@ class Crawler:
             if termo.ult_processamento and self.since_id is None:
                 inicio_processamento = max(termo.ult_processamento, dt_limite_api)
             else:
-                inicio_processamento = None
+                # Caso o último processamento tenha ultrapassado 7 dias, não considerar o since_id
+                if termo.ult_processamento < dt_limite_api:
+                    self.since_id = None
+                    inicio_processamento = dt_limite_api
+                else:
+                    inicio_processamento = None
         else:
             # Estratégia de Correção: irá buscar registros mais antigos
             self.since_id = None
@@ -140,11 +145,14 @@ class Crawler:
                          max_results=100)
 
             users = {}
-            for user in tweets.source['includes']['users']:
-                users[str(user['id'])] = {'username': user['username'], 'name': user['name'], 'verified': user['verified'],
-                                          'followers_count': user['public_metrics']['followers_count'],
-                                          'following_count': user['public_metrics']['following_count'],
-                                          'tweet_count': user['public_metrics']['tweet_count']}
+            if tweets.source['includes']:
+                for user in tweets.source['includes']['users']:
+                    users[str(user['id'])] = {'username': user['username'], 'name': user['name'], 'verified': user['verified'],
+                                              'followers_count': user['public_metrics']['followers_count'],
+                                              'following_count': user['public_metrics']['following_count'],
+                                              'tweet_count': user['public_metrics']['tweet_count']}
+            else:
+                print('No includes found', tweets.keys())
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
             for tweet in tweets.source['data']:
@@ -234,7 +242,6 @@ def processa_termo(termo, limite):
     except Exception as e:
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
-        print(mensagem)
         if crawler.ultimo_tweet != 0:
             Termo.objects.filter(id=termo.id).update(status='E',ult_tweet=crawler.ultimo_tweet)
         else:
