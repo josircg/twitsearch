@@ -112,7 +112,7 @@ class Crawler:
                 inicio_processamento = max(termo.ult_processamento, dt_limite_api)
             else:
                 # Caso o último processamento tenha ultrapassado 7 dias, não considerar o since_id
-                if termo.ult_processamento < dt_limite_api:
+                if termo.ult_processamento and termo.ult_processamento < dt_limite_api:
                     self.since_id = None
                     inicio_processamento = dt_limite_api
                 else:
