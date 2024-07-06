@@ -64,8 +64,8 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites')
-
+    fields = ('nome', 'objetivo', 'status', 'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites')
+    list_per_page = 25
     inlines = [TermoInline]
 
     def get_inline_instances(self, request, obj=None):
@@ -113,9 +113,9 @@ class ProjetoAdmin(PowerModelAdmin):
         if obj:
             if request.user.is_superuser:
                 return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', \
-                    'termos_ativos', 'termos_processados', 'usuario', 'grupo'
+                    'termos_ativos', 'termos_processados', 'usuario', 'grupo', 'status'
             else:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario'
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'status'
         else:
             return 'nome', 'objetivo',
 

@@ -44,6 +44,9 @@ TIPO_PROCESSAMENTO = (
     (PROC_NETWORK,      'Montagem Rede')
 )
 
+STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
+                ('I', 'Interrompido'), ('C', 'Concluido'))
+
 
 class Projeto(models.Model):
     nome = models.CharField(max_length=40)
@@ -53,6 +56,7 @@ class Projeto(models.Model):
     tot_twits = models.IntegerField('Total Lido', null=True, blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
+    status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
 
     def __str__(self):
         return self.nome
@@ -82,9 +86,6 @@ class Projeto(models.Model):
                 soma += termo.tot_retwits
             return '{:,}'.format(soma).replace(',','.')
 
-    def top_tweets(self):
-        return None
-
     @property
     def termos_processados(self):
         return self.termo_set.filter(status='C').count()
@@ -107,16 +108,6 @@ class Projeto(models.Model):
             soma = cursor.fetchone()[0]
         return '{:,}'.format(soma).replace(',','.')
 
-    @property
-    def status(self):
-        _status = 'C'
-        for termo in self.termo_set.all():
-            if termo.status == 'P':
-                _status = 'P'
-                termo.get_status_display()
-            elif _status not in ('P', 'I'):
-                _status = termo.status
-        return dict(STATUS_TERMO).get(_status)
 
     def most_common(self, total=100):
         result = Counter()
@@ -137,10 +128,6 @@ class Projeto(models.Model):
                             if len(palavra_limpa) > 3:
                                 result[palavra_limpa] += tweet.favorites
         return result.most_common(total)
-
-
-STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
-                ('I', 'Interrompido'), ('C', 'Concluido'))
 
 
 class Termo(models.Model):

@@ -144,6 +144,10 @@ class Crawler:
                          start_time=inicio_processamento,
                          max_results=100)
 
+            if tweets.source.get('meta'):
+                if tweets.source['meta'].get('result_count',0) == 0:
+                    break
+
             users = {}
             if tweets.source.get('includes'):
                 for user in tweets.source['includes']['users']:
@@ -195,8 +199,10 @@ class Crawler:
 
         # se o processo foi concluído antes do fim, então o número máximo de tweets foi alcançado
         if next_token != 'Fim':
-            termo.status = 'C'
-            termo.ult_tweet = self.ultimo_tweet
+            if agora > termo.dtfinal:
+                termo.status = 'C'
+            if self.ultimo_tweet:
+                termo.ult_tweet = self.ultimo_tweet
             termo.ult_processamento = agora
             termo.save()
 

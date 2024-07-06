@@ -13,9 +13,4 @@ def deploy(connection):
 
 @task
 def deploy_producao(context):
-    deploy(Connection('webapp@monitor.farmi.pro.br', port=8090))
-
-
-@task
-def deploy_teste(context):
-    deploy(Connection('', port=8090))
+    deploy(Connection('webapp@monitor.cgti.ibict.br', port=25000))

@@ -20,10 +20,12 @@ from twitsearch.local import get_api_client
 from core.management.commands.importjson import Processo
 
 def update_stats_action(description=u"Recalcular estatísticas"):
+    # Calcula a estimativa de tweets e o status do Projeto
     def recalcular(modeladmin, request, queryset):
         alterados = 0
         soma = 0
         hoje = timezone.now()
+        status_projeto = 'A'
         for projeto in queryset:
             for termo in projeto.termo_set.all():
                 if termo.status != 'C':
@@ -43,18 +45,30 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     else:
                         ult_estimativa = max(last_estimate.dt, ult_estimativa)
 
-                    # se a data da última coleta for menor que hoje e menor que a data final de coleta
+                    # obtem uma nova estimativa na API apenas se a data da última coleta
+                    # for menor que hoje e menor que a data final de coleta
                     if ult_estimativa < min(hoje, termo.dtfinal):
                         termo.estimativa += calcula_estimativa(termo, ult_estimativa)
                         proc = Processamento(tipo=PROC_ESTIMATE, termo=termo, dt=hoje, status='C',
                                              tot_registros=termo.estimativa)
                         proc.save()
+
                     termo.save()
                     alterados += 1
                 soma += termo.last_count
+
                 if termo.dtfinal < hoje + datetime.timedelta(days=8):
                     termo.status = 'C'
+
+                if termo.status == 'E':
+                    status_projeto = 'E'
+
+                # se em algum dos termos houver o status P ou E, este será o status final do Projeto
+                if status_projeto not in ('P','E'):
+                    status_projeto = termo.status
+
             projeto.tot_twits = soma
+            projeto.status = status_projeto
             projeto.save()
         messages.info(request, u'%d termos alterados' % alterados)
 
@@ -70,6 +84,8 @@ def finalizar_projeto_action(description=u"Finaliza Projeto"):
                 termo.status = 'C'
                 termo.save()
                 alterados += 1
+            projeto.status = 'C'
+            projeto.save()
         messages.info(request, f'{alterados} termos finalizados')
 
     finalizar_projeto.short_description = description
@@ -205,8 +221,7 @@ def generate_tags_file(queryset, project_id):
         if intdef(project_id,0) != 0:
             termo = Termo.objects.filter(projeto_id=project_id).first()
             p,_ = Processamento.objects.get_or_create(
-                    termo=termo, tipo=PROC_TAGS)
-            p.dt = timezone.now()
+                    termo=termo, tipo=PROC_TAGS, defaults={'dt': timezone.now()})
             p.status = Processamento.CONCLUIDO
             p.tot_registros = num_lines
             p.save()
