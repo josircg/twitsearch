@@ -79,12 +79,15 @@ def update_stats_action(description=u"Recalcular estatísticas"):
 def finalizar_projeto_action(description=u"Finaliza Projeto"):
     def finalizar_projeto(modeladmin, request, queryset):
         alterados = 0
+        tot_registros = 0
         for projeto in queryset:
             for termo in projeto.termo_set.all():
                 termo.status = 'C'
                 termo.save()
+                tot_registros += termo.tot_twits()
                 alterados += 1
             projeto.status = 'C'
+            projeto.tot_twits = tot_registros
             projeto.save()
         messages.info(request, f'{alterados} termos finalizados')
 

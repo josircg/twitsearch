@@ -7,10 +7,10 @@ def deploy(connection):
         print('Iniciando a migração')
         connection.run('../bin/python manage.py migrate')
         connection.run('../bin/python manage.py collectstatic --noinput')
-        connection.run('supervisorctl restart twitsearch')
+        connection.run('supervisorctl restart tm')
         print('Atualização efetuada')
 
 
 @task
 def deploy_producao(context):
-    deploy(Connection('webapp@monitor.cgti.ibict.br', port=25000))
+    deploy(Connection('webapp@172.16.16.98', port=25000))

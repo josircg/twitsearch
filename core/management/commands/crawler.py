@@ -257,7 +257,9 @@ def processa_termo(termo, limite):
         processo.tot_registros = crawler.tot_registros
         processo.status = Processamento.CONCLUIDO
         processo.save()
-        log_message(termo.projeto, mensagem)
+        log_message(termo, mensagem)
+        log_message(termo.projeto, 'Erro durante a captura do termo {termo.id}')
+        print(f'Erro na montagem da busca. Termo:{termo.id}')
         print(mensagem)
         commit()
 
@@ -269,7 +271,8 @@ class Command(BaseCommand):
         parser.add_argument('--twit', type=str, help='Twitter ID')
         parser.add_argument('--proc', type=str, help='Processo')
         parser.add_argument('--termo', type=str, help='Termo ID')
-        parser.add_argument('--limite', type=str, help='Limite de Tweets')
+        parser.add_argument('--limite', type=int, help='Limite de Tweets')
+        parser.add_argument('--fake-run', action='store_true', help='Indica quais os termos que seriam processados')
 
     def handle(self, *args, **options):
         if 'twit' in options and options['twit']:
@@ -277,7 +280,7 @@ class Command(BaseCommand):
             return
 
         if 'limite' in options:
-            limite = intdef(options['limite'], 2000)
+            limite = options['limite']
         else:
             limite = 2000
 
@@ -294,7 +297,10 @@ class Command(BaseCommand):
         else:
             tot_termos = 0
             for termo in Termo.objects.filter(status='A').order_by('ult_processamento'):
-                processa_termo(termo, limite)
+                if options['fake-run']:
+                    print(termo.projeto, termo.busca, termo.ult_tweet)
+                else:
+                    processa_termo(termo, limite)
                 tot_termos += 1
 
             if tot_termos == 0:

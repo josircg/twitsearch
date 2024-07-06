@@ -112,10 +112,10 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', \
+                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'language', 'alcance', \
                     'termos_ativos', 'termos_processados', 'usuario', 'grupo', 'status'
             else:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'status'
+                return 'nome', 'objetivo', 'language', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'status'
         else:
             return 'nome', 'objetivo',
 
@@ -172,7 +172,7 @@ class ProjetoAdmin(PowerModelAdmin):
             else:
                 return 'usuario', 'tot_twits', 'tot_retwits', 'alcance', 'grupo'
         else:
-            return 'nome', 'objetivo', 'usuario', 'grupo', 'tot_twits', 'tot_retwits', 'alcance', \
+            return 'nome', 'objetivo', 'usuario', 'grupo', 'language', 'tot_twits', 'tot_retwits', 'alcance', \
                 'termos_ativos', 'termos_processados',
 
     def visao(self, request, project_id):
