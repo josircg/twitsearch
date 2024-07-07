@@ -13,6 +13,7 @@ PROC_RAPID = 'D'        # Importação Rapid API
 PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'      # Busca na rede retweets de um determinado tweet
 PROC_BUSCAGLOBAL = 'G'  # Busca na base de dados, tweets que atendam a um critério de busca
+PROC_OPENSEARCH = 'O'   # Busca na base do OpenSearch/ElasticSearch
 PROC_FILTROPROJ = 'P'   # Filtro dentro do projeto
 PROC_ESTIMATE = 'E'     # Calcula estimativa de tweets
 PROC_MATCH = 'M'        # Faz o match de tweets orfãos de projeto
@@ -26,6 +27,7 @@ TIPO_BUSCA = (
     (PROC_PREMIUM,     'Importação Premium'),
     (PROC_IMPORTUSER,  'Importação Usuário'),
     (PROC_BUSCAGLOBAL, 'Busca Global'),
+    (PROC_OPENSEARCH,  'OpenSearch'),
     (PROC_FILTROPROJ,  'Busca no Projeto'),
 )
 
@@ -35,6 +37,7 @@ TIPO_PROCESSAMENTO = (
     (PROC_RAPID,        'Importação Rapid'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),
+    (PROC_OPENSEARCH,   'OpenSearch'),
     (PROC_FILTROPROJ,   'Busca no Projeto'),
     (PROC_BACKUP,       'Backup JSON'),
     (PROC_ESTIMATE,     'Calcula Estimativa'),
