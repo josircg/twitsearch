@@ -97,7 +97,7 @@ class Crawler:
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
-        self.limite = limite
+        self.limite = limite or 2000
         self.ultimo_tweet = 0
         self.dt_inicial = None
 
@@ -283,10 +283,7 @@ class Command(BaseCommand):
             processa_item_unico(options['twit'], options['termo'])
             return
 
-        if 'limite' in options:
-            limite = options['limite']
-        else:
-            limite = 2000
+        limite = options['limite'] or 2000
 
         fake_run = options.get('fake')
 
