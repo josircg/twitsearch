@@ -99,6 +99,7 @@ class Crawler:
         self.tot_registros = 0
         self.limite = limite
         self.ultimo_tweet = 0
+        self.dt_inicial = None
 
     def search_recent(self, processo):
         agora = timezone.now()
@@ -109,24 +110,24 @@ class Crawler:
             self.since_id = termo.ult_tweet
             self.until_id = None
             if termo.ult_processamento and self.since_id is None:
-                inicio_processamento = max(termo.ult_processamento, dt_limite_api)
+                self.dt_inicial = max(termo.ult_processamento, dt_limite_api)
             else:
                 # Caso o último processamento tenha ultrapassado 7 dias, não considerar o since_id
                 if termo.ult_processamento and termo.ult_processamento < dt_limite_api:
                     self.since_id = None
-                    inicio_processamento = dt_limite_api
+                    self.dt_inicial = dt_limite_api
                 else:
-                    inicio_processamento = None
+                    self.dt_inicial = None
         else:
             # Estratégia de Correção: irá buscar registros mais antigos
             self.since_id = None
             first_tweet = TweetInput.objects.filter(termo=processo.termo, tweet__created_time__gt=dt_limite_api).first()
             if first_tweet:
                 self.until_id = first_tweet.tweet.id
-                inicio_processamento = None
+                self.dt_inicial = None
             else:
                 self.until_id = None
-                inicio_processamento = None
+                self.dt_inicial = None
 
         client = get_api_client()
         next_token = None
@@ -141,7 +142,7 @@ class Crawler:
                          next_token=next_token,
                          since_id=self.since_id,
                          until_id=self.until_id,
-                         start_time=inicio_processamento,
+                         start_time=self.dt_inicial,
                          max_results=100)
 
             if tweets.source.get('meta'):
@@ -157,7 +158,7 @@ class Crawler:
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
                 print('No includes found', tweets.source)
-                print(self.since_id, self.until_id, inicio_processamento)
+                print(self.since_id, self.until_id, self.dt_inicial)
                 break
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
@@ -260,6 +261,9 @@ def processa_termo(termo, limite):
         log_message(termo, mensagem)
         log_message(termo.projeto, 'Erro durante a captura do termo {termo.id}')
         print(f'Erro na montagem da busca. Termo:{termo.id}')
+        print(f'since_id:{crawler.since_id}')
+        print(f'until_id:{crawler.until_id}')
+        print(f'Data inicial:{crawler.dt_inicial}')
         print(mensagem)
         commit()
 
@@ -272,7 +276,7 @@ class Command(BaseCommand):
         parser.add_argument('--proc', type=str, help='Processo')
         parser.add_argument('--termo', type=str, help='Termo ID')
         parser.add_argument('--limite', type=int, help='Limite de Tweets')
-        parser.add_argument('--fake-run', action='store_true', help='Indica quais os termos que seriam processados')
+        parser.add_argument('--fake', action='store_true', help='Indica quais os termos que seriam processados')
 
     def handle(self, *args, **options):
         if 'twit' in options and options['twit']:
@@ -283,6 +287,8 @@ class Command(BaseCommand):
             limite = options['limite']
         else:
             limite = 2000
+
+        fake_run = options.get('fake')
 
         # Existem 3 estratégias de busca: Padrão, Continua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
@@ -297,7 +303,7 @@ class Command(BaseCommand):
         else:
             tot_termos = 0
             for termo in Termo.objects.filter(status='A').order_by('ult_processamento'):
-                if options['fake-run']:
+                if fake_run:
                     print(termo.projeto, termo.busca, termo.ult_tweet)
                 else:
                     processa_termo(termo, limite)
