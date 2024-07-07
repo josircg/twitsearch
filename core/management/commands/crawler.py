@@ -108,6 +108,8 @@ class Crawler:
         if termo.status in ('A','P'):
             # Estratégia Contínua: irá continuar de onde parou
             self.since_id = termo.ult_tweet
+            if self.since_id == 0:
+                self.since_id = None
             self.until_id = None
             if termo.ult_processamento and self.since_id is None:
                 self.dt_inicial = max(termo.ult_processamento, dt_limite_api)
