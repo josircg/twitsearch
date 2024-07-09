@@ -200,13 +200,17 @@ class Crawler:
             print(f'Total registros: {self.tot_registros}')
             next_token = tweets.source.get('meta',{}).get('next_token','Fim')
 
-        # se o processo foi concluído antes do fim, então o número máximo de tweets foi alcançado
-        if next_token != 'Fim':
-            if agora > termo.dtfinal:
-                termo.status = 'C'
+        # se algum registro foi recebido, atualizar os status do termo
+        if self.tot_registros > 0:
             if self.ultimo_tweet:
                 termo.ult_tweet = self.ultimo_tweet
             termo.ult_processamento = agora
+            termo.save()
+
+        # se a data atual for maior que o final programado
+        if agora > termo.dtfinal or self.tot_registros > 2000:
+            print(f'Termo {termo.id} finalizado')
+            termo.status = 'C'
             termo.save()
 
         return

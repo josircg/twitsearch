@@ -333,7 +333,7 @@ class Command(BaseCommand):
             processo_ativo.termo = termo
             processo_ativo.save()
 
-        # Atualiza o contador de tweets de cada termo trabalhado
+        # Atualiza o contador de tweets de cada termo importado
         for termo in Termo.objects.filter(id__in=processo.termos):
             ultima_contagem = termo.last_count
             termo.last_count = termo.tweetinput_set.all().count()
@@ -343,7 +343,7 @@ class Command(BaseCommand):
             termo.save()
             diferenca = termo.last_count - ultima_contagem
             if diferenca > 0:
-                log_message(termo.projeto, f'{diferenca} registros importados')
+                log_message(termo.projeto, f'{diferenca} registros importados no termo {termo.busca}')
         commit()
 
         if tot_files != 0:
