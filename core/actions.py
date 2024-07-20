@@ -393,7 +393,6 @@ def adiciona_users(tweets):
 
 
 def importa_tweets(processo_db, lista):
-    tot_registros = 0
     api = get_api_client()
     processo = Processo(processo_db)
 
@@ -412,6 +411,8 @@ def importa_tweets(processo_db, lista):
     processo_db.tot_registros = processo.counter_tweets
     processo_db.status = 'C'
     processo_db.save()
+    processo_db.termo.last_count = processo_db.termo.tweetinput_set.count() or 0
+    processo_db.termo.save()
     return
 
 
