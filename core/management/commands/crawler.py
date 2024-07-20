@@ -248,9 +248,6 @@ def processa_termo(termo, limite):
         processo.tot_registros = crawler.tot_registros
         processo.status = Processamento.CONCLUIDO
         processo.save()
-        Termo.objects.filter(id=termo.id).update(status='C',
-                                                 ult_processamento=agora,
-                                                 ult_tweet=crawler.ultimo_tweet)
         log_message(termo.projeto, f'{crawler.tot_registros} obtidos')
         commit()
 
