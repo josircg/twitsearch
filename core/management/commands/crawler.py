@@ -205,13 +205,14 @@ class Crawler:
             if self.ultimo_tweet:
                 termo.ult_tweet = self.ultimo_tweet
             termo.ult_processamento = agora
-            termo.save()
 
         # se a data atual for maior que o final programado
         if agora > termo.dtfinal or self.tot_registros > 2000:
             print(f'Termo {termo.id} finalizado')
             termo.status = 'C'
-            termo.save()
+        else:
+            termo.status = 'A'
+        termo.save()
 
         return
 

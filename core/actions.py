@@ -409,7 +409,7 @@ def importa_tweets(processo_db, lista):
             save_result(tweet, processo_db.id)
             processo.load_twitter(tweet)
 
-    processo_db.tot_registros = len(processo.counter_tweets)
+    processo_db.tot_registros = processo.counter_tweets
     processo_db.status = 'C'
     processo_db.save()
     return
@@ -419,19 +419,19 @@ def import_list(termo_id, arquivo):
     texto = arquivo.read().decode('utf-8')
     hoje = timezone.now()
     termo = Termo.objects.get(id=termo_id)
-    processo = Processamento.objects.create(tipo=PROC_MATCH, termo=termo, dt=hoje, status='A')
     fila = []
-    tot_registros = 0
     for linha in texto.split('\n'):
         # verifica se a linha é um número inteiro e acumula-se em uma lista
-        print(linha)
         tweet_id = intdef(linha.strip(), 0)
         if tweet_id != 0:
             fila.append(tweet_id)
 
-    processo.tot_registros = len(fila)
-    processo.save()
-    th = Thread(target=importa_tweets, args=(processo, fila))
-    th.start()
+    tot_registros = len(fila)
+    if tot_registros > 0:
+        processo = Processamento.objects.create(tipo=PROC_MATCH, termo=termo, dt=hoje, status='A')
+        processo.tot_registros = tot_registros
+        processo.save()
+        th = Thread(target=importa_tweets, args=(processo, fila))
+        th.start()
 
     return f'{tot_registros} agendados para importação'
