@@ -424,6 +424,7 @@ def import_list(termo_id, arquivo):
     tot_registros = 0
     for linha in texto.split('\n'):
         # verifica se a linha é um número inteiro e acumula-se em uma lista
+        print(linha)
         tweet_id = intdef(linha.strip(), 0)
         if tweet_id != 0:
             fila.append(tweet_id)
