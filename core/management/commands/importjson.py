@@ -249,8 +249,9 @@ class Command(BaseCommand):
                     update(status=Processamento.CONCLUIDO)
                 print('Force Update')
             else:
-                if Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT):
-                    print('Importação pendente')
+                proc = Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT)
+                if proc:
+                    print('Importação pendente %d' % proc[0].id)
                     return
             agora = timezone.now()
             processo_ativo = Processamento.objects.create(status=Processamento.PROCESSANDO,
@@ -295,6 +296,7 @@ class Command(BaseCommand):
                             continue
 
                         try:
+                            print(filename)
                             with open(filename, 'r') as file:
                                 texto = file.read()
                                 twitter_data = json.loads(texto)
@@ -336,14 +338,13 @@ class Command(BaseCommand):
         # Atualiza o contador de tweets de cada termo importado
         for termo in Termo.objects.filter(id__in=processo.termos):
             ultima_contagem = termo.last_count
-            termo.last_count = termo.tweetinput_set.all().count()
-            ult_tweet = termo.tweetinput_set.all().order_by('-tweet').first()
-            if ult_tweet:
-                termo.ult_tweet = ult_tweet.tweet.twit_id
+            tweets = termo.tweetinput_set.all().order_by('-tweet')
+            if tweets:
+                termo.ult_tweet = tweets[0].tweet.twit_id
+                termo.last_count = tweets.count()
             termo.save()
             diferenca = termo.last_count - ultima_contagem
-            if diferenca > 0:
-                log_message(termo.projeto, f'{diferenca} registros importados no termo {termo.busca}')
+            log_message(termo.projeto, f'{diferenca} registros importados no termo {termo.busca}')
         commit()
 
         if tot_files != 0:

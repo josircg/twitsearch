@@ -67,10 +67,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         self.header = {'Authorization': 'Bearer %s' % settings.BEARED_TOKEN}
-
+        limite_busca = 100
         user_list = []
         total = TweetUser.objects.filter(username__isnull=True).count()
-        print(f'Usuários sem info: {total} - Buscando apenas 2000')
+        print(f'Usuários sem info: {total} - Buscando apenas {limite_busca}')
         for empty_user in TweetUser.objects.filter(username__isnull=True).only('twit_id'):
 
             user_list.append(str(empty_user.twit_id))
@@ -80,7 +80,7 @@ class Command(BaseCommand):
                 print(f'{self.tot_updates}')
                 user_list = []
 
-                if self.tot_registros % 2000 == 0:
+                if self.tot_registros > limite_busca:
                     break
 
         if len(user_list) > 0:
