@@ -296,7 +296,6 @@ class Command(BaseCommand):
                             continue
 
                         try:
-                            print(filename)
                             with open(filename, 'r') as file:
                                 texto = file.read()
                                 twitter_data = json.loads(texto)

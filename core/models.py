@@ -60,6 +60,7 @@ class Projeto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    stopwords = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.nome
@@ -73,9 +74,7 @@ class Projeto(models.Model):
 
     @property
     def tot_estimado(self):
-        soma = 0
-        for termo in self.termo_set.all():
-            soma += termo.estimativa
+        soma = self.termo_set.aggregate(Sum('estimativa'))['estimativa__sum']
         return '{:,}'.format(soma).replace(',', '.')
     tot_estimado.fget.short_description = 'Estimativa'
 

@@ -295,7 +295,13 @@ def nuvem(request, project_id, modelo=None):
 
     if len(palavras) == 0:
         messages.error(request,'Nenhuma palavra encontrada para a montagem da nuvem')
-        return redirect(reverse('admin:core_projeto_change', args=(project_id)))
+        return redirect(reverse('admin:core_projeto_change', args=project_id))
+
+    if projeto.stopwords:
+        for word in projeto.stopwords.split(','):
+            stopword = word.lower().strip()
+            if stopword in palavras:
+                del palavras[stopword]
 
     # Grava o CSV caso ele não tenha sido lido
     if not csv_lido:
@@ -393,10 +399,10 @@ def gerar_gephi(request, project_id):
     response['Content-Disposition'] = 'attachment; filename="gephi.csv"'
     csv_file = csv.writer(response)
     csv_file.writerow(['source', 'target'])
-    dataset = list(Retweet.objects.filter(tweet__termo__projeto_id=project_id).
-                   select_related().values_list('tweet__user__username', 'user__username'))
-    for data in dataset:
-        csv_file.writerow(data)
+    for termo in Termo.objects.filter(projeto__id=project_id):
+        for record in (Retweet.objects.filter(tweet__tweetinput__termo_id=termo).
+                select_related().values_list('tweet__user__username', 'user__username')):
+            csv_file.writerow(record[0], record[1])
 
     return response
 

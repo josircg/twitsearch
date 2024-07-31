@@ -30,7 +30,7 @@ def ressurect_processamentos():
     Processamento.objects.filter(status__in=('P', 'E'), dt=grace_time).update(status='A')
 
 
-from core.apps import import_xlsx
+from core.actions import import_xlsx
 
 def import_csv():
     result = import_xlsx(4, '/home/josir/Downloads/Conselhao 2_.xlsx')
@@ -41,16 +41,23 @@ class Command(BaseCommand):
     label = 'Revive stalled processes'
 
     def handle(self, *args, **options):
-        import_csv()
-        '''
+        # import_csv()
         ressurect_termos()
         ressurect_processamentos()
+
         # Atualiza os contadores dos termos já concluídos
         cnt = 0
         for termo in Termo.objects.filter(status='C'):
-            if termo.last_count != termo.tot_twits:
+            if termo.tweetinput_set.count() != termo.last_count:
                 termo.last_count = termo.tot_twits
                 cnt += 1
                 termo.save()
+
+        # Atualiza o status e os contadores dos projetos abertos
+        for projeto in Projeto.objects.exclude(status='C'):
+            total = projeto.tot_calculado()
+            if total != projeto.tot_twits:
+                projeto.tot_twits = total
+                projeto.save()
+
         print('Recounted: %d' % cnt)
-        '''
