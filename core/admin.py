@@ -64,7 +64,7 @@ class TermoInline(admin.TabularInline):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'status', 'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites')
+    fields = ('nome', 'objetivo', 'status', 'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
     list_per_page = 25
     inlines = [TermoInline]
 
@@ -352,6 +352,7 @@ class ProcessamentoAdmin(PowerModelAdmin):
 class TweetInputAdmin(PowerModelAdmin):
     search_fields = ('tweet__twit_id', )
     list_display = ('tweet', 'termo', 'processamento', )
+    raw_id_fields = ('tweet', 'termo', 'processamento', )
 
     def lookup_allowed(self, lookup, value):
         if lookup in ('tweet_twit_id', 'processamento__id', 'termo__projeto__id'):
