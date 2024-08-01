@@ -12,8 +12,7 @@ from core.models import *
 from core.actions import export_tags_action, export_extra_action, detach_action, \
     update_stats_action, stop_process_action, reativar_projeto_action, finalizar_projeto_action
 
-from poweradmin.admin import PowerModelAdmin, PowerButton
-
+from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline
 
 
 def get_object_from_path(request, model):
@@ -113,9 +112,9 @@ class ProjetoAdmin(PowerModelAdmin):
         if obj:
             if request.user.is_superuser:
                 return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'language', 'alcance', \
-                    'termos_ativos', 'termos_processados', 'usuario', 'grupo', 'status'
+                    'termos_ativos', 'termos_processados', 'usuario', 'grupo', 'status', 'stopwords'
             else:
-                return 'nome', 'objetivo', 'language', 'tot_twits', 'tot_retwits', 'alcance', 'usuario', 'status'
+                return 'nome', 'objetivo', 'language', 'tot_twits', 'tot_retwits', 'alcance', 'status', 'stopwords'
         else:
             return 'nome', 'objetivo',
 
@@ -173,7 +172,7 @@ class ProjetoAdmin(PowerModelAdmin):
                 return 'usuario', 'tot_twits', 'tot_retwits', 'alcance', 'grupo'
         else:
             return 'nome', 'objetivo', 'usuario', 'grupo', 'language', 'tot_twits', 'tot_retwits', 'alcance', \
-                'termos_ativos', 'termos_processados',
+                'termos_ativos', 'termos_processados', 'stopwords'
 
     def visao(self, request, project_id):
         projeto = get_object_or_404(Projeto, pk=project_id)
@@ -234,6 +233,16 @@ class UserAdmin(PowerModelAdmin):
     followers_str.admin_order_field = 'followers'
 
 
+class InputInline(PowerTabularInline):
+    model = TweetInput
+    extra = 0
+    fields = ('termo', 'processamento', )
+    readonly_fields = fields
+    can_delete = False
+
+    def has_add_permission(self, request, obj):
+        return False
+
 class TweetAdmin(PowerModelAdmin):
     multi_search = (
         ('q1', 'Texto', ['text']),
@@ -248,6 +257,7 @@ class TweetAdmin(PowerModelAdmin):
     fields = ('text', 'imprints', 'quotes','retweets', 'favorites', 'user_link', 'termo',
               'created_time', 'language', 'url')
     readonly_fields = fields
+    inlines = [ InputInline, ]
     list_per_page = 30
 
     def lookup_allowed(self, lookup, value):
@@ -302,7 +312,7 @@ class RetweetAdmin(PowerModelAdmin):
     list_display = ('retweet_id', 'user', 'created_time', 'tweet', 'type', 'tweet_dif')
     list_per_page = 30
 
-    raw_id_fields = ('user', 'tweet')
+    raw_id_fields = ('user', 'related_user', 'tweet')
 
 
 class TermoAdmin(PowerModelAdmin):
