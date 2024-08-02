@@ -131,6 +131,10 @@ class Projeto(models.Model):
                                 result[palavra_limpa] += tweet.favorites
         return result.most_common(total)
 
+    @property
+    def total_views(self):
+        return Tweet.objects.filter(tweetinput__termo__projeto_id=self.pk, imprints__isnull=False).count()
+
 
 class Termo(models.Model):
     busca = models.CharField(max_length=200)
