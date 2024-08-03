@@ -133,7 +133,7 @@ class Projeto(models.Model):
 
     @property
     def total_views(self):
-        return Tweet.objects.filter(tweetinput__termo__projeto_id=self.pk, imprints__isnull=False).count()
+        return Tweet.objects.filter(tweetinput__termo__projeto_id=1).aggregate(soma=Sum('imprints'))['soma']
 
 
 class Termo(models.Model):
