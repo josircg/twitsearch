@@ -8,7 +8,7 @@ from core.models import *
 from twitsearch.settings import TIME_ZONE
 from core.models import Termo
 
-from core.apps import generate_tags_file
+from core.actions import generate_tags_file
 
 
 class Command(BaseCommand):

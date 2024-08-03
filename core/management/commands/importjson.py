@@ -123,10 +123,11 @@ class Processo:
         if 'process' in src and src['process'] != self.processamento:
             try:
                 processo_atual = Processamento.objects.get(id=src['process'])
-                if processo_atual.termo.id not in self.termos:
-                    self.termos.append( processo_atual.termo.id )
             except Processamento.DoesNotExist:
                 processo_atual = self.processamento
+
+            if processo_atual.termo and processo_atual.termo.id not in self.termos:
+                self.termos.append( processo_atual.termo.id )
         else:
             processo_atual = self.processamento
 
@@ -255,7 +256,8 @@ class Command(BaseCommand):
                     return
             agora = timezone.now()
             processo_ativo = Processamento.objects.create(status=Processamento.PROCESSANDO,
-                                                          tipo=PROC_JSON_IMPORT, dt=agora, termo=termo)
+                                                          tipo=PROC_JSON_IMPORT, dt=agora, termo=termo,
+                                                          tot_registros=0)
             commit()
             print('Processo ativo: %d' % processo_ativo.id)
 

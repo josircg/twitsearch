@@ -281,7 +281,7 @@ class Tweet(models.Model):
     imprints = models.IntegerField(null=True)
     user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True) # Termo que trouxe o tweet
-    retwit_id = models.CharField(max_length=21, null=True) # Parent Tweet (Deprecated)
+    # retwit_id = models.CharField(max_length=21, null=True) # Parent Tweet (Deprecated)
     language = models.CharField(max_length=5, null=True)
     location = models.TextField(null=True, blank=True)
     geo = models.CharField(max_length=150, null=True, blank=True)

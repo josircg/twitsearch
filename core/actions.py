@@ -202,7 +202,7 @@ def generate_tags_file(queryset, project_id):
             writer_full.writerow([
                 obj.twit_id, obj.user.username, "%s" % obj.text.replace('"', ''),
                 obj.created_time.strftime("%Y-%m-%d %H:%M:%S"),
-                obj.language, "%s" % obj.user.twit_id, obj.favorites, obj.retweets, "%s" % obj.retwit_id,
+                obj.language, "%s" % obj.user.twit_id, obj.favorites, obj.retweets, "",
                 "https://twitter.com/i/web/status/%s" % obj.twit_id
             ])
         csvfile.close()
