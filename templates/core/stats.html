@@ -78,7 +78,8 @@
 				<div><label>Total de Tweets Coletados: {{projeto.tot_twits}}</label></div>
 				<div><label>Total de Retweets Coletados: {{projeto.tot_retwits}}</label></div>
 				<div><label>Total de Usuários Unicos Coletados: {{projeto.unique_users}}</label></div>
-				<div data-tooltip="Total de interações (Favoritos e Retweets) máxima"><label>Alcance Máximo: {{projeto.alcance|intcomma}}</label></div>
+				<div><label>Total de Visualizações: {{projeto.total_views}}</label></div>
+				<div data-tooltip="Total de interações (Favoritos e Retweets) máxima"><label>Total de Interações: {{projeto.alcance|intcomma}}</label></div>
 			</div>
             <label style="margin-top: 10px; display: block"><b>Top 5 - Tweets mais favoritados:</b></label>
             <p></p>
@@ -87,19 +88,9 @@
                     <li>{{ tweet.url }}: {{ tweet.text }}</li>
                 {% endfor %}
             </ol>
+            <p></p>           
             <p></p>
-            <label><b>Palavras mais utilizadas:</b></label>
-            <p></p>
-            <div class="block" style="display: flex;">
-                <div class="form-row palavra">
-                 {% for palavra in palavras %}
-                    <div>
-                        <p>
-                            {{ palavra.0 }} - {{ palavra.1 }}
-                        </p>
-                    </div>
-                {%  endfor %}
-			    </div>
+            <div class="block" style="display: flex;">                
                  <div class="graficos" style="display: flex; flex-direction: column; align-items: start">
 {#                    <div class="form-row grafico">#}
 {#                        <img src="{{ bar }}" alt="Grafico de barra">#}

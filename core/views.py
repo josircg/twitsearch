@@ -44,7 +44,6 @@ def stats(request, project_id):
     agora = timezone.now()
     projeto = get_object_or_404(Projeto, pk=project_id)
     termo_base = projeto.termo_set.all().first()
-    palavras = projeto.most_common()
     top_tweets = Tweet.objects.filter(tweetinput__termo__projeto_id=project_id).order_by('-favorites')[:5]
 
     proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
@@ -200,12 +199,11 @@ def stats(request, project_id):
     return render(request, 'core/stats.html', {
         'title': u'Estatísticas do Projeto',
         'projeto': projeto,
-        'palavras': palavras,
         'top_tweets': top_tweets,
         'csv_tags': csv_tags,
         'csv_completo': csv_completo,
         'heatmap_div': heatmap_div,
-        'grafico_div':grafico_div,
+        'grafico_div': grafico_div,
         # 'heatmap': os.path.join(settings.MEDIA_URL, 'heatmap', filename),
         # 'bar': os.path.join(settings.MEDIA_URL, 'graficos', filename_bar ),
         'csv': filename_csv })
