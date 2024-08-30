@@ -174,28 +174,29 @@ class Crawler:
                 self.tot_registros += 1
 
             # os tweets pais (que geraram retweets ou quotes) são registrados nos includes
-            for tweet in tweets.source['includes']['tweets']:
-                author_id = tweet.get('author_id', None)
-                if author_id:
-                    # se o author do tweet original não estiver registrado, não gravar o pai
-                    record = {
-                        'id': tweet.id,
-                        'author_id': tweet.author_id,
-                        'user': users.get(str(author_id),None),
-                        'created_at': tweet.created_at.strftime("%a %b %d %H:%M:%S %z %Y"),
-                        'text': tweet.text,
-                        'public_metrics': tweet.public_metrics,
-                        'lang': tweet.lang,
-                        'geo': tweet.geo,
-                    }
-                    if tweet.referenced_tweets:
-                        record['referenced_tweet'] = []
-                        for ref in tweet.referenced_tweets:
-                            record['referenced_tweet'].append(ref.data)
+            if tweets.source['includes'].get('tweets'):
+                for tweet in tweets.source['includes']['tweets']:
+                    author_id = tweet.get('author_id', None)
+                    if author_id:
+                        # se o author do tweet original não estiver registrado, não gravar o pai
+                        record = {
+                            'id': tweet.id,
+                            'author_id': tweet.author_id,
+                            'user': users.get(str(author_id),None),
+                            'created_at': tweet.created_at.strftime("%a %b %d %H:%M:%S %z %Y"),
+                            'text': tweet.text,
+                            'public_metrics': tweet.public_metrics,
+                            'lang': tweet.lang,
+                            'geo': tweet.geo,
+                        }
+                        if tweet.referenced_tweets:
+                            record['referenced_tweet'] = []
+                            for ref in tweet.referenced_tweets:
+                                record['referenced_tweet'].append(ref.data)
 
-                    save_result(record, processo.id, overwrite=False)
-                    self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
-                    self.tot_registros += 1
+                        save_result(record, processo.id, overwrite=False)
+                        self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
+                        self.tot_registros += 1
 
             print(f'Total registros: {self.tot_registros}')
             next_token = tweets.source.get('meta',{}).get('next_token','Fim')
