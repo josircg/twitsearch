@@ -75,7 +75,10 @@ class Projeto(models.Model):
     @property
     def tot_estimado(self):
         soma = self.termo_set.aggregate(Sum('estimativa'))['estimativa__sum']
-        return '{:,}'.format(soma).replace(',', '.')
+        if soma:
+            return '{:,}'.format(soma).replace(',', '.')
+        else:
+            return '-'
     tot_estimado.fget.short_description = 'Estimativa'
 
     @property
