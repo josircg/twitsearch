@@ -15,7 +15,7 @@ import tweepy
 
 from twitsearch.settings import TIME_ZONE
 from core.apps import save_result
-from core.models import Termo, Tweet, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO
+from core.models import Termo, Rede, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO
 
 
 def processa_item_unico(twitid, termo):
@@ -291,6 +291,7 @@ class Command(BaseCommand):
         limite = options['limite'] or 2000
 
         fake_run = options.get('fake')
+        rede_twitter = Rede.objects.get(id=1)
 
         # Existem 3 estratégias de busca: Padrão, Continua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
@@ -304,7 +305,8 @@ class Command(BaseCommand):
             processa_termo(termo, limite)
         else:
             tot_termos = 0
-            for termo in Termo.objects.filter(status='A').order_by('ult_processamento'):
+            for termo in Termo.objects.filter(status='A',
+                                              projeto__redes=rede_twitter).order_by('ult_processamento'):
                 if fake_run:
                     print(termo.projeto, termo.busca, termo.ult_tweet)
                 else:

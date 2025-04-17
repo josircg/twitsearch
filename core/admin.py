@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls import url
+from django.db.models.functions import Power
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.template import RequestContext
@@ -60,10 +61,16 @@ class TermoInline(admin.TabularInline):
         return not projeto_readonly(request.user, obj)
 
 
+@admin.register(Rede)
+class Rede(PowerModelAdmin):
+    list_display = ('nome', 'ativa',)
+
+
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'status', 'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
+    fields = ('nome', 'objetivo', 'status', 'redes',
+              'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
     list_per_page = 25
     inlines = [TermoInline]
 
@@ -111,10 +118,10 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', 'objetivo', 'tot_twits', 'tot_retwits', 'language', 'alcance', \
-                    'termos_ativos', 'termos_processados', 'usuario', 'grupo', 'status', 'stopwords'
+                return 'nome', ('objetivo', 'redes'), ('tot_twits', 'tot_retwits'), 'language', 'alcance', \
+                    ('termos_ativos', 'termos_processados'), ('usuario', 'grupo'), 'status', 'stopwords'
             else:
-                return 'nome', 'objetivo', 'language', 'tot_twits', 'tot_retwits', 'alcance', 'status', 'stopwords'
+                return 'nome', ('objetivo', 'redes'), 'language', 'status', 'stopwords', ('tot_twits', 'tot_retwits', 'alcance')
         else:
             return 'nome', 'objetivo',
 

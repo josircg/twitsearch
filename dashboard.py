@@ -38,7 +38,7 @@ class CustomIndexDashboard(Dashboard):
             ),
             modules.ModelList(
                 u'Adminstração',
-                models=('core.models.Processamento',
+                models=('core.models.Rede', 'core.models.Processamento',
                         'django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
             ),
             modules.ModelList(

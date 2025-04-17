@@ -9,6 +9,7 @@ from core import clean_pontuation, stopwords
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium
+PROC_YOUTUBE = 'Y'      # Importação Youtube
 PROC_RAPID = 'D'        # Importação Rapid API
 PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'      # Busca na rede retweets de um determinado tweet
@@ -33,8 +34,8 @@ TIPO_BUSCA = (
 
 TIPO_PROCESSAMENTO = (
     (PROC_IMPORTACAO,   'Importação'),
-    (PROC_PREMIUM,      'Importação Premium'),
-    (PROC_RAPID,        'Importação Rapid'),
+    (PROC_PREMIUM,      'Importação Twitter'),
+    (PROC_YOUTUBE,      'Importação Youtube'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),
     (PROC_OPENSEARCH,   'OpenSearch'),
@@ -51,6 +52,14 @@ STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
                 ('I', 'Interrompido'), ('C', 'Concluido'))
 
 
+class Rede(models.Model):
+    nome = models.CharField(max_length=100)
+    ativa = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nome
+
+
 class Projeto(models.Model):
     nome = models.CharField(max_length=40)
     objetivo = models.TextField('Objetivo')
@@ -60,6 +69,7 @@ class Projeto(models.Model):
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    redes = models.ManyToManyField(Rede, blank=True)
     stopwords = models.TextField(null=True, blank=True)
 
     def __str__(self):
@@ -140,7 +150,7 @@ class Projeto(models.Model):
 
 
 class Termo(models.Model):
-    busca = models.CharField(max_length=200)
+    busca = models.CharField(max_length=2000)
     projeto = models.ForeignKey(Projeto, on_delete=models.PROTECT)
     dtinicio = models.DateTimeField('Início da Busca', null=True, blank=True,
                                     help_text='Deixe em branco caso queira iniciar imediatamente')
@@ -288,7 +298,6 @@ class Tweet(models.Model):
     imprints = models.IntegerField(null=True)
     user = models.ForeignKey(TweetUser, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.SET_NULL, null=True) # Termo que trouxe o tweet
-    # retwit_id = models.CharField(max_length=21, null=True) # Parent Tweet (Deprecated)
     language = models.CharField(max_length=5, null=True)
     location = models.TextField(null=True, blank=True)
     geo = models.CharField(max_length=150, null=True, blank=True)
@@ -341,6 +350,7 @@ class TweetInput(models.Model):
     tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE)
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE, blank=True, null=True)
     processamento = models.ForeignKey(Processamento, on_delete=models.CASCADE)
+    exported = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ["tweet", "termo"]
