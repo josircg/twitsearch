@@ -3,17 +3,6 @@
 from django.db import migrations, models
 
 
-def update_rede(apps, schema_editor):
-    projeto_model = apps.get_model("core", "Projeto")
-    rede_model = apps.get_model("core", "Rede")
-    rede, _ = rede_model.objects.get_or_create(nome='Twitter/X')
-    tot_registros = 0
-    for projeto in projeto_model.objects.all():
-        projeto.redes.add(rede)
-        tot_registros += 1
-    print(f'Contatos atualizados: {tot_registros}')
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -21,39 +10,36 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(update_rede, migrations.RunPython.noop),
-        '''
-            migrations.CreateModel(
-                name='Rede',
-                fields=[
-                    ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                    ('nome', models.CharField(max_length=100)),
-                    ('ativa', models.BooleanField(default=True)),
-                ],
-            ),
-            migrations.RemoveField(
-                model_name='tweet',
-                name='retwit_id',
-            ),
-            migrations.AddField(
-                model_name='tweetinput',
-                name='exported',
-                field=models.BooleanField(default=False),
-            ),
-            migrations.AlterField(
-                model_name='processamento',
-                name='tipo',
-                field=models.CharField(choices=[('I', 'Importação'), ('A', 'Importação Twitter'), ('Y', 'Importação Youtube'), ('U', 'Importação User'), ('G', 'Busca Global'), ('O', 'OpenSearch'), ('P', 'Busca no Projeto'), ('B', 'Backup JSON'), ('E', 'Calcula Estimativa'), ('M', 'Match de Tweets orfãos'), ('T', 'Exportação Tags'), ('J', 'Importação JSON'), ('N', 'Montagem Rede')], default='I', max_length=1),
-            ),
-            migrations.AlterField(
-                model_name='termo',
-                name='busca',
-                field=models.CharField(max_length=2000),
-            ),
-            migrations.AddField(
-                model_name='projeto',
-                name='redes',
-                field=models.ManyToManyField(blank=True, to='core.Rede'),
-            ),
-'''
+        migrations.CreateModel(
+            name='Rede',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('nome', models.CharField(max_length=100)),
+                ('ativa', models.BooleanField(default=True)),
+            ],
+        ),
+        migrations.RemoveField(
+            model_name='tweet',
+            name='retwit_id',
+        ),
+        migrations.AddField(
+            model_name='tweetinput',
+            name='exported',
+            field=models.BooleanField(default=False),
+        ),
+        migrations.AlterField(
+            model_name='processamento',
+            name='tipo',
+            field=models.CharField(choices=[('I', 'Importação'), ('A', 'Importação Twitter'), ('Y', 'Importação Youtube'), ('U', 'Importação User'), ('G', 'Busca Global'), ('O', 'OpenSearch'), ('P', 'Busca no Projeto'), ('B', 'Backup JSON'), ('E', 'Calcula Estimativa'), ('M', 'Match de Tweets orfãos'), ('T', 'Exportação Tags'), ('J', 'Importação JSON'), ('N', 'Montagem Rede')], default='I', max_length=1),
+        ),
+        migrations.AlterField(
+            model_name='termo',
+            name='busca',
+            field=models.CharField(max_length=2000),
+        ),
+        migrations.AddField(
+            model_name='projeto',
+            name='redes',
+            field=models.ManyToManyField(blank=True, to='core.Rede'),
+        ),
     ]

@@ -31,19 +31,31 @@ def ressurect_processamentos():
 
 
 from core.actions import import_xlsx
+from core.models import Rede, Projeto
 
 def import_csv():
     result = import_xlsx(4, '/home/josir/Downloads/Conselhao 2_.xlsx')
     print(result)
 
 
+def update_projeto_rede():
+    rede, _ = Rede.objects.get_or_create(nome='Twitter/X')
+    tot_registros = 0
+    for projeto in Projeto.objects.all():
+        projeto.redes.add(rede)
+        tot_registros += 1
+    print(f'Contatos atualizados: {tot_registros}')
+
+
 class Command(BaseCommand):
     label = 'Revive stalled processes'
 
     def handle(self, *args, **options):
+        update_projeto_rede()
+        return
         # import_csv()
-        ressurect_termos()
-        ressurect_processamentos()
+        # ressurect_termos()
+        # ressurect_processamentos()
 
         # Atualiza os contadores dos termos já concluídos
         cnt = 0
@@ -55,7 +67,7 @@ class Command(BaseCommand):
 
         # Atualiza o status e os contadores dos projetos abertos
         for projeto in Projeto.objects.exclude(status='C'):
-            total = projeto.tot_calculado()
+            total = projeto.tot_calculado
             if total != projeto.tot_twits:
                 projeto.tot_twits = total
                 projeto.save()
