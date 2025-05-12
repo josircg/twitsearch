@@ -1,9 +1,10 @@
-from django.conf import settings
+from django.urls import path
 from django.conf.urls import url
-from django.conf.urls.static import static
 
 from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
     nuvem, create_graph, gerar_gephi, solicita_busca, get_source, importacao_arquivo
+
+from core.api import redes, termos, projetos
 
 urlpatterns = [
     url(r'^$', index),
@@ -19,5 +20,9 @@ urlpatterns = [
     url(r'^gerar_gephi/(?P<project_id>\d+)/$', gerar_gephi, name='gerar_gephi'),
     url(r'^source/(?P<tweet_id>\d+)/$', get_source, name='get_source'),
     url(r'^importacao_arquivo/', importacao_arquivo, name='importacao_arquivo'),
+    path('api/redes/', redes, name='redes'),
+    path('api/projetos/', projetos, name='projeto'),
+    path('api/projetos/<str:status>', projetos, name='projeto'),
+    path('api/termos/<int:rede_id>', termos, name='termos'),
 
 ]

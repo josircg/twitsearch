@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from django.contrib import admin
 from django.conf import settings
 from django.conf.urls import url
+from django.contrib.admin import StackedInline
 from django.db.models.functions import Power
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
@@ -13,7 +14,7 @@ from core.models import *
 from core.actions import export_tags_action, export_extra_action, detach_action, \
     update_stats_action, stop_process_action, reativar_projeto_action, finalizar_projeto_action
 
-from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline
+from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline, PowerInlineModelAdmin
 
 
 def get_object_from_path(request, model):
@@ -37,10 +38,10 @@ def projeto_readonly(usuario, projeto):
     return readonly
 
 
-class TermoInline(admin.TabularInline):
+class TermoInline(StackedInline):
     model = Termo
     extra = 0
-    fields = ('busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count',)
+    fields = ('descritivo', 'busca', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
