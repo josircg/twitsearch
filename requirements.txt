@@ -27,3 +27,4 @@ reportlab==3.6.13
 plotly
 gunicorn
 boto3
+django-debug-toolbar
