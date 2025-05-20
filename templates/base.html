@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="{% static '/css/bootstrap.min.css' %}" rel="stylesheet">
+        {% block extrastyles %}{% endblock %}
+        <link href="{% static '/css/style.css' %}" rel="stylesheet">
+        <title>{% block title %}{% endblock %} | Capitu</title>
+    </head>
+
+    <body>
+
+     <header class="sticky-top shadow">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+            <div class="container">
+            <a class="navbar-brand" href="#">MySite</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item"><a href="#main" class="nav-link">Início</a></li>
+                        <li class="nav-item"><a href="#como-funciona" class="nav-link">Como funciona</a></li>
+                        <li class="nav-item"><a href="#acesso" class="nav-link">Como ter acesso</a></li>
+                        <li class="nav-item"><a href="#institucional" class="nav-link">Institucional</a></li>
+                    </ul>
+                    <a href="/admin" class="btn btn-acessar">Acessar Sistema</a>
+                </div>
+            </div>
+        </nav>
+     </header>
+
+
+    <main class="container-fluid g-0 p-0" id="main">
+        <img src="{% static 'imgs/ibict.png' %}" alt="Logo ibict">
+        {% block fluid-content %}{% endblock %}
+    </main>
+
+    <footer class="container-fluid footer-block">
+        <div class="container container-extra footer-content" style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap; margin: auto;">
+        </div>
+        <hr style="border-color: white; width: 80%; margin: 20px auto;">
+        <p class="copyright">&copy; 2025 Todos os direitos reservados.</p>
+    </footer>
+
+    <script src=" {% static '/js/bootstrap.bundle.min.jss' %}"></script>
+    {% block scripts %}
+    {% endblock scripts %}
+    </body>
+</html>
