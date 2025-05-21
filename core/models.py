@@ -70,6 +70,7 @@ class Projeto(models.Model):
     grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
     redes = models.ManyToManyField(Rede, blank=True)
+    prefix = models.CharField('Elastic Prefix', max_length=20, blank=True)
     stopwords = models.TextField(null=True, blank=True)
 
     def __str__(self):

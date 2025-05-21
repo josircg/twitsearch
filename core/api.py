@@ -27,13 +27,14 @@ def projetos(request, status=None):
 
 def termos(request, rede_id):
     termos = []
-    for termo in Termo.objects.filter(projeto__redes=rede_id).order_by('projeto'):
+    for termo in Termo.objects.filter(projeto__redes=rede_id, status='A').order_by('projeto'):
         termos.append({
+            'projeto_id': termo.projeto.id,
+            'projeto_nome': termo.projeto.nome,
+            'projeto_index': termo.projeto.prefix,
             'id': termo.id,
-            'projeto': termo.projeto.id,
             'nome': termo.descritivo,
             'busca': termo.busca,
-            'status': termo.get_status_display()
         })
 
     return HttpResponse(json.dumps(termos), content_type='application/json')

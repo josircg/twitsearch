@@ -70,7 +70,7 @@ class Rede(PowerModelAdmin):
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
     search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'status', 'redes',
+    fields = ('nome', 'objetivo', 'status', 'redes', 'prefix',
               'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
     list_per_page = 25
     inlines = [TermoInline]
@@ -119,7 +119,7 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', ('objetivo', 'redes'), ('tot_twits', 'tot_retwits'), 'language', 'alcance', \
+                return 'nome', ('objetivo', 'redes'), ('tot_twits', 'tot_retwits'), 'prefix', 'language', 'alcance', \
                     ('termos_ativos', 'termos_processados'), ('usuario', 'grupo'), 'status', 'stopwords'
             else:
                 return 'nome', ('objetivo', 'redes'), 'language', 'status', 'stopwords', ('tot_twits', 'tot_retwits', 'alcance')
