@@ -1,28 +1,135 @@
-{% extends "base_site.html" %}
-
+{% extends "base.html" %}
+{% load static %}
 {% block title %}Twitter Monitor{% endblock %}
 
-{% block content %}
-    <h2 style="color: #417690;">O que é ?</h2>
-    O Twitter Monitor é um sistema que permite que um pesquisador capture dados do Twitter a partir de critérios de busca<br/>
-    <br/>
-    <h2 style="color: #417690;">Como funciona?</h2>
-    <br/>
-    1) O Pesquisador cria um Projeto e define os critérios de busca e uma data inicial e final<br/>
-    2) O sistema inicia a coleta e armazena os tweets coletados em um banco de dados relacional<br/>
-    3) A medida que a coleta é realizada, o pesquiador pode em tempo real analisar os resultados encontrados eincluir novos critérios de busca<br/>
-    4) Ao final do processo, o sistema emite relatórios de totalização e permite que você exporte os dados para softwares de análise<br/>
-    <br/>
-    O sistema é gratuito para uso acadêmico<br/>
-    Se você tem já recebeu credenciais para utilizar o sistema, <b><a href="/admin/">Clique aqui</a> para acessá-lo</b><br/>
-    Se você é um pesquisador e tem interesse em utilizar a ferramenta, <a href="mailto:josir@irdx.com.br">entre em contato</a><br/>
-    <h2 style="color: #417690;">Quem desenvolve</h2>
-    O sistema foi concebido por Josir Gomes e conta com o apoio do IBICT/CGTI, AdUFRJ, <a href="http://larhud.ibict.br">LARHUD</a> e dos alunos e professores do <a href="http://www.ppgci.ufrj.br/">PPGCI IBICT/UFRJ</a>.<br/>
-    <br/>
-    <h2 style="color: #417690;">Política de Informação</h2>
-    O código fonte do Tweet Monitor será baseado na licença GPL 3.0. Entretanto, só iremos liberar os fontes a partir da versão 1 pois ainda os fontes ainda não estão "apresentáveis".<br/>
-    Entretanto, caso algum pesquisador queira acessar o código, por favor envie um <a href="mailto:josir@irdx.com.br">email</a> que iremos avaliar a possibilidade de compartilhamento antes da versão final<br/>
-    <br/>
-    Acreditamos que o verdadeiro motor para a inovação é o trabalho colaborativo que não esteja restrito às cercas da propriedade material<br/>
-    <br/>
+{% block fluid-content %}
+    <section id="banner">
+        <div class="container">
+            <div class="row banner">
+                <div class="col-sm-12 col-md-6 d-flex align-items-center">
+                    <div class="dark-gray">
+                        <h1 class="lh-base mb-4">Um sistema que possibilita a coleta de dados de redes sociais de forma simples</h1>
+                        <p class="lh-base">A partir da definição de parâmetros de busca, a ferramenta Capitu permite que o usuário colete dados do Twitter, Telegram, TikTok, Instagram, Facebook e Whatsapp mesmo sem conhecimentos em programação.</p>
+                        <!-- âncora para o menu -->
+                        <span id="como-funciona"></span> 
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6 banner-image">
+                    <img class="glass" src="{% static '/img/cube-glass.svg' %}">
+                </div>
+            </div>
+        </div>               
+    </section>
+    
+
+    <section class="como-funciona">
+        <div class="container pt-5 pb-5">
+            <h5 class="text-white title mb-4">Como funciona</h5>
+            <div class="row">
+                <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
+                    <div class="d-flex align-items-center">
+                        <img class="me-4" src="{% static '/img/icon-1.png' %}">
+                        <p class="text-white fs-08 mb-0">O Pesquisador define os critérios de busca e uma data inicial e final para a coleta e envia para a equipe do Capitu.</p>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
+                    <div class="d-flex align-items-center">
+                        <img class="me-4" src="{% static '/img/icon-2.png' %}">
+                        <p class="text-white fs-08 mb-0">O Projeto é criado e uma URL é informada para que o pesquisador possa acompanhar o resultado da busca.</p>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
+                    <div class="d-flex align-items-center">
+                        <img class="me-4" src="{% static '/img/icon-3.png' %}">
+                        <p class="text-white fs-08 mb-0">O sistema inicia a coleta e armazena os dados coletados.</p>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
+                    <div class="d-flex align-items-center">
+                        <img class="me-4" src="{% static '/img/icon-4.png' %}">
+                        <p class="text-white fs-08 mb-0">A medida que a coleta é realizada, o pesquisador pode em tempo real analisar os resultados encontrados e incluir novos critérios de busca.</p>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
+                    <div class="d-flex align-items-center">
+                        <img class="me-4" src="{% static '/img/icon-5.png' %}">
+                        <p class="text-white fs-08 mb-0">Ao final do processo, o sistema emite relatórios de totalização e permite que você exporte os dados para softwares de análise de conteúdo.</p>
+                    </div>
+                    <!-- âncora para o menu -->
+                    <span id="acesso"></span>
+                </div>
+            </div>
+        </div>                
+    </section>
+
+    <section class="mb-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-12 col-md-6 sec-2-image">
+                    <img class="glass" src="{% static '/img/computer-cubes.svg' %}">
+                </div>
+                <div class="col-sm-12 col-md-6 d-flex align-items-center">
+                    <div class="dark-gray mt-4">
+                        <h5 class="title mb-4">Como ter acesso</h5>
+                        <p class="lh-base fs-09">O sistema, que é de uso exclusivo da comunidade acadêmica, pode ser acessado com credenciais criadas a partir da solicitação do interessado. Se você é um pesquisador e tem interesse em utilizar a ferramenta, entre em contato.</p>
+                        <p class="fs-09">Se você já possui suas credenciais, acesse o sistema.</p>
+                        <div class="d-flex justify-content-end">
+                            <a class="btn-white text-center" href="mailto:josirgomes@ibict.br?subject=Capitu" target="_blank">Entrar em contato</a>
+                            <a class="btn-blue text-center" href="http://monitor.cgti.ibict.br/admin" target="_blank">Acessar sistema</a>
+                            <!-- âncora para o menu -->
+                            <span id="institucional"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <h5 class="title mb-4">Institucional</h5>
+            <div class="bg-white p-4 mb-5">
+                <div class="d-sm-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <img class="logo" src="{% static '/img/logo-ibict.svg' %}">
+                    </div>
+                    <div class="d-flex text-center">
+                        <a class="link" href="https://www.gov.br/ibict/pt-br">https://www.gov.br/ibict/pt-br<img class="ms-2 arrow" src="{% static '/img/arrow-right.png' %}"></a>
+                    </div>
+                </div>
+                <hr class="mb-4 mt-4">
+                <p class="lh-base fs-09">
+                    O Instituto Brasileiro de Informação em Ciência e Tecnologia (Ibict) é um instituto de pesquisa vinculado ao Ministério da Ciência, Tecnologia,
+                    Inovações e Comunicações. Sua missão é promover a competência, o desenvolvimento de recursos e a infraestrutura de informação em ciência e
+                    tecnologia para a produção, socialização e integração do conhecimento científico e tecnológico no País, sendo o órgão federal com atribuição
+                    para a coordenação de ações relacionadas à área de informação.
+                    <br><br>
+                    A formação e a capacitação dos recursos humanos para pesquisa na área de Ciência da Informação motivaram o IBICT a estabelecer um convênio
+                    com a Universidade Federal do Rio de Janeiro (UFRJ) e lançar o primeiro programa em Ciência da Informação, que se tornou também um modelo
+                    para a América Latina. Com os resultados dessa parceria, foi criado o primeiro estágio de pesquisa de Pós-Doutorado em Ciência da Informação
+                    no Brasil. O estágio desenvolve pesquisas supervisionadas por pesquisadores do IBICT em temáticas que atendam à demanda institucional.
+                </p>
+            </div>
+            <div class="bg-white p-4 mb-5">
+                <div class="d-sm-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <img class="logo" src="{% static '/img/logo-larhud.svg' %}">
+                    </div>
+                    <div class="d-flex">
+                        <a class="link" href="https://www.larhud.ibict.br/">https://www.larhud.ibict.br<img class="ms-2 arrow" src="{% static '/img/arrow-right.png' %}"></a>
+                    </div>
+                </div>
+                <hr class="mb-4 mt-4">
+                <p class="lh-base fs-09">
+                    O Laboratório em Rede de Humanidades Digitais do Instituto Brasileiro de Informação em Ciência e Tecnologia (IBICT) é uma iniciativa do Grupo de 
+                    Pesquisa Informação, Memória e Sociedade (IMeS), mantido na Coordenação de Ensino e Pesquisa (COEPE) com o objetivo de incentivar a produção 
+                    científica e tecnológica além de desenvolver ferramentas e metodologias mediadas no vasto campo das Humanidades intermediada pelas plataformas, 
+                    ferramentas e registros digitais. Com o intuito de oferecer suporte crítico e metodológico aos “praticantes” das Humanidades Digitais (HD), 
+                    o Larhud constitui-se enquanto lugar de práticas e, portanto, um espaço comunitário onde a gestão e a aplicação de idéias, métodos e de 
+                    conhecimento, ambos relacionados ao universo digital, voltados aos estudos de humanidades atuam em um inovador paradigma de interdisciplinaridade 
+                    ou transdisciplinaridade.
+                </p>
+            </div>
+        </div>
+    </section>
 {% endblock %}
