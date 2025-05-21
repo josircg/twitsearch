@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load static %}
 {% block title %}Twitter Monitor{% endblock %}
 
 {% block fluid-content %}
@@ -15,11 +15,12 @@
                     </div>
                 </div>
                 <div class="col-sm-12 col-md-6 banner-image">
-                    <img class="glass" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/cube-glass.svg">
+                    <img class="glass" src="{% static '/img/cube-glass.svg' %}">
                 </div>
             </div>
-        </div>                
+        </div>               
     </section>
+    
 
     <section class="como-funciona">
         <div class="container pt-5 pb-5">
@@ -27,31 +28,31 @@
             <div class="row">
                 <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
                     <div class="d-flex align-items-center">
-                        <img class="me-4" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icon-1.png">
+                        <img class="me-4" src="{% static '/img/icon-1.png' %}">
                         <p class="text-white fs-08 mb-0">O Pesquisador define os critérios de busca e uma data inicial e final para a coleta e envia para a equipe do Capitu.</p>
                     </div>
                 </div>
                 <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
                     <div class="d-flex align-items-center">
-                        <img class="me-4" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icon-2.png">
+                        <img class="me-4" src="{% static '/img/icon-2.png' %}">
                         <p class="text-white fs-08 mb-0">O Projeto é criado e uma URL é informada para que o pesquisador possa acompanhar o resultado da busca.</p>
                     </div>
                 </div>
                 <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
                     <div class="d-flex align-items-center">
-                        <img class="me-4" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icon-3.png">
+                        <img class="me-4" src="{% static '/img/icon-3.png' %}">
                         <p class="text-white fs-08 mb-0">O sistema inicia a coleta e armazena os dados coletados.</p>
                     </div>
                 </div>
                 <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
                     <div class="d-flex align-items-center">
-                        <img class="me-4" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icon-4.png">
+                        <img class="me-4" src="{% static '/img/icon-4.png' %}">
                         <p class="text-white fs-08 mb-0">A medida que a coleta é realizada, o pesquisador pode em tempo real analisar os resultados encontrados e incluir novos critérios de busca.</p>
                     </div>
                 </div>
                 <div class="col-sm-12 col-md-6 pt-3 pb-3 pe-3">
                     <div class="d-flex align-items-center">
-                        <img class="me-4" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icon-5.png">
+                        <img class="me-4" src="{% static '/img/icon-5.png' %}">
                         <p class="text-white fs-08 mb-0">Ao final do processo, o sistema emite relatórios de totalização e permite que você exporte os dados para softwares de análise de conteúdo.</p>
                     </div>
                     <!-- âncora para o menu -->
@@ -65,10 +66,10 @@
         <div class="container">
             <div class="row">
                 <div class="col-sm-12 col-md-6 sec-2-image">
-                    <img class="glass" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/computer-cubes.svg">
+                    <img class="glass" src="{% static '/img/computer-cubes.svg' %}">
                 </div>
                 <div class="col-sm-12 col-md-6 d-flex align-items-center">
-                    <div class="dark-gray">
+                    <div class="dark-gray mt-4">
                         <h5 class="title mb-4">Como ter acesso</h5>
                         <p class="lh-base fs-09">O sistema, que é de uso exclusivo da comunidade acadêmica, pode ser acessado com credenciais criadas a partir da solicitação do interessado. Se você é um pesquisador e tem interesse em utilizar a ferramenta, entre em contato.</p>
                         <p class="fs-09">Se você já possui suas credenciais, acesse o sistema.</p>
@@ -90,10 +91,10 @@
             <div class="bg-white p-4 mb-5">
                 <div class="d-sm-flex align-items-center">
                     <div class="flex-grow-1">
-                        <img class="logo" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/logo-ibict.svg">
+                        <img class="logo" src="{% static '/img/logo-ibict.svg' %}">
                     </div>
                     <div class="d-flex text-center">
-                        <a class="link" href="https://www.gov.br/ibict/pt-br">https://www.gov.br/ibict/pt-br<img class="ms-2 arrow" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icons/arrow-right.png"></a>
+                        <a class="link" href="https://www.gov.br/ibict/pt-br">https://www.gov.br/ibict/pt-br<img class="ms-2 arrow" src="{% static '/img/arrow-right.png' %}"></a>
                     </div>
                 </div>
                 <hr class="mb-4 mt-4">
@@ -112,10 +113,10 @@
             <div class="bg-white p-4 mb-5">
                 <div class="d-sm-flex align-items-center">
                     <div class="flex-grow-1">
-                        <img class="logo" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/logo-larhud.svg">
+                        <img class="logo" src="{% static '/img/logo-larhud.svg' %}">
                     </div>
                     <div class="d-flex">
-                        <a class="link" href="https://www.larhud.ibict.br/">https://www.larhud.ibict.br<img class="ms-2 arrow" src="http://capitu.ibict.br/wp-content/themes/capitu/static/img/icons/arrow-right.png"></a>
+                        <a class="link" href="https://www.larhud.ibict.br/">https://www.larhud.ibict.br<img class="ms-2 arrow" src="{% static '/img/arrow-right.png' %}"></a>
                     </div>
                 </div>
                 <hr class="mb-4 mt-4">

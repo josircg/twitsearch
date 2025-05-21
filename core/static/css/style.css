@@ -62,8 +62,7 @@ a {
 }
 
 .btn-blue,
-.btn-white:hover,
-#menu-header li:last-child a {
+.btn-white:hover{
   background-color: var(--blue);
   color: white;
   border: 1px solid var(--blue);
@@ -73,6 +72,14 @@ a {
   font-weight: 300;
   transition: 0.3s;
 }
+
+.btn-blue a{
+  color: #fff;
+}
+.btn-blue:hover a{
+  color: var(--blue);
+}
+
 
 .link {
   font-weight: 400;
