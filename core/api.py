@@ -35,7 +35,7 @@ def termos(request, rede_id):
             'id': termo.id,
             'nome': termo.descritivo,
             'busca': termo.busca,
-            'idioma': termo.idioma,
+            'idioma': termo.language,
         })
 
     return HttpResponse(json.dumps(termos), content_type='application/json')
