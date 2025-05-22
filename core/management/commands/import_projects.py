@@ -40,11 +40,11 @@ class Command(BaseCommand):
                                 projeto.redes.add(rede)
 
                         # Processar termo
-                        if not Termo.objects.filter(projeto=projeto, busca=row['Query']).exists():
+                        if not Termo.objects.filter(projeto=projeto, descritivo=row['Tema']).exists():
                             Termo.objects.create(
                                 projeto=projeto,
-                                busca=row['Query'].replace('""','"'),
                                 descritivo=row['Tema'],
+                                busca=row['Query'].replace('""','"'),
                                 dtinicio=DT_INICIAL,
                                 tipo_busca=PROC_PREMIUM,  
                                 status='A',
