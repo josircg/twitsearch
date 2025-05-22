@@ -43,7 +43,7 @@ class Command(BaseCommand):
                         if not Termo.objects.filter(projeto=projeto, busca=row['Query']).exists():
                             Termo.objects.create(
                                 projeto=projeto,
-                                busca=row['Query'],
+                                busca=row['Query'].replace('""','"'),
                                 descritivo=row['Tema'],
                                 dtinicio=DT_INICIAL,
                                 tipo_busca=PROC_PREMIUM,  
