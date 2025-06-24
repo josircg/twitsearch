@@ -45,9 +45,13 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     else:
                         ult_estimativa = max(last_estimate.dt, ult_estimativa)
 
+                    if termo.dtfinal:
+                        dt_limite = min(hoje, termo.dtfinal)
+                    else:
+                        dt_limite = hoje
                     # obtem uma nova estimativa na API apenas se a data da última coleta
                     # for menor que hoje e menor que a data final de coleta
-                    if ult_estimativa < min(hoje, termo.dtfinal):
+                    if ult_estimativa < dt_limite:
                         termo.estimativa += calcula_estimativa(termo, ult_estimativa)
                         proc = Processamento(tipo=PROC_ESTIMATE, termo=termo, dt=hoje, status='C',
                                              tot_registros=termo.estimativa)
@@ -57,7 +61,7 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     alterados += 1
                 soma += termo.last_count
 
-                if termo.dtfinal < hoje + datetime.timedelta(days=8):
+                if termo.dtfinal and (termo.dtfinal < hoje + datetime.timedelta(days=8)):
                     termo.status = 'C'
 
                 if termo.status == 'E':

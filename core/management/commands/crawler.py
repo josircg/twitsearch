@@ -28,7 +28,7 @@ def processa_item_unico(twitid, termo):
     tweets = api.search_recent_tweets(query=termo.busca,
                                       tweet_fields=['context_annotations', 'created_at'],
                                       max_results=10)
-    tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
+    tweepy_stream = tweepy.StreamingClient(auth=api.auth, listener=listener)
     tweepy_stream.filter(track=[termo.busca], is_async=True)
     print('Twit %s importado' % twitid)
 
@@ -97,13 +97,13 @@ class Crawler:
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
-        self.limite = limite or 2000
+        self.limite = limite
         self.ultimo_tweet = 0
         self.dt_inicial = None
 
     def search_recent(self, processo):
         agora = timezone.now()
-        dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=2)
+        dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
         termo = processo.termo
         if termo.status in ('A','P'):
             # Estratégia Contínua: irá continuar de onde parou
@@ -208,7 +208,7 @@ class Crawler:
             termo.ult_processamento = agora
 
         # se a data atual for maior que o final programado
-        if agora > termo.dtfinal or self.tot_registros > 2000:
+        if termo.dtfinal and agora > termo.dtfinal or self.tot_registros > self.limite:
             print(f'Termo {termo.id} finalizado')
             termo.status = 'C'
         else:
@@ -229,7 +229,7 @@ def processa_termo(termo, limite):
     else:
         inicio_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
 
-    if inicio_processamento > termo.dtfinal:
+    if termo.dtfinal and inicio_processamento > termo.dtfinal:
         termo.status = 'C'
         termo.save()
         mensagem = f'{termo.busca}: Busca Concluída. Fora do período possível ({inicio_processamento})'
