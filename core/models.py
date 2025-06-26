@@ -154,6 +154,7 @@ class Projeto(models.Model):
 class Termo(models.Model):
     descritivo = models.CharField(max_length=100, blank=True, null=True)
     busca = models.CharField(max_length=2000)
+    # busca_generica = models.CharField(max_length=2000)
     projeto = models.ForeignKey(Projeto, on_delete=models.PROTECT)
     dtinicio = models.DateTimeField('Início da Busca', null=True, blank=True,
                                     help_text='Deixe em branco caso queira iniciar imediatamente')

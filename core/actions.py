@@ -14,7 +14,7 @@ from django.contrib import messages
 
 from .apps import calcula_estimativa, save_result
 from .models import *
-from core import intdef
+from core import intdef, log_message
 
 from twitsearch.local import get_api_client
 from core.management.commands.importjson import Processo
@@ -52,10 +52,13 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     # obtem uma nova estimativa na API apenas se a data da última coleta
                     # for menor que hoje e menor que a data final de coleta
                     if ult_estimativa < dt_limite:
-                        termo.estimativa += calcula_estimativa(termo, ult_estimativa)
-                        proc = Processamento(tipo=PROC_ESTIMATE, termo=termo, dt=hoje, status='C',
-                                             tot_registros=termo.estimativa)
-                        proc.save()
+                        try:
+                            termo.estimativa += calcula_estimativa(termo, ult_estimativa)
+                            proc = Processamento(tipo=PROC_ESTIMATE, termo=termo, dt=hoje, status='C',
+                                                 tot_registros=termo.estimativa)
+                            proc.save()
+                        except Exception as e:
+                            log_message(termo, f'{e}')
 
                     termo.save()
                     alterados += 1
