@@ -4,10 +4,10 @@ from django.contrib import admin
 from django.conf import settings
 from django.conf.urls import url
 from django.contrib.admin import StackedInline
-from django.db.models.functions import Power
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.template import RequestContext
+from django import forms
 
 from core.models import *
 
@@ -38,10 +38,21 @@ def projeto_readonly(usuario, projeto):
     return readonly
 
 
+class TermoInlineForm(forms.ModelForm):
+    class Meta:
+        model = Termo
+        fields = '__all__'
+        widgets = {
+            'busca': forms.TextInput(attrs={'size': 120}),
+            'busca_complementar': forms.TextInput(attrs={'size': 120}),
+        }
+
+
 class TermoInline(StackedInline):
     model = Termo
+    form = TermoInlineForm
     extra = 0
-    fields = ('descritivo', 'busca', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
+    fields = ('descritivo', 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -52,7 +63,7 @@ class TermoInline(StackedInline):
         if not readonly:
             return 'estimativa', 'last_count',
         else:
-            return 'busca', 'tipo_busca', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count'
+            return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count'
 
     def has_add_permission(self, request, obj):
         projeto = get_object_from_path(request, Projeto)
@@ -63,17 +74,33 @@ class TermoInline(StackedInline):
 
 
 @admin.register(Rede)
-class Rede(PowerModelAdmin):
+class RedeAdmin(PowerModelAdmin):
     list_display = ('nome', 'ativa',)
+
+
+@admin.register(Eixo)
+class EixoAdmin(PowerModelAdmin):
+    list_display = ('nome', 'num_projetos',)
+
+    @admin.display(ordering='num_projetos')
+    def num_projetos(self, obj):
+        return obj.projeto_set.count()
 
 
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
-    search_fields = ('nome',)
-    fields = ('nome', 'objetivo', 'status', 'redes', 'prefix',
+    search_fields = ('nome', )
+    list_filter = ('status', 'grupo')
+    fields = ('nome', 'objetivo', 'eixo', 'status', 'redes', 'prefix',
               'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
     list_per_page = 25
     inlines = [TermoInline]
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super(ProjetoAdmin, self).get_form(request, obj, **kwargs)
+        form.base_fields['objetivo'].widget.attrs['style'] = 'height: 4em; width: 60em;'
+        form.base_fields['stopwords'].widget.attrs['style'] = 'height: 3em; width: 60em;'
+        return form
 
     def get_inline_instances(self, request, obj=None):
         inline_instances = []
@@ -119,17 +146,23 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_fields(self, request, obj=None):
         if obj:
             if request.user.is_superuser:
-                return 'nome', ('objetivo', 'redes'), ('tot_twits', 'tot_retwits'), 'prefix', 'language', 'alcance', \
+                return 'nome', 'eixo', ('objetivo', 'redes'), ('tot_twits', 'tot_retwits'), 'prefix', 'language', 'alcance', \
                     ('termos_ativos', 'termos_processados'), ('usuario', 'grupo'), 'status', 'stopwords'
             else:
-                return 'nome', ('objetivo', 'redes'), 'language', 'status', 'stopwords', ('tot_twits', 'tot_retwits', 'alcance')
+                return 'nome', 'eixo', ('objetivo', 'redes'), 'language', 'status', 'stopwords', ('tot_twits', 'tot_retwits', 'alcance')
         else:
-            return 'nome', 'objetivo',
+            return 'nome', 'eixo', 'objetivo',
 
     def save_model(self, request, obj, form, change):
         if not change:
             obj.usuario = request.user
-            obj.grupo = request.user.groups.first()
+
+        if not obj.grupo:
+            if obj.eixo and obj.eixo.grupo:
+                obj.grupo = obj.eixo.grupo
+            else:
+                obj.grupo = request.user.groups.first()
+
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
         # if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
         #    OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh')

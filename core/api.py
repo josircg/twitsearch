@@ -1,11 +1,16 @@
 import json
 
 from django.http import HttpResponse
-from .models import Projeto, Termo, Rede
+from .models import Eixo, Projeto, Termo, Rede
 
 
 def redes(request):
     result = Rede.objects.all().values('id', 'nome', 'ativa')
+    return HttpResponse(json.dumps(list(result)), content_type='application/json')
+
+
+def eixos(request):
+    result = Eixo.objects.all().values('id', 'nome', 'descricao')
     return HttpResponse(json.dumps(list(result)), content_type='application/json')
 
 

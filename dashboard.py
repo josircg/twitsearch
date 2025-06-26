@@ -31,7 +31,7 @@ class CustomIndexDashboard(Dashboard):
         self.children += [
             modules.ModelList(
                 u'Projetos',
-                models=('core.models.Projeto', 'core.models.Termo',
+                models=('core.models.Eixo', 'core.models.Projeto', 'core.models.Termo',
                         'core.models.Tweet', 'core.models.TweetUser', 'core.models.Retweet',
                         'core.models.TweetInput'
                         )

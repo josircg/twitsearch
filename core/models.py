@@ -60,18 +60,32 @@ class Rede(models.Model):
         return self.nome
 
 
+class Eixo(models.Model):
+    nome = models.CharField(max_length=100)
+    descricao = models.TextField()
+    grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
+
+    def __str__(self):
+        return self.nome
+
+
 class Projeto(models.Model):
     nome = models.CharField(max_length=40)
     objetivo = models.TextField('Objetivo')
+    eixo = models.ForeignKey(Eixo, on_delete=models.PROTECT, null=True, blank=True)
+    redes = models.ManyToManyField(Rede, blank=True)
+    grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     alcance = models.BigIntegerField('Alcance Estimado', default=0)
     language = models.CharField(max_length=4, null=True, blank=True)  # Idioma default
     tot_twits = models.IntegerField('Total Lido', null=True, blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
-    grupo = models.ForeignKey(Group, on_delete=models.PROTECT, null=True)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
-    redes = models.ManyToManyField(Rede, blank=True)
     prefix = models.CharField('Elastic Prefix', max_length=20, blank=True)
     stopwords = models.TextField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Projeto de Monitoramento'
+        verbose_name_plural = 'Monitoramentos'
 
     def __str__(self):
         return self.nome
@@ -154,9 +168,9 @@ class Projeto(models.Model):
 class Termo(models.Model):
     descritivo = models.CharField(max_length=100, blank=True, null=True)
     busca = models.CharField(max_length=2000)
-    # busca_generica = models.CharField(max_length=2000)
+    busca_complementar = models.CharField('Busca Complementar', max_length=2000, blank=True, null=True)
     projeto = models.ForeignKey(Projeto, on_delete=models.PROTECT)
-    dtinicio = models.DateTimeField('Início da Busca', null=True, blank=True,
+    dtinicio = models.DateTimeField('Início da Busca', blank=True, null=True,
                                     help_text='Deixe em branco caso queira iniciar imediatamente')
     dtfinal = models.DateTimeField('Fim da Busca', null=True, blank=True)
     language = models.CharField(max_length=2, null=True, blank=True)
