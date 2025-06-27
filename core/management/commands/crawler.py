@@ -55,7 +55,7 @@ class SimpleListener():
                 print(data['warning'])
                 return False
 
-        save_result(data, self.processo.id)
+        save_result(data, self.processo)
         self.count += 1
         created = convert_date(data['created_at']).replace(tzinfo=timezone.utc)
         if not self.menor_data or created < self.menor_data:
@@ -169,7 +169,7 @@ class Crawler:
                 user_record = users.get(str(tweet['author_id']),None)
                 if user_record:
                     tweet['user'] = user_record
-                save_result(tweet, processo.id)
+                save_result(tweet, processo)
                 self.ultimo_tweet = max(intdef(tweet['id'],0), self.ultimo_tweet)
                 self.tot_registros += 1
 
@@ -182,8 +182,8 @@ class Crawler:
                         record = {
                             'id': tweet.id,
                             'author_id': tweet.author_id,
-                            'user': users.get(str(author_id),None),
-                            'created_at': tweet.created_at.strftime("%a %b %d %H:%M:%S %z %Y"),
+                            'user': users.get(str(author_id), None),
+                            'created_at': tweet.created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z") if tweet.created_at else None,
                             'text': tweet.text,
                             'public_metrics': tweet.public_metrics,
                             'lang': tweet.lang,
@@ -194,7 +194,7 @@ class Crawler:
                             for ref in tweet.referenced_tweets:
                                 record['referenced_tweet'].append(ref.data)
 
-                        save_result(record, processo.id, overwrite=False)
+                        save_result(record, processo, overwrite=False)
                         self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
                         self.tot_registros += 1
 

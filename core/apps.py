@@ -8,20 +8,33 @@ from django.conf import settings
 from django.utils import timezone
 
 from twitsearch.local import get_api_client
-
+from .opensearch import connect_opensearch, create_if_not_exists_index, save_object
 class CoreConfig(AppConfig):
     name = 'core'
 
 
-def save_result(data, processo_id, overwrite=True):
-    data['process'] = processo_id
+def save_result(data, processo, overwrite=True):
+    data['process'] = processo.id
+    data['termo'] = processo.termo.id
+    data['projeto'] = processo.termo.projeto.id
+    
     filename = '%s/data/%s.json' % (settings.BASE_DIR,data['id'])
     if overwrite or not os.path.exists(filename):
         with open(filename, 'w') as arquivo:
             json.dump(data, arquivo)
-            return True
-    return False
+            # return True
+    # return False
     # print('%s saved' % filename)
+    
+    client = connect_opensearch()
+    today = datetime.datetime.now()
+    
+    index_name = f"twitter-{today.year}-{today.month}"
+    create_if_not_exists_index(client, index_name)
+    
+    save_object(client, data, index_name)
+    return True
+    
 
 
 def calcula_estimativa(termo, dt_inicial):
