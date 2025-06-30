@@ -2,8 +2,8 @@ from opensearchpy import OpenSearch
 from django.conf import settings
 
 
-def connect_opensearch():
-    server = settings.OPENSEARCH_SERVERS['teste']
+def connect_opensearch(server_alias):
+    server = settings.OPENSEARCH_SERVERS[server_alias]
     
     host = server['host']
     port = server['port']
@@ -23,19 +23,19 @@ def connect_opensearch():
     return open_search_client
 
 
-def create_if_not_exists_index(open_search_client: OpenSearch, index_name):
+def create_if_not_exists_index(client: OpenSearch, index_name):
     index_body = {
         'settings': {
             'index': {
+                'number_of_replicas': 2,
                 'number_of_shards': 4
             }
         }
     }
     
     try:
-        if not open_search_client.indices.exists(index=index_name):
-            open_search_client.indices.create(
-                index=index_name, body=index_body)
+        if not client.indices.exists(index=index_name):
+            client.indices.create(index=index_name, body=index_body)
     except Exception as e:
         print('Erro na conexão com o Opensearch')
         raise ValueError(e)

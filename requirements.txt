@@ -23,8 +23,8 @@ matplotlib
 networkx
 seaborn
 sqlparse
-reportlab==3.6.13
 plotly
 gunicorn
 boto3
 opensearch-py
+eldar

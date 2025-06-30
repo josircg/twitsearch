@@ -13,7 +13,7 @@ class CoreConfig(AppConfig):
     name = 'core'
 
 
-def save_result(data, processo, overwrite=True):
+def save_result(data, processo, overwrite=True, opensearch=None):
     data['process'] = processo.id
     data['termo'] = processo.termo.id
     data['projeto'] = processo.termo.projeto.id
@@ -22,17 +22,12 @@ def save_result(data, processo, overwrite=True):
     if overwrite or not os.path.exists(filename):
         with open(filename, 'w') as arquivo:
             json.dump(data, arquivo)
-            # return True
-    # return False
-    # print('%s saved' % filename)
-    
-    client = connect_opensearch()
-    today = datetime.datetime.now()
-    
-    index_name = f"twitter-{today.year}-{today.month}"
-    create_if_not_exists_index(client, index_name)
-    
-    save_object(client, data, index_name)
+
+    if opensearch:
+        today = datetime.datetime.now()
+        index_name = f"twitter-{today.year}-{today.month}"
+        save_object(opensearch, data, index_name)
+
     return True
     
 

@@ -1,14 +1,5 @@
-# -*- coding: utf-8 -*-
 from django.core.management.base import BaseCommand
 
-from datetime import datetime, timedelta
-
-from core.models import *
-
-from twitsearch.settings import TIME_ZONE
-from core.models import Termo
-
-from core.apps import generate_tags_file
 import boto3
 
 

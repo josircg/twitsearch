@@ -9,6 +9,7 @@ from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit, rollback
 
 from core import log_message, intdef, convert_date
+from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 
 import tweepy
@@ -18,6 +19,7 @@ from core.apps import save_result
 from core.models import Termo, Rede, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO
 
 
+# Não está funcionando
 def processa_item_unico(twitid, termo):
     agora = datetime.now(pytz.timezone(TIME_ZONE))
     termo = Termo.objects.get(id=termo)
@@ -33,6 +35,7 @@ def processa_item_unico(twitid, termo):
     print('Twit %s importado' % twitid)
 
 
+# Não está funcionando
 class SimpleListener():
 
     def __init__(self):
@@ -100,6 +103,10 @@ class Crawler:
         self.limite = limite
         self.ultimo_tweet = 0
         self.dt_inicial = None
+        self.client = connect_opensearch('minerva-teste')
+        if self.client:
+            create_if_not_exists_index(self.client)
+
 
     def search_recent(self, processo):
         agora = timezone.now()
@@ -169,7 +176,7 @@ class Crawler:
                 user_record = users.get(str(tweet['author_id']),None)
                 if user_record:
                     tweet['user'] = user_record
-                save_result(tweet, processo)
+                save_result(tweet, processo, opensearch=self.client)
                 self.ultimo_tweet = max(intdef(tweet['id'],0), self.ultimo_tweet)
                 self.tot_registros += 1
 
@@ -194,7 +201,7 @@ class Crawler:
                             for ref in tweet.referenced_tweets:
                                 record['referenced_tweet'].append(ref.data)
 
-                        save_result(record, processo, overwrite=False)
+                        save_result(record, processo, overwrite=False, opensearch=self.client)
                         self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
                         self.tot_registros += 1
 
