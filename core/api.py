@@ -40,6 +40,7 @@ def termos(request, rede_id):
             'id': termo.id,
             'nome': termo.descritivo,
             'busca': termo.busca,
+            'busca_complementar': termo.busca_complementar,
             'idioma': termo.language,
         })
 
