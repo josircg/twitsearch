@@ -363,16 +363,16 @@ class TermoAdmin(PowerModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(TermoAdmin, self).get_form(request, obj, **kwargs)
-        form.base_fields['busca'].widget.attrs['style'] = 'width: 30em;'
+        form.base_fields['busca'].widget.attrs['style'] = 'width: 80em;'
+        form.base_fields['busca_complementar'].widget.attrs['style'] = 'width: 80em;'
         return form
 
     def get_buttons(self, request, object_id=None):
         buttons = super(TermoAdmin, self).get_buttons(request, object_id)
-        # TODO: corrigir solicita_busca
-        # if object_id:
+        #if object_id:
         #    buttons.append(
-        #        PowerButton(url=reverse('solicita_busca', kwargs={'id': object_id, }),
-        #                    label=u'Busca Local'))
+        #        PowerButton(url=reverse('testa_busca', kwargs={'id': object_id, }),
+        #                    label=u'Testar'))
         return buttons
 
     def get_actions(self, request):

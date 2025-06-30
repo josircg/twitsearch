@@ -9,6 +9,7 @@ from core import clean_pontuation, stopwords
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium
+PROC_FULL = 'F'         # Importação Full Archive
 PROC_YOUTUBE = 'Y'      # Importação Youtube
 PROC_RAPID = 'D'        # Importação Rapid API
 PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
@@ -22,10 +23,11 @@ PROC_TAGS = 'T'         # Geração de arquivo CSV com as TAGs
 PROC_NETWORK = 'N'      # Geração de Grafo
 PROC_BACKUP = 'B'       # Backup JSON
 PROC_JSON_IMPORT = 'J'  # Importação dos JSONs pendentes
-PROC_FECHAMENTO = 'F'   # Fechamento do Projeto e cálculo das estatísticas
+PROC_FECHAMENTO = 'X'   # Fechamento do Projeto e cálculo das estatísticas
 
 TIPO_BUSCA = (
     (PROC_PREMIUM,     'Importação Premium'),
+    (PROC_FULL,         'Importação Full Archive'),
     (PROC_IMPORTUSER,  'Importação Usuário'),
     (PROC_BUSCAGLOBAL, 'Busca Global'),
     (PROC_OPENSEARCH,  'OpenSearch'),
@@ -34,7 +36,8 @@ TIPO_BUSCA = (
 
 TIPO_PROCESSAMENTO = (
     (PROC_IMPORTACAO,   'Importação'),
-    (PROC_PREMIUM,      'Importação Twitter'),
+    (PROC_PREMIUM,      'Twitter Search'),
+    (PROC_FULL,         'Twitter Full'),
     (PROC_YOUTUBE,      'Importação Youtube'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),
