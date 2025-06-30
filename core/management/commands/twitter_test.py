@@ -17,7 +17,8 @@ class Command(BaseCommand):
 
         # Somente campos válidos permitidos
         queryparams = {
-            "tweet.fields": "text,created_at,public_metrics,author_id,conversation_id,lang,referenced_tweets,attachments,geo",
+            "tweet.fields": "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,display_text_range,entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,referenced_tweets,reply_settings,scopes,source,text,withheld",
+            "media.fields": "alt_text,duration_ms,height,media_key,preview_image_url,promoted_metrics,public_metrics,type,url,variants,width",
             "expansions": "article.cover_media,article.media_entities,attachments.media_keys,attachments.media_source_tweet,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,entities.note.mentions.username,referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id",
             "user.fields": "username,name,public_metrics,created_at,location",
             
