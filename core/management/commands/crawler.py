@@ -96,7 +96,7 @@ def busca_stream(termo, listener):
 
 class Crawler:
 
-    def __init__(self, limite=2000):
+    def __init__(self, limite=2000, index_name=None):
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
@@ -104,8 +104,8 @@ class Crawler:
         self.ultimo_tweet = 0
         self.dt_inicial = None
         self.client = connect_opensearch('minerva-teste')
-        if self.client:
-            create_if_not_exists_index(self.client)
+        if self.client and index_name:
+            create_if_not_exists_index(self.client, index_name)
 
 
     def search_recent(self, processo):
@@ -249,8 +249,9 @@ def processa_termo(termo, limite):
                                             tipo=termo.tipo_busca, status=Processamento.PROCESSANDO)
     Termo.objects.filter(id=termo.id).update(status='P')
     commit()
-
-    crawler = Crawler(limite)
+    
+    index_name = f"twitter-{agora.year}-{agora.month}"
+    crawler = Crawler(limite, index_name=index_name)
     try:
         crawler.search_recent(processo)
         processo.twit_id = crawler.ultimo_tweet
