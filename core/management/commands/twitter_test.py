@@ -3,7 +3,6 @@ import requests
 from django.core.management.base import BaseCommand
 from django.conf import settings
 
-from core.apps import save_result
 
 class Command(BaseCommand):
     help = 'Recupera um tweet específico pelo ID'
