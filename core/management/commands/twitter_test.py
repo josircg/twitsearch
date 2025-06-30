@@ -19,6 +19,7 @@ class Command(BaseCommand):
         queryparams = {
             "tweet.fields": "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,display_text_range,entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,referenced_tweets,reply_settings,scopes,source,text,withheld",
             "media.fields": "alt_text,duration_ms,height,media_key,preview_image_url,promoted_metrics,public_metrics,type,url,variants,width",
+            "place.fields": "contained_within,country,country_code,full_name,geo,id,name,place_type",
             "expansions": "article.cover_media,article.media_entities,attachments.media_keys,attachments.media_source_tweet,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,entities.note.mentions.username,referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id",
             "user.fields": "username,name,public_metrics,created_at,location",
             
@@ -34,8 +35,8 @@ class Command(BaseCommand):
         # Corrige erro de acesso a 'response.data'
         filename = '%s/data/%s.json' % (settings.BASE_DIR,twit_id)
         with open(filename, 'w') as arquivo:
-            json.dump(data, arquivo)        
-            
+            json.dump(data, arquivo)
+
 
         self.stdout.write(self.style.SUCCESS(
             f'Comando de teste do Twitter executado com sucesso! twit_id: {twit_id}'))
