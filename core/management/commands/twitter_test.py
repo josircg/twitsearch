@@ -29,9 +29,13 @@ class Command(BaseCommand):
             "Authorization": f"Bearer {settings.BEARED_TOKEN}"
         }
 
-        response = requests.get(url, headers=headers, params=queryparams)
+        response = requests.get(url, headers=headers, params=queryparams)        
         data = response.json()
-
+        if 'errors' in data:
+            self.stdout.write(self.style.ERROR(f'Erro: {data}'))
+            return
+        
+        
         # Corrige erro de acesso a 'response.data'
         filename = '%s/data/%s.json' % (settings.BASE_DIR,twit_id)
         with open(filename, 'w') as arquivo:
