@@ -24,6 +24,7 @@ def projetos(request, status=None):
         result.append({'id': projeto.id,
                        'nome': projeto.nome,
                        'redes': list(projeto.redes.all().values('id')),
+                       'eixo': projeto.eixo.nome,
                        'status': projeto.get_status_display(),
                        })
 

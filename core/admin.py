@@ -99,7 +99,8 @@ class ProjetoAdmin(PowerModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form = super(ProjetoAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['objetivo'].widget.attrs['style'] = 'height: 4em; width: 60em;'
-        form.base_fields['stopwords'].widget.attrs['style'] = 'height: 3em; width: 60em;'
+        if form.base_fields.get('stopwords'):
+            form.base_fields['stopwords'].widget.attrs['style'] = 'height: 3em; width: 60em;'
         return form
 
     def get_inline_instances(self, request, obj=None):

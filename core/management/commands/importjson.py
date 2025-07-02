@@ -52,6 +52,9 @@ class Processo:
     # https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
     def load_twitter(self, src):
 
+        if type(src) != dict:
+            return
+
         if 'author_id' in src:
             user_id = src['author_id']
         elif 'user' in src:
@@ -93,7 +96,10 @@ class Processo:
             user.save()
         else:
             if new_user:
-                user.save()
+                if not user.twit_id:
+                    print('User sem ID')
+                else:
+                    user.save()
 
         if 'created_at' in src:
             dt = convert_date(src['created_at'])
@@ -166,7 +172,9 @@ class Processo:
         # logo o tweet corrente só é gravado se tiver um novo texto associado
         if not retweet:
 
-            if 'full_text' in src:
+            if 'note_tweet' in src:
+                texto = src['note_tweet']['text']
+            elif 'full_text' in src:
                 texto = src['full_text']
             else:
                 texto = src['text']
@@ -174,6 +182,7 @@ class Processo:
             try:
                 tweet = Tweet.objects.get(twit_id=src['id'])
                 tweet.termo = tweet.termo or processo_atual.termo
+                tweet.text = texto
             except Tweet.DoesNotExist:
                 tweet = Tweet(
                             twit_id=src['id'], user=user, text=texto,
@@ -188,7 +197,7 @@ class Processo:
             tweet.location = src.get('location', tweet.location)
             tweet.geo = src.get('geo', tweet.geo)
 
-            if 'public_metrics' in src:
+            if 'public_metrics' in src and src['public_metrics']:
                 retweets_count = src['public_metrics'].get('retweet_count',0)
                 favorites_count = src['public_metrics'].get('like_count',0)
                 imprints = src['public_metrics'].get('impression_count',0)
@@ -219,9 +228,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
         parser.add_argument('-p', '--processo', type=str, help='Processo Default', nargs='?')
-        parser.add_argument('-j', '--projeto', type=str, help='Projeto Default', nargs='?')
-        parser.add_argument('-f', '--force', help='Accept multiple imports running', action='store_true')
-        parser.add_argument('-o', '--optimize', help='Do not import duplicate files', action='store_true')
+        parser.add_argument('-j', '--projeto', type=str, help='Projeto onde será gravado os tweets caso não o projeto não exista', nargs='?')
+        parser.add_argument('-f', '--force', help='Aceita importações paralelas', action='store_true')
+        parser.add_argument('-o', '--optimize', help='Não duplica os arquivos', action='store_true')
 
     def handle(self, *args, **options):
 
@@ -303,8 +312,12 @@ class Command(BaseCommand):
                                 twitter_data = json.loads(texto)
 
                             if 'data' in twitter_data:
-                                for record in twitter_data.get('data'):
-                                    processo.load_twitter(record)
+                                data = twitter_data.get('data')
+                                if type(data) == list:
+                                    for record in twitter_data.get('data'):
+                                        processo.load_twitter(record)
+                                else:
+                                    processo.load_twitter(data)
                             else:
                                 processo.load_twitter(twitter_data)
 
@@ -316,6 +329,9 @@ class Command(BaseCommand):
                             rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
                             tot_erros += 1
+                            if tot_erros > 10:
+                                print('Mais de 10 erros encontrados')
+                                break
                         tot_files += 1
             finally:
                 if tot_files == 0:

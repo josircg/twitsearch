@@ -1,10 +1,9 @@
-import sys
 import json
-import pytz
-import time
+import requests
 import traceback
 from django.utils import timezone
-from datetime import datetime, timedelta
+
+from datetime import timedelta, date
 from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit, rollback
 
@@ -12,87 +11,61 @@ from core import log_message, intdef, convert_date
 from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 
-import tweepy
+from django.conf import settings
 
-from twitsearch.settings import TIME_ZONE
 from core.apps import save_result
-from core.models import Termo, Rede, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO
+from core.models import Termo, Rede, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO, PROC_FULL
 
+API_FIELDS = (
+    "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,public_metrics,"
+    "entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,"
+    "referenced_tweets,scopes,source,text,withheld")
+API_EXPANSIONS = ['article.cover_media', 'article.media_entities', 'attachments.media_keys',
+              'attachments.media_source_tweet', 'author_id', 'entities.mentions.username',
+              'geo.place_id',
+              'in_reply_to_user_id',
+              'entities.note.mentions.username',
+              'referenced_tweets.id',
+              'referenced_tweets.id.attachments.media_keys',
+              'referenced_tweets.id.author_id']
+API_MEDIA_FIELDS = "alt_text,duration_ms,height,media_key,preview_image_url,public_metrics,type,url,variants,width"
+API_PLACE_FIELDS = "contained_within,country,country_code,full_name,geo,id,name,place_type"
+API_USER_FIELDS = "username,name,public_metrics,created_at,location"
 
-# Não está funcionando
-def processa_item_unico(twitid, termo):
-    agora = datetime.now(pytz.timezone(TIME_ZONE))
-    termo = Termo.objects.get(id=termo)
-    listener = SimpleListener()
-    listener.processo = Processamento.objects.create(termo=termo, dt=agora)
-    listener.dtfinal = termo.dtfinal
-    api = get_api_client()
-    tweets = api.search_recent_tweets(query=termo.busca,
-                                      tweet_fields=['context_annotations', 'created_at'],
-                                      max_results=10)
-    tweepy_stream = tweepy.StreamingClient(auth=api.auth, listener=listener)
-    tweepy_stream.filter(track=[termo.busca], is_async=True)
-    print('Twit %s importado' % twitid)
+def processa_item_unico(twit_id, termo_id):
 
+    if termo_id:
+        termo = Termo.objects.filter(id=termo_id).first()
+    else:
+        termo = None
 
-# Não está funcionando
-class SimpleListener():
+    url = f"https://api.twitter.com/2/tweets/{twit_id}"
+    headers = {
+        "Authorization": f"Bearer {settings.BEARED_TOKEN}"
+    }
 
-    def __init__(self):
-        # super(SimpleListener, self).__init__()
-        self.checkpoint = 120 # 2 minutos para começar a receber algum tweet
-        self.processo = None
-        self.dtfinal = None
-        self.menor_data = None
-        self.count = 0
-        self.status = 'A'
+    queryparams = {
+        "tweet.fields": API_FIELDS,
+        "media.fields": API_MEDIA_FIELDS,
+        "place.fields": API_PLACE_FIELDS,
+        "expansions": ','.join(API_EXPANSIONS),
+        "user.fields": API_USER_FIELDS,
+    }
 
-    def on_data(self, status):
-        # code to run each time you receive some data (direct message, delete, profile update, status,...)
-        data = json.loads(status)
-        if 'disconnect' in data:
-            if self.on_disconnect(data['disconnect']) is False:
-                return False
-        elif 'warning' in data:
-            if self.on_warning(data['warning']) is False:
-                print(data['warning'])
-                return False
+    response = requests.get(url, headers=headers, params=queryparams)
+    tweet = response.json()
+    if 'errors' in tweet:
+        print(f'Erro: {tweet}')
+        return
 
-        save_result(data, self.processo)
-        self.count += 1
-        created = convert_date(data['created_at']).replace(tzinfo=timezone.utc)
-        if not self.menor_data or created < self.menor_data:
-            self.menor_data = created
+    if termo:
+        tweet['termo'] = termo.id
+        tweet['projeto'] = termo.projeto.id
 
-        return self.checkpoint > 0
+    filename = '%s/data/%s.json' % (settings.BASE_DIR, twit_id)
+    with open(filename, 'w') as arquivo:
+        json.dump(tweet, arquivo)
 
-    def on_error(self, status_code):
-        # code to run each time an error is received
-        if status_code == 420:
-            return False
-        else:
-            return True
-
-def busca_stream(termo, listener):
-    agora = datetime.now(pytz.timezone(TIME_ZONE))
-    api = get_api_client()
-    termo_busca = termo.busca
-    print('Stream %d %s' % (listener.processo.id, termo_busca))
-    tweepy_stream = tweepy.Stream(auth=api.auth, listener=listener)
-    tweepy_stream.filter(track=[termo_busca], is_async=True)
-    listener.status = 'P'
-    while listener.checkpoint > 0 and listener.dtfinal > agora and listener.status == 'P':
-        print('Sleeping')
-        time.sleep(listener.checkpoint + listener.count)
-        agora = datetime.now(pytz.timezone(TIME_ZONE))
-        # Verifica se o processo não foi interrompido pelo usuário
-        listener.status = Termo.objects.get(id=termo.id).status
-        listener.checkpoint -= 100
-        print('Checkpoint %d' % listener.checkpoint)
-
-    # se saiu do loop pois ficou muito tempo sem encontrar tweets, mantem a busca ativa
-    tweepy_stream.disconnect()
-    return
 
 class Crawler:
 
@@ -110,8 +83,12 @@ class Crawler:
 
     def search_recent(self, processo):
         agora = timezone.now()
-        dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
         termo = processo.termo
+        if termo.tipo_busca == PROC_FULL:
+            dt_limite_api = date(1985,1,1)
+        else:
+            dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
+
         if termo.status in ('A','P'):
             # Estratégia Contínua: irá continuar de onde parou
             self.since_id = termo.ult_tweet
@@ -126,7 +103,10 @@ class Crawler:
                     self.since_id = None
                     self.dt_inicial = dt_limite_api
                 else:
-                    self.dt_inicial = None
+                    if termo.tipo_busca == PROC_FULL:
+                        self.dt_inicial = termo.dtinicio
+                    else:
+                        self.dt_inicial = None
         else:
             # Estratégia de Correção: irá buscar registros mais antigos
             self.since_id = None
@@ -141,30 +121,24 @@ class Crawler:
         client = get_api_client()
         next_token = None
         while self.tot_registros < self.limite and next_token != 'Fim':
-            tweets = client.search_recent_tweets(
-                         query=termo.busca,
-                         tweet_fields='text,created_at,public_metrics,author_id,conversation_id,lang,'
-                                      'referenced_tweets,attachments,geo',
-                         user_fields=['username', 'public_metrics', 'created_at', 'location'],                        
-                         expansions=[
-                            'article.cover_media',
-                            'article.media_entities',
-                            'attachments.media_keys',
-                            'attachments.media_source_tweet',
-                            'author_id',
-                            'entities.mentions.username',
-                            'geo.place_id',
-                            'in_reply_to_user_id',
-                            'entities.note.mentions.username',
-                            'referenced_tweets.id',
-                            'referenced_tweets.id.attachments.media_keys',
-                            'referenced_tweets.id.author_id'
-                        ],
-                         next_token=next_token,
-                         since_id=self.since_id,
-                         until_id=self.until_id,
-                         start_time=self.dt_inicial,
-                         max_results=100)
+            if termo.tipo_busca == PROC_FULL:
+                tweets = client.search_all_tweets(
+                             query=termo.busca,
+                             tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
+                             next_token=next_token,
+                             since_id=self.since_id,
+                             until_id=self.until_id,
+                             start_time=self.dt_inicial,
+                             max_results=100)
+            else:
+                tweets = client.search_recent_tweets(
+                             query=termo.busca,
+                             tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
+                             next_token=next_token,
+                             since_id=self.since_id,
+                             until_id=self.until_id,
+                             start_time=self.dt_inicial,
+                             max_results=100)
 
             if tweets.source.get('meta'):
                 if tweets.source['meta'].get('result_count',0) == 0:
@@ -304,25 +278,28 @@ class Command(BaseCommand):
         parser.add_argument('--fake', action='store_true', help='Indica quais os termos que seriam processados')
 
     def handle(self, *args, **options):
-        if 'twit' in options and options['twit']:
-            processa_item_unico(options['twit'], options['termo'])
-            return
 
         limite = options['limite'] or 2000
 
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(id=1)
 
-        # Existem 3 estratégias de busca: Padrão, Continua e Recuperação
+        if 'twit' in options and options['twit']:
+            processa_item_unico(options['twit'], options.get('termo'))
+            return
+
+        # Existem 3 estratégias de busca: Padrão, Contínua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
         # Contínua: para cargas em andamento: começa do since_id
         # Recuperação: para caso de cargas com erro: calcula o último e usa o parâmetro until_id
         if 'termo' in options and options['termo']:
             termo = Termo.objects.filter(id=options['termo']).first()
-            if not termo:
+            if termo:
+                processa_termo(termo, limite)
+            else:
                 print('Termo não encontrado: %s' % options['termo'])
                 return
-            processa_termo(termo, limite)
+
         else:
             tot_termos = 0
             for termo in Termo.objects.filter(status='A',
@@ -340,6 +317,6 @@ class Command(BaseCommand):
         # Revive qualquer projeto de busca em processamento há mais de 1 horas
         uma_hora = timezone.now() - timedelta(hours=1)
         Termo.objects.filter(status='P',
-                             tipo_busca__in=(PROC_IMPORTACAO, PROC_PREMIUM),
+                             tipo_busca__in=(PROC_IMPORTACAO, PROC_PREMIUM, PROC_FULL),
                              ult_processamento__lt=uma_hora).update(status='A')
         commit()

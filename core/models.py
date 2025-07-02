@@ -311,7 +311,7 @@ class FollowersHistory(models.Model):
 
 class Tweet(models.Model):
     twit_id = models.CharField(max_length=21, primary_key=True)
-    text = models.CharField(max_length=2048)
+    text = models.TextField()
     created_time = models.DateTimeField()
     retweets = models.IntegerField(null=True)
     favorites = models.IntegerField(null=True)
