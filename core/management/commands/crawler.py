@@ -282,7 +282,7 @@ class Command(BaseCommand):
         limite = options['limite'] or 2000
 
         fake_run = options.get('fake')
-        rede_twitter = Rede.objects.get(id=1)
+        rede_twitter = Rede.objects.get(nome='Twitter/X')
 
         if 'twit' in options and options['twit']:
             processa_item_unico(options['twit'], options.get('termo'))
