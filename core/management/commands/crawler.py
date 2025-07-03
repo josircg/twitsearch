@@ -69,7 +69,7 @@ def processa_item_unico(twit_id, termo_id):
 
 class Crawler:
 
-    def __init__(self, limite=2000, index_name=None):
+    def __init__(self, limite=20000, index_name=None):
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
@@ -108,15 +108,18 @@ class Crawler:
                     else:
                         self.dt_inicial = None
         else:
-            # Estratégia de Correção: irá buscar registros mais antigos
+            # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros mais antigos
             self.since_id = None
             first_tweet = TweetInput.objects.filter(termo=processo.termo, tweet__created_time__gt=dt_limite_api).first()
             if first_tweet:
                 self.until_id = first_tweet.tweet.id
-                self.dt_inicial = None
+                self.dt_inicial = termo.dtinicio
             else:
                 self.until_id = None
-                self.dt_inicial = None
+                if termo.tipo_busca == PROC_FULL:
+                    self.dt_inicial = termo.dtinicio
+                else:
+                    self.dt_inicial = None
 
         client = get_api_client()
         next_token = None
