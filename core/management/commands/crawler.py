@@ -302,7 +302,7 @@ class Command(BaseCommand):
 
         else:
             tot_termos = 0
-            for termo in Termo.objects.filter(status='A',
+            for termo in Termo.objects.filter(status='A', projeto__status='A',
                                               projeto__redes=rede_twitter).order_by('ult_processamento'):
                 if fake_run:
                     print(termo.projeto, termo.busca, termo.ult_tweet)
