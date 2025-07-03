@@ -203,8 +203,10 @@ class Crawler:
                 termo.ult_tweet = self.ultimo_tweet
             termo.ult_processamento = agora
 
+        if self.tot_registros >= self.limite:
+            termo.status = 'I'
+        elif termo.dtfinal and agora > termo.dtfinal:
         # se a data atual for maior que o final programado
-        if termo.dtfinal and agora > termo.dtfinal or self.tot_registros > self.limite:
             print(f'Termo {termo.id} finalizado')
             termo.status = 'C'
         else:
@@ -282,7 +284,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        limite = options['limite'] or 2000
+        limite = options['limite'] or 20000
 
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(nome='Twitter/X')
