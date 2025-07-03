@@ -23,12 +23,9 @@ SECRET_KEY = 'xxxxx'
 AWS_PROFILE = 'admin-irdx'
 AWS_BUCKET = 'twitsearch-irdx'
 
+# Permissões para acessar a API
+AUTH_KEYS = {
+    '123': True,
+    '234': True
+}
 
-def get_api():
-    auth = tweepy.OAuthHandler(
-                consumer_key='xxxx',
-                consumer_secret='xxxx')
-    auth.set_access_token(
-            'xxxx',
-            'xxxx')
-    return tweepy.API(auth, wait_on_rate_limit=True)
