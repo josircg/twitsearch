@@ -69,7 +69,7 @@ def processa_item_unico(twit_id, termo_id):
 
 class Crawler:
 
-    def __init__(self, limite=20000, index_name=None):
+    def __init__(self, limite=10000, index_name=None):
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
@@ -126,11 +126,12 @@ class Crawler:
         busca = termo.busca
         if termo.language:
             busca = f'{busca} lang:{termo.language}'
+            print(busca)
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             if termo.tipo_busca == PROC_FULL:
                 tweets = client.search_all_tweets(
-                             query=termo.busca,
+                             query=busca,
                              tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                              next_token=next_token,
                              since_id=self.since_id,
@@ -139,7 +140,7 @@ class Crawler:
                              max_results=100)
             else:
                 tweets = client.search_recent_tweets(
-                             query=termo.busca,
+                             query=busca,
                              tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                              next_token=next_token,
                              since_id=self.since_id,
@@ -229,7 +230,10 @@ def processa_termo(termo, limite):
         else:
             inicio_processamento = agora - timedelta(days=7)
     else:
-        inicio_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
+        if termo.tipo_busca == PROC_FULL:
+            inicio_processamento = termo.dtinicio
+        else:
+            inicio_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
 
     if termo.dtfinal and inicio_processamento > termo.dtfinal:
         termo.status = 'C'
@@ -288,7 +292,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        limite = options['limite'] or 20000
+        limite = options['limite'] or 10000
 
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(nome='Twitter/X')
