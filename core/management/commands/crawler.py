@@ -123,6 +123,10 @@ class Crawler:
 
         client = get_api_client()
         next_token = None
+        busca = termo.busca
+        if termo.language:
+            busca = f'{busca} lang:{termo.language}'
+
         while self.tot_registros < self.limite and next_token != 'Fim':
             if termo.tipo_busca == PROC_FULL:
                 tweets = client.search_all_tweets(
