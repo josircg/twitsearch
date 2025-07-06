@@ -4,7 +4,7 @@ from django.core.management.base import BaseCommand
 from core.opensearch import connect_opensearch
 
 class Command(BaseCommand):
-    label = 'Generate csv tags file'
+    label = 'Test Opensearch connection'
 
     def add_arguments(self, parser):
         parser.add_argument('--server', type=str, help='Server')

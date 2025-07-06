@@ -2,7 +2,7 @@ import json
 import os
 import traceback
 
-from os import rename, makedirs
+from os import remove, rename, makedirs
 from os.path import isfile, join, exists
 
 from django.conf import settings
@@ -322,7 +322,7 @@ class Command(BaseCommand):
                                 processo.load_twitter(twitter_data)
 
                             commit()
-                            rename(filename, join(cached_dir, arquivo.name))
+                            remove(filename)
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))
                             traceback.print_exc()

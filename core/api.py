@@ -47,7 +47,7 @@ def termos(request, rede_id):
         return HttpResponseForbidden()
 
     termos = []
-    for termo in Termo.objects.filter(projeto__redes=rede_id, projeto__status='A', status='A').order_by('projeto'):
+    for termo in Termo.objects.filter(projeto__redes=rede_id).order_by('projeto'):
         termos.append({
             'projeto_id': termo.projeto.id,
             'projeto_nome': termo.projeto.nome,

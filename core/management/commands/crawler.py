@@ -32,6 +32,7 @@ API_MEDIA_FIELDS = "alt_text,duration_ms,height,media_key,preview_image_url,publ
 API_PLACE_FIELDS = "contained_within,country,country_code,full_name,geo,id,name,place_type"
 API_USER_FIELDS = "username,name,public_metrics,created_at,location"
 
+
 def processa_item_unico(twit_id, termo_id):
 
     if termo_id:
@@ -223,17 +224,18 @@ class Crawler:
 def processa_termo(termo, limite):
 
     agora = timezone.now()
-    # se for um reset ou primeiro processamento
-    if termo.status == 'A' or not termo.ult_tweet:
-        if termo.dtinicio:
-            inicio_processamento = termo.dtinicio
-        else:
-            inicio_processamento = agora - timedelta(days=7)
-    else:
+
+    # se a data inicial já for superior a data final, concluir a carga
+    if termo.dtinicio:
         if termo.tipo_busca == PROC_FULL:
             inicio_processamento = termo.dtinicio
         else:
+            inicio_processamento = max(termo.dtinicio, agora - timedelta(days=7))
+    else:
+        if termo.status in ('A','P'):
             inicio_processamento = max(termo.ult_processamento, agora - timedelta(days=7))
+        else:
+            inicio_processamento = agora - timedelta(days=7)
 
     if termo.dtfinal and inicio_processamento > termo.dtfinal:
         termo.status = 'C'
@@ -318,7 +320,7 @@ class Command(BaseCommand):
             for termo in Termo.objects.filter(status='A', projeto__status='A',
                                               projeto__redes=rede_twitter).order_by('ult_processamento'):
                 if fake_run:
-                    print(termo.projeto, termo.busca, termo.ult_tweet)
+                    print(f"{termo.projeto}/{termo.busca} ({termo.id}): {termo.ult_tweet}")
                 else:
                     processa_termo(termo, limite)
                 tot_termos += 1

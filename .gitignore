@@ -12,6 +12,7 @@ twitsearch/*.yaml
 twitsearch/local.py
 twitsearch/test.py
 twitsearch/media/*
+core/management/commands/opensearch_fix.py
 Untitled.ipynb
 venv*
 media/*
