@@ -114,7 +114,7 @@ class Crawler:
             self.since_id = None
             first_tweet = TweetInput.objects.filter(termo=processo.termo, tweet__created_time__gt=dt_limite_api).first()
             if first_tweet:
-                self.until_id = first_tweet.tweet.id
+                self.until_id = first_tweet.tweet.twit_id
                 self.dt_inicial = termo.dtinicio
             else:
                 self.until_id = None

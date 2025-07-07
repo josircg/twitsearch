@@ -52,7 +52,7 @@ class TermoInline(StackedInline):
     model = Termo
     form = TermoInlineForm
     extra = 0
-    fields = ('descritivo', 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
+    fields = (('descritivo', 'id'), 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -61,9 +61,9 @@ class TermoInline(StackedInline):
             readonly = False
 
         if not readonly:
-            return 'estimativa', 'last_count',
+            return 'estimativa', 'last_count', 'id'
         else:
-            return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count'
+            return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count', 'id'
 
     def has_add_permission(self, request, obj):
         projeto = get_object_from_path(request, Projeto)
