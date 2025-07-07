@@ -73,11 +73,11 @@ class Crawler:
 
     def __init__(self, limite=10000, index_name=None):
         self.since_id = None
-        self.until_id = None
         self.tot_registros = 0
         self.limite = limite
         self.ultimo_tweet = 0
         self.dt_inicial = None
+        self.end_time = None
         self.client = connect_opensearch('minerva-teste')
         if self.client and index_name:
             create_if_not_exists_index(self.client, index_name)
@@ -86,45 +86,37 @@ class Crawler:
     def search_recent(self, processo):
         agora = timezone.now()
         termo = processo.termo
-        if termo.tipo_busca == PROC_FULL:
-            dt_limite_api = timezone.make_aware(datetime(1985,1,1))
-        else:
-            dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
 
-        if termo.status in ('A','P'):
-            # Estratégia Contínua: irá continuar de onde parou
+        if termo.status == 'A':
+            # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet
             if self.since_id == 0:
                 self.since_id = None
-            self.until_id = None
+
             if termo.ult_processamento and self.since_id is None:
-                self.dt_inicial = max(termo.ult_processamento, dt_limite_api)
+                self.dt_inicial = termo.ult_processamento
             else:
-                # Caso o último processamento tenha ultrapassado 7 dias, não considerar o since_id
-                if termo.ult_processamento and termo.ult_processamento < dt_limite_api:
-                    self.since_id = None
-                    self.dt_inicial = dt_limite_api
-                else:
-                    if termo.tipo_busca == PROC_FULL:
-                        self.dt_inicial = termo.dtinicio
-                    else:
-                        self.dt_inicial = None
+                self.dt_inicial = None
+
         else:
-            # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros mais antigos
+            # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
             self.since_id = None
-            first_tweet = TweetInput.objects.filter(termo=processo.termo, tweet__created_time__gt=dt_limite_api).first()
+            first_tweet = TweetInput.objects.filter(termo=processo.termo).order_by('-tweet__created_time').first()
             if first_tweet:
-                self.until_id = first_tweet.tweet.twit_id
                 self.dt_inicial = termo.dtinicio
-            else:
-                self.until_id = None
-                if termo.tipo_busca == PROC_FULL:
-                    self.dt_inicial = termo.dtinicio
-                else:
-                    self.dt_inicial = None
+                self.end_time = first_tweet.tweet.created_time
+
+        # Caso não seja Full search e o último processamento tenha ultrapassado 7 dias, não considerar o since_id
+        if termo.tipo_busca != PROC_FULL and self.dt_inicial:
+            dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
+            self.dt_inicial = max(self.dt_inicial, dt_limite_api)
+            self.end_time = self.end_time or termo.dtfinal
+            self.since_id = None
 
         client = get_api_client()
         next_token = None
+        menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
         busca = termo.busca
         if termo.language:
             busca = f'{busca} lang:{termo.language}'
@@ -137,8 +129,8 @@ class Crawler:
                              tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                              next_token=next_token,
                              since_id=self.since_id,
-                             until_id=self.until_id,
                              start_time=self.dt_inicial,
+                             end_time = self.end_time,
                              max_results=100)
             else:
                 tweets = client.search_recent_tweets(
@@ -146,8 +138,8 @@ class Crawler:
                              tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                              next_token=next_token,
                              since_id=self.since_id,
-                             until_id=self.until_id,
                              start_time=self.dt_inicial,
+                             end_time =self.end_time,
                              max_results=100)
 
             if tweets.source.get('meta'):
@@ -163,7 +155,7 @@ class Crawler:
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
                 print('No includes found', tweets.source)
-                print(self.since_id, self.until_id, self.dt_inicial)
+                print(self.since_id, self.dt_inicial, self.end_time)
                 break
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
@@ -173,6 +165,8 @@ class Crawler:
                 if user_record:
                     tweet['user'] = user_record
                 save_result(tweet, processo, opensearch=self.client)
+                if 'created_at' in tweet:
+                    menor_data = min(menor_data, tweet['created_at'])
                 self.ultimo_tweet = max(intdef(tweet['id'],0), self.ultimo_tweet)
                 self.tot_registros += 1
 
@@ -180,13 +174,14 @@ class Crawler:
             if tweets.source['includes'].get('tweets'):
                 for tweet in tweets.source['includes']['tweets']:
                     author_id = tweet.get('author_id', None)
+                    # se o author do tweet original não estiver registrado, não gravar o pai
                     if author_id:
-                        # se o author do tweet original não estiver registrado, não gravar o pai
+                        created_at = tweet.created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z") if tweet.created_at else None
                         record = {
                             'id': tweet.id,
                             'author_id': tweet.author_id,
                             'user': users.get(str(author_id), None),
-                            'created_at': tweet.created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z") if tweet.created_at else None,
+                            'created_at': created_at,
                             'text': tweet.text,
                             'public_metrics': tweet.public_metrics,
                             'lang': tweet.lang,
@@ -198,6 +193,7 @@ class Crawler:
                                 record['referenced_tweet'].append(ref.data)
 
                         save_result(record, processo, overwrite=False, opensearch=self.client)
+                        menor_data = min(menor_data, created_at)
                         self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
                         self.tot_registros += 1
 
@@ -212,8 +208,9 @@ class Crawler:
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
-        elif termo.dtfinal and agora > termo.dtfinal:
+
         # se a data atual for maior que o final programado
+        elif termo.dtfinal and menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
             print(f'Termo {termo.id} finalizado')
             termo.status = 'C'
         else:
@@ -277,8 +274,8 @@ def processa_termo(termo, limite):
         log_message(termo.projeto, 'Erro durante a captura do termo {termo.id}')
         print(f'Erro na montagem da busca. Termo:{termo.id}')
         print(f'since_id:{crawler.since_id}')
-        print(f'until_id:{crawler.until_id}')
         print(f'Data inicial:{crawler.dt_inicial}')
+        print(f'Data Final:{crawler.end_time}')
         print(mensagem)
         commit()
 
@@ -307,7 +304,7 @@ class Command(BaseCommand):
         # Existem 3 estratégias de busca: Padrão, Contínua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
         # Contínua: para cargas em andamento: começa do since_id
-        # Recuperação: para caso de cargas com erro: calcula o último e usa o parâmetro until_id
+        # Recuperação: para caso de cargas com erro: calcula o último e usa até o último capturado
         if 'termo' in options and options['termo']:
             termo = Termo.objects.filter(id=options['termo']).first()
             if termo:

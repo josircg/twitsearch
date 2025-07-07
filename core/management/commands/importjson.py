@@ -213,8 +213,11 @@ class Processo:
 
             # se a data do tweet for maior que a data programada para o termo, não grava o termo
             termo = processo_atual.termo
-            if termo and termo.dtfinal and tweet.created_time > termo.dtfinal:
-                termo = None
+            if termo:
+                if termo.dtfinal and tweet.created_time > termo.dtfinal:
+                    termo = None
+                elif termo.dtinicio and tweet.created_time < termo.dtinicio:
+                    termo = None
 
             TweetInput.objects.get_or_create(tweet=tweet, termo=termo,
                                              defaults={'processamento': processo_atual})
