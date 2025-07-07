@@ -3,7 +3,7 @@ import requests
 import traceback
 from django.utils import timezone
 
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit, rollback
 
@@ -86,7 +86,7 @@ class Crawler:
         agora = timezone.now()
         termo = processo.termo
         if termo.tipo_busca == PROC_FULL:
-            dt_limite_api = date(1985,1,1)
+            dt_limite_api = datetime(1985,1,1)
         else:
             dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
 

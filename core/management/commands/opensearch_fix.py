@@ -22,19 +22,18 @@ def match_query(query: str, text: str) -> bool:
 
 # somente arquivadas
 # "query": {"bool": {"must": [{"match": {"arquivada": True}}]}},
-# 'tw:1466723696035483648'
+#     search_body = {
+#         'query': {
+#             'match': {
+#                 'id': "tw:1441550021019586564"
+#             }
+#         },
+#     }
 
 def get_records(opensearch: OpenSearch, index_name, size=1000, search_after=None):
     search_body = {
         "sort": [ {"_id": {"order": "asc"}} ],
         "size": size
-    }
-    search_body = {
-        'query': {
-            'match': {
-                'id': "tw:1441550021019586564"
-            }
-        },
     }
 
     if search_after:
@@ -72,10 +71,16 @@ class Command(BaseCommand):
             results, next_search_after = get_records(conn, index_name, batch_size, last_search_after)
             last_search_after = next_search_after
             num_results = len(results)
-            print(f"Foram encontrados {num_results}")
+            print(f"Registros lidos: {tot_read}")
 
             for row in results:
                 tot_read += 1
+
+                if tot_read < 4000:
+                    continue
+
+                if not 'busca' in row:
+                    continue
 
                 busca = row['busca']
                 conteudo = row['conteudo']
@@ -101,24 +106,22 @@ class Command(BaseCommand):
                 termos_agrupados = ','.join(s)
                 termos_unicos = ','.join(unicos)
 
-                if busca:
-                    conteudo = conteudo.lower()
-                    termos = re.sub(r'[\\()"]', '', busca)
-                    termos = [t.strip().lower() for t in termos.split('OR')]
-                    termos = [x for x in termos if x in conteudo]
-                    arquivada = len(termos) == 0
-                    if arquivada != row['arquivada']:
-                        row['arquivada'] = arquivada
-                        tot_fixed += 1
-                    row['termos'] = termos
-                    row["termos_unicos"] = termos_unicos
-                    row["termosAgrupados"] = termos_agrupados
-                    conn.index(
-                        index=index_name,
-                        body=row,
-                        id=row['id'],
-                        refresh=True,
-                        request_timeout=200)
+                conteudo = conteudo.lower()
+                termos = re.sub(r'[\\()"]', '', busca)
+                termos = [t.strip().lower() for t in termos.split('OR')]
+                termos = [x for x in termos if x in conteudo]
+                arquivada = len(termos) == 0
+                if arquivada != row['arquivada']:
+                    row['arquivada'] = arquivada
+                    tot_fixed += 1
+                row['termos'] = termos
+                row["termos_unicos"] = termos_unicos
+                row["termosAgrupados"] = termos_agrupados
+                conn.index(
+                    index=index_name,
+                    body=row,
+                    id=row['id'],
+                    request_timeout=200)
 
             if num_results < batch_size:
                 break

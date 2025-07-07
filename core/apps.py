@@ -18,7 +18,7 @@ def save_result(data, processo, overwrite=True, opensearch=None):
     data['termo'] = processo.termo.id
     data['projeto'] = processo.termo.projeto.id
     
-    filename = '%s/data/%s.json' % (settings.BASE_DIR,data['id'])
+    filename = f"{settings.BASE_DIR}/data/{data['id']}_{processo.termo.id}.json"
     if overwrite or not os.path.exists(filename):
         with open(filename, 'w') as arquivo:
             json.dump(data, arquivo)
@@ -30,7 +30,6 @@ def save_result(data, processo, overwrite=True, opensearch=None):
 
     return True
     
-
 
 def calcula_estimativa(termo, dt_inicial):
     client = get_api_client()
