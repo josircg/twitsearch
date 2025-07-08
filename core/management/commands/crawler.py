@@ -120,7 +120,8 @@ class Crawler:
         busca = termo.busca
         if termo.language:
             busca = f'{busca} lang:{termo.language}'
-            print(busca)
+
+        print(termo.id, self.since_id, self.dt_inicial, self.end_time)
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             if termo.tipo_busca == PROC_FULL:
@@ -155,7 +156,6 @@ class Crawler:
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
                 print('No includes found', tweets.source)
-                print(self.since_id, self.dt_inicial, self.end_time)
                 break
 
             # os tweets originais, retweets, replies e quotes são gravados em 'data'
@@ -197,7 +197,7 @@ class Crawler:
                         self.ultimo_tweet = max(intdef(record['id'],0), self.ultimo_tweet)
                         self.tot_registros += 1
 
-            print(f'Total registros: {self.tot_registros}')
+            print(f'Total registros: {self.tot_registros} / {self.ultimo_tweet} / {menor_data}')
             next_token = tweets.source.get('meta',{}).get('next_token','Fim')
 
         # se algum registro foi recebido, atualizar os status do termo
