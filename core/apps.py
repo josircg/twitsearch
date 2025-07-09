@@ -1,14 +1,18 @@
 import datetime
 import json
 import os
+from datetime import timedelta, date, datetime
 
 from django.apps import AppConfig
+from django.utils import timezone
 
 from django.conf import settings
 from django.utils import timezone
 
 from twitsearch.local import get_api_client
-from .opensearch import connect_opensearch, create_if_not_exists_index, save_object
+from .opensearch import save_object
+from core import intdef
+
 class CoreConfig(AppConfig):
     name = 'core'
 
@@ -30,6 +34,34 @@ def save_result(data, processo, overwrite=True, opensearch=None):
 
     return True
     
+
+def find_first_tweet(termo):
+    client = get_api_client()
+    start_time = termo.dtinicio
+    end_time = termo.dtinicio
+    dt_final = termo.dtfinal or (timezone.now() - timedelta(days=1))
+    busca = termo.busca
+    if termo.language:
+        busca = f'{busca} lang:{termo.language}'
+    minutes = 10
+    tot_registros = 0
+    prim_tweet = None
+    while tot_registros == 0 and end_time < dt_final:
+        end_time = start_time + timedelta(minutes=minutes)
+        tweets = client.search_all_tweets(query=busca, tweet_fields='created_at,id',
+                                          start_time=start_time, end_time=end_time, max_results=50)
+        for tweet in tweets.source['data']:
+            current_id = intdef(tweet['id'], 0)
+            if prim_tweet:
+                prim_tweet = min(current_id, prim_tweet)
+            else:
+                prim_tweet = current_id
+            tot_registros += 1
+        if tot_registros == 0:
+            minutes = minutes * 60
+            start_time = end_time
+    return prim_tweet
+
 
 def calcula_estimativa(termo, dt_inicial):
     client = get_api_client()

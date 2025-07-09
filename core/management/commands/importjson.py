@@ -234,6 +234,7 @@ class Command(BaseCommand):
         parser.add_argument('-j', '--projeto', type=str, help='Projeto onde será gravado os tweets caso não o projeto não exista', nargs='?')
         parser.add_argument('-f', '--force', help='Aceita importações paralelas', action='store_true')
         parser.add_argument('-o', '--optimize', help='Não duplica os arquivos', action='store_true')
+        parser.add_argument('-d', '--verbose', help='Inclui detalhamento durante o processo', action='store_true')
 
     def handle(self, *args, **options):
 
@@ -325,7 +326,11 @@ class Command(BaseCommand):
                                 processo.load_twitter(twitter_data)
 
                             commit()
-                            remove(filename)
+                            if settings.OPENSEARCH_SERVERS:
+                                remove(filename)
+                            else:
+                                rename(filename, join(cached_dir, arquivo.name))
+
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))
                             traceback.print_exc()
@@ -358,14 +363,19 @@ class Command(BaseCommand):
         # Atualiza o contador de tweets de cada termo importado
         for termo in Termo.objects.filter(id__in=processo.termos):
             ultima_contagem = termo.last_count
-            tweets = termo.tweetinput_set.all().order_by('-tweet')
-            if tweets:
-                termo.ult_tweet = tweets[0].tweet.twit_id
-                termo.last_count = tweets.count()
+            tot_tweets = termo.tweetinput_set.count()
+            termo.last_count = tot_tweets
             termo.save()
             diferenca = termo.last_count - ultima_contagem
             log_message(termo.projeto, f'{diferenca} registros importados no termo {termo.busca}')
         commit()
+
+        '''
+        from core.apps import find_first_tweet
+        termo = Termo.objects.get(id=7)
+        termo.prim_tweet = find_first_tweet(termo)
+        termo.save()
+        '''
 
         if tot_files != 0:
             print('Arquivos processados: %d' % tot_files)

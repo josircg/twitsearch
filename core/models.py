@@ -10,11 +10,12 @@ from core import clean_pontuation, stopwords
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium
 PROC_FULL = 'F'         # Importação Full Archive
+PROC_CONTINUA = 'C'     # Captura Continuada (Quando um processo é interrompido)
 PROC_YOUTUBE = 'Y'      # Importação Youtube
 PROC_RAPID = 'D'        # Importação Rapid API
 PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'      # Busca na rede retweets de um determinado tweet
-PROC_BUSCAGLOBAL = 'G'  # Busca na base de dados, tweets que atendam a um critério de busca
+PROC_BUSCAGLOBAL = 'G'  # Busca na própria base PostgreSQL
 PROC_OPENSEARCH = 'O'   # Busca na base do OpenSearch/ElasticSearch
 PROC_FILTROPROJ = 'P'   # Filtro dentro do projeto
 PROC_ESTIMATE = 'E'     # Calcula estimativa de tweets
@@ -27,7 +28,7 @@ PROC_FECHAMENTO = 'X'   # Fechamento do Projeto e cálculo das estatísticas
 
 TIPO_BUSCA = (
     (PROC_PREMIUM,     'Importação Premium'),
-    (PROC_FULL,         'Importação Full Archive'),
+    (PROC_FULL,        'Importação Full Archive'),
     (PROC_IMPORTUSER,  'Importação Usuário'),
     (PROC_BUSCAGLOBAL, 'Busca Global'),
     (PROC_OPENSEARCH,  'OpenSearch'),
@@ -173,12 +174,12 @@ class Termo(models.Model):
     busca = models.CharField(max_length=2000)
     busca_complementar = models.CharField('Busca Complementar', max_length=2000, blank=True, null=True)
     projeto = models.ForeignKey(Projeto, on_delete=models.PROTECT)
-    dtinicio = models.DateTimeField('Início da Busca', blank=True, null=True,
-                                    help_text='Deixe em branco caso queira iniciar imediatamente')
+    dtinicio = models.DateTimeField('Início da Busca')
     dtfinal = models.DateTimeField('Fim da Busca', null=True, blank=True)
     language = models.CharField(max_length=2, null=True, blank=True)
     tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_IMPORTACAO)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    prim_tweet = models.BigIntegerField(null=True, blank=True)       # Utilizado para a estratégia de correção
     ult_tweet = models.BigIntegerField(null=True, blank=True)        # Utilizado para a estratégia contínua
     ult_processamento = models.DateTimeField(null=True, blank=True)  # Última vez que o crawler foi executado
     last_count = models.IntegerField('Total de Tweets', default=0)
