@@ -1,7 +1,6 @@
-import datetime
 import json
 import os
-from datetime import timedelta, date, datetime
+from datetime import timedelta, datetime
 
 from django.apps import AppConfig
 from django.utils import timezone
@@ -28,7 +27,7 @@ def save_result(data, processo, overwrite=True, opensearch=None):
             json.dump(data, arquivo)
 
     if opensearch:
-        today = datetime.datetime.now()
+        today = datetime.now()
         index_name = f"twitter-{today.year}-{today.month}"
         save_object(opensearch, data, index_name)
 
@@ -65,7 +64,7 @@ def find_first_tweet(termo):
 
 def calcula_estimativa(termo, dt_inicial):
     client = get_api_client()
-    agora = timezone.now() - datetime.timedelta(hours=2)
+    agora = timezone.now() - timedelta(hours=2)
     start_time = dt_inicial.isoformat()
     total = 0
     if termo.dtfinal:
