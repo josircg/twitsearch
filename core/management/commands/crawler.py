@@ -87,6 +87,7 @@ class Crawler:
     def search_recent(self, processo, fake=False):
         agora = timezone.now()
         termo = processo.termo
+        next_token = None
 
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
@@ -116,13 +117,6 @@ class Crawler:
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
                     self.since_id = ult_proc.twit_id
 
-            if not self.until_id:
-                primeiro = TweetInput.objects.filter(termo=termo).order_by('tweet_id').first()
-                print(f'{termo.id} ')
-                if primeiro:
-                    self.until_id = int(primeiro.tweet_id)
-                    print(f'Until: {self.until_id}')
-
             if not self.since_id:
                 if not termo.prim_tweet:
                     termo.prim_tweet = find_first_tweet(termo)
@@ -130,8 +124,16 @@ class Crawler:
                     commit()
                 self.since_id = termo.prim_tweet
 
-                if self.since_id and self.since_id > self.until_id:
-                    self.until_id = None
+            if not self.until_id:
+                primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
+                print(f'{termo.id} ')
+                if primeiro:
+                    self.until_id = int(primeiro.tweet_id)
+                    print(f'Until: {self.until_id}')
+
+            if self.since_id and self.since_id > self.until_id:
+                print('Não foi possível encontrar a faixa')
+                next_token = 'Fim'
 
             print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
@@ -147,7 +149,6 @@ class Crawler:
             return
 
         client = get_api_client()
-        next_token = None
         menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         busca = termo.busca
@@ -240,8 +241,9 @@ class Crawler:
         termo.ult_processamento = agora
 
         if self.correcao:
-            proc.status = Processamento.CONCLUIDO
-            proc.save()
+            if proc:
+                proc.status = Processamento.CONCLUIDO
+                proc.save()
         else:
             # se algum registro foi recebido, atualizar
             if self.tot_registros > 0 and self.ultimo_tweet:
