@@ -1,5 +1,6 @@
 import json
 import os
+import time
 from datetime import timedelta, datetime
 
 from django.apps import AppConfig
@@ -49,16 +50,20 @@ def find_first_tweet(termo):
         end_time = start_time + timedelta(minutes=minutes)
         tweets = client.search_all_tweets(query=busca, tweet_fields='created_at,id',
                                           start_time=start_time, end_time=end_time, max_results=50)
-        for tweet in tweets.source['data']:
-            current_id = intdef(tweet['id'], 0)
-            if prim_tweet:
-                prim_tweet = min(current_id, prim_tweet)
-            else:
-                prim_tweet = current_id
-            tot_registros += 1
+        if tweets.source.get('meta'):
+            if tweets.source['meta'].get('result_count', 0) > 0:
+                for tweet in tweets.source['data']:
+                    current_id = intdef(tweet['id'], 0)
+                    if prim_tweet:
+                        prim_tweet = min(current_id, prim_tweet)
+                    else:
+                        prim_tweet = current_id
+                    tot_registros += 1
+
         if tot_registros == 0:
             minutes = minutes * 60
             start_time = end_time
+            time.sleep(1)
     return prim_tweet
 
 

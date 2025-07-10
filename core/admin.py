@@ -359,8 +359,9 @@ class RetweetAdmin(PowerModelAdmin):
 
 class TermoAdmin(PowerModelAdmin):
     search_fields = ('busca', 'projeto__nome')
-    list_filter = ('status',)
+    list_filter = ('status','projeto__redes__nome')
     list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'last_count',)
+    list_select_related = ('projeto', )
     list_per_page = 30
 
     def get_form(self, request, obj=None, **kwargs):

@@ -39,6 +39,7 @@ TIPO_PROCESSAMENTO = (
     (PROC_IMPORTACAO,   'Importação'),
     (PROC_PREMIUM,      'Twitter Search'),
     (PROC_FULL,         'Twitter Full'),
+    (PROC_CONTINUA,     'Twitter Contínua'),
     (PROC_YOUTUBE,      'Importação Youtube'),
     (PROC_IMPORTUSER,   'Importação User'),
     (PROC_BUSCAGLOBAL,  'Busca Global'),

@@ -84,7 +84,7 @@ class Crawler:
         self.correcao = False
         self.client = opensearch_client
 
-    def search_recent(self, processo):
+    def search_recent(self, processo, fake=False):
         agora = timezone.now()
         termo = processo.termo
 
@@ -103,22 +103,33 @@ class Crawler:
         else:
             # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
             self.correcao = True
-
+            self.since_id = None
             proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA,
                                                 status=Processamento.AGENDADO).order_by('-id').first()
 
             # Busca o último processamento anterior ao agendamento
-            ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
-                                                    status=Processamento.CONCLUIDO,
-                                                    twit_id__lt=proc.twit_id).exclude(twit_id='0').order_by('-id').first()
-            if ult_proc and intdef(ult_proc.twit_id,0) != 0:
-                self.since_id = ult_proc.twit_id
+            if proc:
+                self.until_id = int(proc.twit_id)
+                ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
+                                                        status=Processamento.CONCLUIDO,
+                                                        twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
+                if ult_proc and intdef(ult_proc.twit_id,0) != 0:
+                    self.since_id = ult_proc.twit_id
             else:
+                dset = TweetInput.objects.filter(termo=termo).order_by('tweet_id').first()
+                if dset:
+                    self.until_id = int(dset.tweet_id)
+
+            if not self.since_id:
                 if not termo.prim_tweet:
                     termo.prim_tweet = find_first_tweet(termo)
+                    termo.save()
+                    commit()
                 self.since_id = termo.prim_tweet
 
-            self.until_id = proc.twit_id
+                if self.since_id and self.since_id > self.until_id:
+                    self.until_id = None
+
             print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
         # Caso não seja Full search e o último processamento tenha ultrapassado 7 dias, não considerar o since_id
@@ -128,6 +139,9 @@ class Crawler:
             if termo.dt_final < agora:
                 self.dt_final = termo.dt_final
             self.since_id = None
+
+        if fake:
+            return
 
         client = get_api_client()
         next_token = None
@@ -305,8 +319,14 @@ def processa_termo(termo, limite):
             print(f'Data inicial:{crawler.dt_inicial}')
             print(f'Data Final:{crawler.dt_final}')
             print(mensagem)
+
+            if crawler.menor_tweet:
+                Processamento.objects.create(termo=termo, dt=agora,
+                                             tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
+                                             twit_id=crawler.menor_tweet)
+
             if crawler.ultimo_tweet != 0:
-                Termo.objects.filter(id=termo.id).update(status='E',ult_tweet=crawler.ultimo_tweet)
+                Termo.objects.filter(id=termo.id).update(status='E', ult_tweet=crawler.ultimo_tweet)
             else:
                 Termo.objects.filter(id=termo.id).update(status='E')
 
