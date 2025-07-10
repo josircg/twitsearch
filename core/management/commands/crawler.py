@@ -4,12 +4,12 @@ import traceback
 
 from datetime import timedelta, date, datetime
 from django.core.management.base import BaseCommand
-from django.db.transaction import set_autocommit, commit, rollback
+from django.db.transaction import set_autocommit, commit
 from django.utils import timezone
-from fontTools.cffLib import readCard16
+
 from tweepy import BadRequest
 
-from core import log_message, intdef, convert_date
+from core import log_message, intdef
 from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 
@@ -115,7 +115,7 @@ class Crawler:
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
-                    self.since_id = ult_proc.twit_id
+                    self.since_id = int(ult_proc.twit_id)
 
             if not self.since_id:
                 if not termo.prim_tweet:
@@ -126,7 +126,6 @@ class Crawler:
 
             if not self.until_id:
                 primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
-                print(f'{termo.id} ')
                 if primeiro:
                     self.until_id = int(primeiro.tweet_id)
                     print(f'Until: {self.until_id}')
