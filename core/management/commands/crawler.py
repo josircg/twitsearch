@@ -115,10 +115,11 @@ class Crawler:
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
                     self.since_id = ult_proc.twit_id
-            else:
-                dset = TweetInput.objects.filter(termo=termo).order_by('tweet_id').first()
-                if dset:
-                    self.until_id = int(dset.tweet_id)
+
+            if not self.until_id:
+                primeiro = TweetInput.objects.filter(termo=termo).order_by('tweet_id').first()
+                if primeiro:
+                    self.until_id = int(primeiro.tweet_id)
 
             if not self.since_id:
                 if not termo.prim_tweet:
