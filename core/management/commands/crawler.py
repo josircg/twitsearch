@@ -118,8 +118,10 @@ class Crawler:
 
             if not self.until_id:
                 primeiro = TweetInput.objects.filter(termo=termo).order_by('tweet_id').first()
+                print(f'{termo.id} ')
                 if primeiro:
                     self.until_id = int(primeiro.tweet_id)
+                    print(f'Until: {self.until_id}')
 
             if not self.since_id:
                 if not termo.prim_tweet:
