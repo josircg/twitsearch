@@ -12,7 +12,8 @@ from django import forms
 from core.models import *
 
 from core.actions import export_tags_action, export_extra_action, detach_action, \
-    update_stats_action, stop_process_action, reativar_projeto_action, finalizar_projeto_action
+    update_stats_action, stop_process_action, reativar_projeto_action, finalizar_projeto_action, reativar_termo_action, \
+    finalizar_termo_action
 
 from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline, PowerInlineModelAdmin
 
@@ -380,6 +381,10 @@ class TermoAdmin(PowerModelAdmin):
 
     def get_actions(self, request):
         actions = super(TermoAdmin, self).get_actions(request)
+        reativar = reativar_termo_action()
+        actions['reativar_termo'] = (reativar, 'reativar_termo', reativar.short_description)
+        finalizar = finalizar_termo_action()
+        actions['finalizar_termo'] = (finalizar, 'finalizar_termo', finalizar.short_description)
         if request.user.is_superuser:
             stop_process = stop_process_action()
             actions['stop_process'] = (stop_process, 'stop_process', stop_process.short_description)

@@ -359,7 +359,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        limite = options['limite']
+        limite = options['limite'] or 2000
 
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(nome='Twitter/X')

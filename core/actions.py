@@ -124,7 +124,33 @@ def stop_process_action(description=u"Interromper processo"):
             termo.status = 'I'
             termo.save()
             alterados += 1
-        messages.info(request, u'%d termos interrompidos' % alterados)
+        messages.info(request, f'{alterados} termos interrompidos')
+
+    recalcular.short_description = description
+    return recalcular
+
+
+def reativar_termo_action(description="Reativar captura"):
+    def recalcular(modeladmin, request, queryset):
+        alterados = 0
+        for termo in queryset:
+            termo.status = 'A'
+            termo.save()
+            alterados += 1
+        messages.info(request, f'{alterados} termos reativados')
+
+    recalcular.short_description = description
+    return recalcular
+
+
+def finalizar_termo_action(description="Finalizar captura"):
+    def recalcular(modeladmin, request, queryset):
+        alterados = 0
+        for termo in queryset:
+            termo.status = 'C'
+            termo.save()
+            alterados += 1
+        messages.info(request, f'{alterados} termos finalizados')
 
     recalcular.short_description = description
     return recalcular
