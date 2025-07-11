@@ -46,8 +46,10 @@ def find_first_tweet(termo):
     minutes = 10
     tot_registros = 0
     prim_tweet = None
-    while tot_registros == 0 and end_time < dt_final:
+    while tot_registros == 0:
         end_time = start_time + timedelta(minutes=minutes)
+        if end_time > dt_final:
+            break
         tweets = client.search_all_tweets(query=busca, tweet_fields='created_at,id',
                                           start_time=start_time, end_time=end_time, max_results=50)
         if tweets.source.get('meta'):

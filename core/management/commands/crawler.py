@@ -122,6 +122,10 @@ class Crawler:
                     termo.prim_tweet = find_first_tweet(termo)
                     termo.save()
                     commit()
+                    # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
+                    if not termo.prim_tweet:
+                        print('Nenhum registro encontrado')
+                        next_token = 'Fim'
                 self.since_id = termo.prim_tweet
 
             if not self.until_id:
