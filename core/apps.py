@@ -66,7 +66,7 @@ def find_first_tweet(termo):
         if tot_registros == 0:
             minutes = minutes * 60
             start_time = end_time
-            print(minutes)
+            print(start_time, end_time)
             time.sleep(5)
     return prim_tweet
 

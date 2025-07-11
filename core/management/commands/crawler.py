@@ -124,21 +124,22 @@ class Crawler:
                     commit()
                     # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
                     if not termo.prim_tweet:
-                        print('Nenhum registro encontrado')
+                        print('Nenhum registro encontrado para o termo')
                         next_token = 'Fim'
                 self.since_id = termo.prim_tweet
 
-            if not self.until_id:
-                primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
-                if primeiro:
-                    self.until_id = int(primeiro.tweet_id)
-                    print(f'Until: {self.until_id}')
+            if not next_token:
+                if not self.until_id:
+                    primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
+                    if primeiro:
+                        self.until_id = int(primeiro.tweet_id)
+                        print(f'Until: {self.until_id}')
 
-            if self.since_id and self.since_id > self.until_id:
-                print('Não foi possível encontrar a faixa')
-                next_token = 'Fim'
+                if self.since_id and self.since_id > self.until_id:
+                    print('Não foi possível encontrar a faixa')
+                    next_token = 'Fim'
 
-            print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
+                print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
         # Caso não seja Full search e o último processamento tenha ultrapassado 7 dias, não considerar o since_id
         if termo.tipo_busca != PROC_FULL and self.dt_inicial:
