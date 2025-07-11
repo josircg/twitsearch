@@ -153,7 +153,7 @@ class Crawler:
 
         busca = termo.busca
         if termo.language:
-            busca = f'({busca}) lang:{termo.language}'
+            busca = f'{busca} lang:{termo.language}'
 
         print(busca)
 
