@@ -326,8 +326,7 @@ def processa_termo(termo, limite, fake_run):
         if erro:
             log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
             print(f'Erro na montagem da busca. Termo:{termo.id} since_id:{crawler.since_id}')
-            print(f'Data inicial:{crawler.dt_inicial}')
-            print(f'Data Final:{crawler.dt_final}')
+            print(f'Data inicial:{crawler.dt_inicial} Data Final:{crawler.dt_final}')
             print(mensagem)
 
             if crawler.menor_tweet:

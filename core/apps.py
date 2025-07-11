@@ -46,6 +46,7 @@ def find_first_tweet(termo):
     minutes = 10
     tot_registros = 0
     prim_tweet = None
+    print('Encontrando primeiro tweet')
     while tot_registros == 0:
         end_time = start_time + timedelta(minutes=minutes)
         if end_time > dt_final:
@@ -65,7 +66,8 @@ def find_first_tweet(termo):
         if tot_registros == 0:
             minutes = minutes * 60
             start_time = end_time
-            time.sleep(1)
+            print(minutes)
+            time.sleep(5)
     return prim_tweet
 
 
