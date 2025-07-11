@@ -72,7 +72,7 @@ def processa_item_unico(twit_id, termo_id):
 
 class Crawler:
 
-    def __init__(self, limite=10000, opensearch_client=None):
+    def __init__(self, limite=5000, opensearch_client=None):
         self.since_id = None
         self.until_id = None
         self.tot_registros = 0
@@ -156,7 +156,10 @@ class Crawler:
 
         busca = termo.busca
         if termo.language:
-            busca = f'{busca} lang:{termo.language}'
+            busca = f'({busca}) lang:{termo.language}'
+
+        print(busca)
+        next_token = 'Fim'
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             if termo.tipo_busca == PROC_FULL:
@@ -358,7 +361,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        limite = options['limite'] or 10000
+        limite = options['limite']
 
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(nome='Twitter/X')
