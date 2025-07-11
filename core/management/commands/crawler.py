@@ -84,7 +84,7 @@ class Crawler:
         self.correcao = False
         self.client = opensearch_client
 
-    def search_recent(self, processo, fake=False):
+    def search_recent(self, processo, fake=True):
         agora = timezone.now()
         termo = processo.termo
         next_token = None
@@ -148,9 +148,6 @@ class Crawler:
                 self.dt_final = termo.dt_final
             self.since_id = None
 
-        if fake:
-            return
-
         client = get_api_client()
         menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
@@ -159,7 +156,9 @@ class Crawler:
             busca = f'({busca}) lang:{termo.language}'
 
         print(busca)
-        next_token = 'Fim'
+
+        if fake:
+            return
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             if termo.tipo_busca == PROC_FULL:
