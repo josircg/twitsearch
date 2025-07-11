@@ -376,7 +376,7 @@ class Command(BaseCommand):
         if 'termo' in options and options['termo']:
             termo = Termo.objects.filter(id=options['termo']).first()
             if termo:
-                processa_termo(termo, limite)
+                processa_termo(termo, limite, fake_run)
             else:
                 print('Termo não encontrado: %s' % options['termo'])
                 return
