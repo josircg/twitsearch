@@ -49,6 +49,7 @@ def find_first_tweet(termo):
     print('Encontrando primeiro tweet')
     while tot_registros == 0:
         end_time = start_time + timedelta(minutes=minutes)
+        print(start_time, end_time)
         if end_time > dt_final:
             break
         tweets = client.search_all_tweets(query=busca, tweet_fields='created_at,id',
@@ -66,7 +67,6 @@ def find_first_tweet(termo):
         if tot_registros == 0:
             minutes = minutes * 60
             start_time = end_time
-            print(start_time, end_time)
             time.sleep(5)
     return prim_tweet
 
