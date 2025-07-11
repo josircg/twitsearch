@@ -84,7 +84,7 @@ class Crawler:
         self.correcao = False
         self.client = opensearch_client
 
-    def search_recent(self, processo, fake=True):
+    def search_recent(self, processo, fake=False):
         agora = timezone.now()
         termo = processo.termo
         next_token = None
@@ -270,7 +270,7 @@ class Crawler:
 
         return
 
-def processa_termo(termo, limite):
+def processa_termo(termo, limite, fake_run):
 
     agora = timezone.now()
 
@@ -304,7 +304,7 @@ def processa_termo(termo, limite):
 
     crawler = Crawler(limite, opensearch_client=client)
     try:
-        crawler.search_recent(processo)
+        crawler.search_recent(processo, fake_run)
         mensagem = f'{crawler.tot_registros} obtidos'
         commit()
         erro = False
@@ -385,10 +385,7 @@ class Command(BaseCommand):
             tot_termos = 0
             for termo in Termo.objects.filter(status__in=('A','I'), projeto__status='A',
                                               projeto__redes=rede_twitter).order_by('ult_processamento'):
-                if fake_run:
-                    print(f"{termo.projeto}/{termo.busca} ({termo.id}): {termo.ult_tweet}")
-                else:
-                    processa_termo(termo, limite)
+                processa_termo(termo, limite, fake_run)
                 tot_termos += 1
 
             if tot_termos == 0:
