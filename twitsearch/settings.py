@@ -7,7 +7,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 DEBUG = True
 
 ALLOWED_HOSTS = []
-SITE_NAME = 'Twitter Analysis'
+SITE_NAME = 'Capitu'
 SITE_HOST = 'http://127.0.0.1:8000/'
 
 # Application definition

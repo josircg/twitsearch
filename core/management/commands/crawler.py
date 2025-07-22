@@ -94,7 +94,7 @@ class Crawler:
             self.since_id = termo.ult_tweet or 0
             if self.since_id == 0:
                 self.since_id = None
-                self.dtinicial = termo.dtinicio
+                self.dt_inicial = termo.dtinicio
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
                 print(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
