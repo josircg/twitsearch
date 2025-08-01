@@ -96,7 +96,7 @@ def stats(request, project_id):
                        "       DATE_FORMAT(created_time, '%%H') as hora, count(*) as total"
                        "  from core_termo p, core_tweetinput i, core_tweet t" 
                        " where p.projeto_id = %s and p.id = i.termo_id and i.tweet_id = t.twit_id" 
-                       "   and created_time between ifnull(p.dtinicio,t.created_time) and p.dtfinal + 1"
+                       "   and t.created_time between p.dtinicio and ifnull(p.dtfinal,t.created_time) + 1"
                        "       group by dia, hora order by dia, hora",
                        [project_id])
         for rec in cursor.fetchall():
