@@ -46,6 +46,5 @@ def save_object(client: OpenSearch, data, index_name):
         index=index_name,
         id=f"{data['id']}_{data['termo']}",
         body=data,
-        request_timeout=20,
-        refresh=True
+        request_timeout=60,
     )
