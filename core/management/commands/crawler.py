@@ -386,6 +386,7 @@ class Command(BaseCommand):
             for termo in Termo.objects.filter(status__in=('A','I'), projeto__status='A',
                                               projeto__redes=rede_twitter).order_by('ult_processamento'):
                 processa_termo(termo, limite, fake_run)
+                sleep(2)
                 tot_termos += 1
 
             if tot_termos == 0:
