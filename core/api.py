@@ -2,6 +2,7 @@ import json
 
 from django.http import HttpResponse, HttpResponseForbidden
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 from .models import Eixo, Projeto, Termo, Rede
 
 
@@ -61,3 +62,24 @@ def termos(request, rede_id):
         })
 
     return HttpResponse(json.dumps(termos), content_type='application/json')
+
+
+def termos_by_id(request, termo_id):
+    auth = request.headers.get('auth','')
+    if not settings.AUTH_KEYS.get(auth):
+        return HttpResponseForbidden()
+    
+    termo = get_object_or_404(Termo, id=termo_id)
+    termo_data = {
+        'projeto_id': termo.projeto.id,
+        'projeto_nome': termo.projeto.nome,
+        'projeto_index': termo.projeto.prefix,
+        'id': termo.id,
+        'nome': termo.descritivo,
+        'busca': termo.busca,
+        'busca_complementar': termo.busca_complementar,
+        'idioma': termo.language,
+        'status': termo.status if termo.projeto.status == 'A' else termo.projeto.status
+    }
+    
+    return HttpResponse(json.dumps(termo_data), content_type='application/json')
