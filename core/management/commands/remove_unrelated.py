@@ -38,11 +38,9 @@ class Command(BaseCommand):
                     tot_removidos += 1
             else:
                 if record.tweet.text.find(criterio) == -1:
-                    print(record.tweet.text)
                     record.delete()
                     tot_removidos += 1
-                    if tot_removidos == 5:
-                        break
+
         print(f'Total lidos: {tot_lidos}')
         print(f'Total removidos: {tot_removidos}')
 
