@@ -116,7 +116,7 @@ class Crawler:
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
-                    self.since_id = int(ult_proc.twit_id)
+                    self.since_id = min(int(ult_proc.twit_id),termo.prim_tweet)
 
             if not self.since_id:
                 if not termo.prim_tweet:
@@ -146,8 +146,8 @@ class Crawler:
         if termo.tipo_busca != PROC_FULL and self.dt_inicial:
             dt_limite_api = agora - timedelta(days=7) + timedelta(minutes=3)
             self.dt_inicial = max(self.dt_inicial, dt_limite_api)
-            if termo.dt_final < agora:
-                self.dt_final = termo.dt_final
+            if termo.dtfinal and termo.dtfinal < agora:
+                self.dt_final = termo.dtfinal
             self.since_id = None
 
         client = get_api_client()
@@ -156,6 +156,9 @@ class Crawler:
         busca = termo.busca
         if termo.language:
             busca = f'{busca} lang:{termo.language}'
+
+        if not termo.retweet:
+            busca = f'{busca} -is:retweet'
 
         print(busca)
 
@@ -275,6 +278,7 @@ class Crawler:
 def processa_termo(termo, limite, fake_run):
 
     agora = timezone.now()
+    mensagem = ''
 
     # se a data inicial já for superior a data final, concluir a carga
     if termo.tipo_busca == PROC_FULL:

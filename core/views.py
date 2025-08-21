@@ -40,17 +40,17 @@ def visao(request):
     return
 
 
-def stats(request, project_id):
+def stats(request, project_id, termo_id=None):
     agora = timezone.now()
     projeto = get_object_or_404(Projeto, pk=project_id)
-    termo_base = projeto.termo_set.all().first()
     top_tweets = Tweet.objects.filter(tweetinput__termo__projeto_id=project_id).order_by('-favorites')[:5]
 
     proc_tags = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_TAGS).last()
     proc_importacao = Processamento.objects.filter(
         termo__projeto=projeto,
-        tipo__in=(PROC_IMPORTACAO, PROC_IMPORTUSER, PROC_PREMIUM, PROC_MATCH, PROC_BUSCAGLOBAL)).last()
+        tipo__in=(PROC_IMPORTACAO, PROC_PREMIUM, PROC_IMPORTUSER, PROC_PREMIUM, PROC_MATCH, PROC_BUSCAGLOBAL)).last()
     if not proc_importacao:
+        termo_base = projeto.termo_set.all().first()
         proc_importacao = Processamento.objects.create(tipo=PROC_MATCH, termo=termo_base,
                                                        dt=agora, status=Processamento.CONCLUIDO)
 
@@ -89,13 +89,18 @@ def stats(request, project_id):
             proc_tags.tot_registros = tot_registros
             proc_tags.save()
 
+    if termo_id:
+        termo_unico = f" and i.termo_id = {termo_id}"
+    else:
+        termo_unico = ""
+
     dataset = []
     dias = Counter()
     with connection.cursor() as cursor:
         cursor.execute("select DATE_FORMAT(created_time, '%%Y%%m%%d') as dia, "
                        "       DATE_FORMAT(created_time, '%%H') as hora, count(*) as total"
                        "  from core_termo p, core_tweetinput i, core_tweet t" 
-                       " where p.projeto_id = %s and p.id = i.termo_id and i.tweet_id = t.twit_id" 
+                       " where p.projeto_id = %s and p.id = i.termo_id and i.tweet_id = t.twit_id" + termo_unico +
                        "   and t.created_time between p.dtinicio and ifnull(p.dtfinal,t.created_time) + 1"
                        "       group by dia, hora order by dia, hora",
                        [project_id])

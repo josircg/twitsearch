@@ -11,6 +11,7 @@ urlpatterns = [
     url(r'^visao/$', visao),
     url(r'^solicita_busca/(?P<termo_id>\d+)/$', solicita_busca, name='solicita_busca'),
     url(r'^estatistica/(?P<project_id>\d+)/$', stats, name='core_projeto_stats'),
+    url(r'^estatistica/(?P<project_id>\d+)/(?P<termo_id>\d+)/$', stats, name='core_projeto_stats'),
     url(r'^backup_json/(?P<project_id>\d+)/$', backup_json, name='backup_json'),
     url(r'^exclui_json/(?P<project_id>\d+)/$', exclui_json, name='exclui_json'),
     url(r'^solicitar_csv/(?P<project_id>\d+)/$', solicitar_csv, name='solicitar_csv'),

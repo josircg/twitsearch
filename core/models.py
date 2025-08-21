@@ -178,7 +178,8 @@ class Termo(models.Model):
     dtinicio = models.DateTimeField('Início da Busca')
     dtfinal = models.DateTimeField('Fim da Busca', null=True, blank=True)
     language = models.CharField(max_length=2, null=True, blank=True)
-    tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_IMPORTACAO)
+    retweets = models.BooleanField('Incluir retweets', default=False)
+    tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_FULL)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
     prim_tweet = models.BigIntegerField(null=True, blank=True)       # Utilizado para a estratégia de correção
     ult_tweet = models.BigIntegerField(null=True, blank=True)        # Utilizado para a estratégia contínua
