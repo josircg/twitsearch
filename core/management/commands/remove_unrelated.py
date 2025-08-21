@@ -31,15 +31,18 @@ class Command(BaseCommand):
         for record in TweetInput.objects.filter(termo=termo).select_related('tweet','tweet__user'):
             tot_lidos += 1
             if tot_lidos % 1000 == 0:
-                print(tot_lidos)
+                print(tot_lidos,tot_removidos)
             if user:
                 if record.tweet.user.username != user:
                     record.delete()
                     tot_removidos += 1
             else:
                 if record.tweet.text.find(criterio) == -1:
+                    print(record.tweet.text)
                     record.delete()
                     tot_removidos += 1
+                    if tot_removidos == 5:
+                        break
         print(f'Total lidos: {tot_lidos}')
         print(f'Total removidos: {tot_removidos}')
 
