@@ -157,7 +157,7 @@ class Crawler:
         if termo.language:
             busca = f'{busca} lang:{termo.language}'
 
-        if not termo.retweet:
+        if not termo.retweets:
             busca = f'{busca} -is:retweet'
 
         print(busca)
