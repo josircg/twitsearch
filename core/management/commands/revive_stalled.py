@@ -30,6 +30,17 @@ def ressurect_processamentos():
     Processamento.objects.filter(status__in=('P', 'E'), dt=grace_time).update(status='A')
 
 
+def reassign(termo_id):
+    tot_incluidos = 0
+    termo = Termo.objects.get(pk=termo_id)
+    agora = datetime.now(pytz.timezone(TIME_ZONE))
+    p = Processamento.objects.create(tipo=PROC_MATCH, termo=termo, dt=agora, status=Processamento.CONCLUIDO)
+    for tweet in Tweet.objects.filter(termo_id=termo_id):
+        TweetInput.objects.get_or_create(termo=tweet.termo,tweet=tweet.twit_id,defaults={'processamento': p})
+        tot_incluidos += 1
+    print(f'Reassigned: {tot_incluidos}')
+
+
 from core.actions import import_xlsx
 from core.models import Rede, Projeto
 

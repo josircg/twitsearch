@@ -21,7 +21,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         id_termo = options['termo']
         termo = Termo.objects.get(id=id_termo)
-        criterio = termo.busca
+        criterio = termo.busca.replace('"','').replace("'",'').replace(' OR ','')
         if criterio.startswith('from:'):
             user = criterio.split()[0].split(':')[1]
         else:
