@@ -17,10 +17,11 @@ class CoreConfig(AppConfig):
     name = 'core'
 
 
-def save_result(data, processo, overwrite=True, opensearch=None):
+def save_result(data, processo, grava_termo=True, overwrite=True, opensearch=None):
     data['process'] = processo.id
-    data['termo'] = processo.termo.id
-    data['projeto'] = processo.termo.projeto.id
+    if grava_termo:
+        data['termo'] = processo.termo.id
+        data['projeto'] = processo.termo.projeto.id
     
     filename = f"{settings.BASE_DIR}/data/{data['id']}_{processo.termo.id}.json"
     if overwrite or not os.path.exists(filename):

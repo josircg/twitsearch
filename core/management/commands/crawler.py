@@ -116,7 +116,10 @@ class Crawler:
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
-                    self.since_id = min(int(ult_proc.twit_id),termo.prim_tweet)
+                    if termo.prim_tweet:
+                        self.since_id = min(int(ult_proc.twit_id),termo.prim_tweet)
+                    else:
+                        self.since_id = int(ult_proc.twit_id)
 
             if not self.since_id:
                 if not termo.prim_tweet:
@@ -201,7 +204,7 @@ class Crawler:
                 print('No includes found', tweets.source)
                 break
 
-            # os tweets originais, retweets, replies e quotes são gravados em 'data'
+            # os tweets primários, retweets, replies e quotes são gravados em 'data'
             for indice, tweet in enumerate(tweets.source['data']):
                 # os dados do autor devem ser reidratados no tweet original
                 user_record = users.get(str(tweet['author_id']),None)
@@ -242,7 +245,8 @@ class Crawler:
                             for ref in tweet.referenced_tweets:
                                 record['referenced_tweet'].append(ref.data)
 
-                        save_result(record, processo, overwrite=False, opensearch=self.client)
+                        # o registro é gravado mas não será associado ao projeto
+                        save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
                         self.tot_registros += 1
 
             print(f'Total registros: {self.tot_registros} / {menor_data}')

@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^source/(?P<tweet_id>\d+)/$', get_source, name='get_source'),
     url(r'^importacao_arquivo/', importacao_arquivo, name='importacao_arquivo'),
     path('api/redes/', redes, name='redes'),
+    path('api/eixos/', projetos, name='eixos'),
     path('api/projetos/', projetos, name='projeto'),
     path('api/projetos/<str:status>', projetos, name='projeto'),
     path('api/termos/<int:rede_id>', termos, name='termos'),
