@@ -42,9 +42,10 @@ def create_if_not_exists_index(client: OpenSearch, index_name):
 
 
 def save_object(client: OpenSearch, data, index_name):
+    chave = f"{data['id']}_{data['termo']}" if 'termo' in data else data['id']
     return client.index(
         index=index_name,
-        id=f"{data['id']}_{data['termo']}",
+        id=chave,
         body=data,
         request_timeout=60,
     )
