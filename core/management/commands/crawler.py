@@ -246,7 +246,7 @@ class Crawler:
                                 record['referenced_tweet'].append(ref.data)
 
                         # o registro é gravado mas não será associado ao projeto
-                        save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
+                        save_result(record, processo, grava_termo=True, overwrite=False, opensearch=self.client)
                         self.tot_registros += 1
 
             print(f'Total registros: {self.tot_registros} / {menor_data}')
