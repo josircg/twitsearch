@@ -53,8 +53,13 @@ TIPO_PROCESSAMENTO = (
     (PROC_NETWORK,      'Montagem Rede')
 )
 
+# Indica que está pronto para ser processado
+# Em fila, indica que ele está em fila para ser processado (pois retornou muitos registros)
+# Processando indica que o termo está sendo processado neste instante
+# Interrompido indica que o usuário interrompeu o processo manualmente
+# Concluído indica que a busca foi concluída pelo usuário porque atingiu a data final programada
 STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
-                ('I', 'Interrompido'), ('C', 'Concluido'))
+                ('I', 'Fila'), ('X', 'Interrompido'), ('C', 'Concluido'))
 
 
 class Rede(models.Model):
