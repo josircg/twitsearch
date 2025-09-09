@@ -394,7 +394,7 @@ class TermoAdmin(PowerModelAdmin):
 
 
 class ProcessamentoAdmin(PowerModelAdmin):
-    list_display = ('termo', 'tipo', 'dt', 'twit_id', 'tot_twits', 'tot_registros')
+    list_display = ('tipo', 'dt', 'termo', 'twit_id', 'tot_twits', 'tot_registros')
     raw_id_fields = ('termo', )
     list_filter = ('tipo', 'dt')
 
