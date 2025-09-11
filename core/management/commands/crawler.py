@@ -90,6 +90,7 @@ class Crawler:
         termo = processo.termo
         next_token = None
 
+        print(f'\nProcesso {processo.id}')
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet or 0
