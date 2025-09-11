@@ -218,6 +218,10 @@ class Processo:
                     termo = None
                 elif termo.dtinicio and tweet.created_time < termo.dtinicio:
                     termo = None
+                else:
+                    # se o idioma foi definido e o idioma do tweet for diferente, não gravar o termo
+                    if termo.language and termo.language != tweet.language:
+                        termo = None
 
             TweetInput.objects.get_or_create(tweet=tweet, termo=termo,
                                              defaults={'processamento': processo_atual})
