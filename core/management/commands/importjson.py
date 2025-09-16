@@ -358,6 +358,8 @@ class Command(BaseCommand):
                                 print('Mais de 10 erros encontrados')
                                 break
                         tot_files += 1
+                        if tot_files == 10:
+                            break
             finally:
                 if tot_files == 0:
                     if processo_ativo.tot_registros == 0:
