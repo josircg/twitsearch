@@ -255,6 +255,7 @@ class Crawler:
 
         termo.ult_processamento = agora
 
+        # marca o agendamento como concluído
         if self.correcao:
             if proc:
                 proc.status = Processamento.CONCLUIDO
@@ -270,6 +271,12 @@ class Crawler:
             Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
                                          twit_id=self.menor_tweet)
         else:
+            # se for um processamento de correção que terminou, deve-se restaurar o último tweet carregado
+            if self.correcao:
+                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA).order_by('-twit_id').first()
+                last = TweetInput.objects.filter(termo=termo).select_related('tweet').order_by('-tweet.twit_id').first()
+                termo.ult_tweet = max(proc.twit_id, last.tweet.twit_id)
+
             # se a data atual for maior que o final programado
             if termo.dtfinal and menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
                 print(f'Termo {termo.id} finalizado')

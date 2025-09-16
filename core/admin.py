@@ -53,7 +53,7 @@ class TermoInline(StackedInline):
     model = Termo
     form = TermoInlineForm
     extra = 0
-    fields = (('descritivo', 'id'), 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
+    fields = (('descritivo', 'id_link'), 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
 
     def get_readonly_fields(self, request, obj=None):
         if obj:
@@ -62,9 +62,9 @@ class TermoInline(StackedInline):
             readonly = False
 
         if not readonly:
-            return 'estimativa', 'last_count', 'id'
+            return 'estimativa', 'last_count', 'id_link',
         else:
-            return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count', 'id'
+            return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count', 'id_link'
 
     def has_add_permission(self, request, obj):
         projeto = get_object_from_path(request, Projeto)
@@ -373,10 +373,14 @@ class TermoAdmin(PowerModelAdmin):
 
     def get_buttons(self, request, object_id=None):
         buttons = super(TermoAdmin, self).get_buttons(request, object_id)
-        #if object_id:
-        #    buttons.append(
-        #        PowerButton(url=reverse('testa_busca', kwargs={'id': object_id, }),
-        #                    label=u'Testar'))
+        if object_id:
+            buttons.append(
+                PowerButton(url='/admin/core/tweetinput/?termo__id=%d' % object_id,
+                            label="Tweets", attrs={'target': '_blank'})
+            )
+            #buttons.append(
+            #    PowerButton(url=reverse('teste_termo', kwargs={'id': object_id, }),
+            #                label=u'Testar'))
         return buttons
 
     def get_actions(self, request):
@@ -410,13 +414,21 @@ class ProcessamentoAdmin(PowerModelAdmin):
 
 class TweetInputAdmin(PowerModelAdmin):
     search_fields = ('tweet__twit_id', )
-    list_display = ('tweet', 'termo', 'processamento', )
+    list_display = ('tweet', 'termo', 'tweet_text', 'tweet_dt')
     raw_id_fields = ('tweet', 'termo', 'processamento', )
 
     def lookup_allowed(self, lookup, value):
         if lookup in ('tweet_twit_id', 'processamento__id', 'termo__projeto__id'):
             return True
         return super(TweetInputAdmin, self).lookup_allowed(lookup, value)
+
+    def tweet_text(self, instance):
+        return instance.tweet.text[:100]
+    tweet_text.short_description = 'Conteúdo'
+
+    def tweet_dt(self, instance):
+        return instance.tweet.created_time
+    tweet_dt.short_description = 'Dt'
 
 admin.site.register(Projeto, ProjetoAdmin)
 admin.site.register(TweetUser, UserAdmin)

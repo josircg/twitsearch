@@ -29,9 +29,7 @@ class Processo:
         self.counter_users = 0
         self.counter_tweets = 0
         self.counter_retweets = 0
-        self.termos = []
-        if self.processamento.termo:
-            self.termos.append(processo_db.termo.id)
+        self.termos_processados = {}
 
     def create_reference(self, parent_tweet, tweet_type, new_id, user, dt):
         retweet, created = Retweet.objects.get_or_create(retweet_id=new_id,
@@ -126,14 +124,19 @@ class Processo:
                 user.followers = follow.followers
                 user.save()
 
-        if 'process' in src and src['process'] != self.processamento:
+        termo_id = src.get('termo', None)
+        if termo_id:
+            termo_atual = Termo.objects.filter(id=termo_id).first()
+            if not termo_atual:
+                print(f'Termo não encontrado {termo_id}')
+        else:
+            termo_atual = None
+
+        if 'process' in src:
             try:
                 processo_atual = Processamento.objects.get(id=src['process'])
             except Processamento.DoesNotExist:
                 processo_atual = self.processamento
-
-            if processo_atual.termo and processo_atual.termo.id not in self.termos:
-                self.termos.append( processo_atual.termo.id )
         else:
             processo_atual = self.processamento
 
@@ -181,8 +184,13 @@ class Processo:
 
             try:
                 tweet = Tweet.objects.get(twit_id=src['id'])
-                tweet.termo = tweet.termo or processo_atual.termo
-                tweet.text = texto
+                tweet.termo = tweet.termo or termo_atual
+                if tweet.termo:
+                    tweet.text = texto
+                else:
+                    # caso o tweet tenha sido criado apenas como referência a partir de um outro tweet, o texto pode vir truncado
+                    # assim, só gravar o texto se não houver o texto original
+                    tweet.text = tweet.text or texto
             except Tweet.DoesNotExist:
                 tweet = Tweet(
                             twit_id=src['id'], user=user, text=texto,
@@ -190,7 +198,7 @@ class Processo:
                             retweets=0,
                             favorites=0,
                             imprints=0,
-                            termo=processo_atual.termo)
+                            termo=termo_atual)
                 self.counter_tweets += 1
 
             tweet.language = src.get('lang', tweet.language)
@@ -212,18 +220,23 @@ class Processo:
             tweet.save()
 
             # se a data do tweet for maior que a data programada para o termo, não grava o termo
-            termo = processo_atual.termo
-            if termo:
-                if termo.dtfinal and tweet.created_time > termo.dtfinal:
-                    termo = None
-                elif termo.dtinicio and tweet.created_time < termo.dtinicio:
-                    termo = None
+            if termo_atual:
+                if termo_atual.dtfinal and tweet.created_time > termo_atual.dtfinal:
+                    termo_atual = None
+                elif termo_atual.dtinicio and tweet.created_time < termo_atual.dtinicio:
+                    termo_atual = None
                 else:
                     # se o idioma foi definido e o idioma do tweet for diferente, não gravar o termo
-                    if termo.language and termo.language != tweet.language:
-                        termo = None
+                    if termo_atual.language and termo_atual.language != tweet.language:
+                        termo_atual = None
 
-            TweetInput.objects.get_or_create(tweet=tweet, termo=termo,
+            if termo_atual:
+                if termo_atual.id in self.termos_processados:
+                    self.termos_processados[termo_atual.id] += 1
+                else:
+                    self.termos_processados[termo_atual.id] = 1
+
+            TweetInput.objects.get_or_create(tweet=tweet, termo=termo_atual,
                                              defaults={'processamento': processo_atual})
 
         return tweet, user
@@ -358,20 +371,25 @@ class Command(BaseCommand):
                 commit()
                 print('Processamento concluído')
 
-        # Estatísticas
-        if len(processo.termos) == 1:
-            termo = Termo.objects.filter(id=processo.termos[0]).first()
+        # Atualiza o contador de tweets de cada termo importado
+        tot_termos = 0
+        for termo_id in processo.termos_processados.keys():
+            termo = Termo.objects.filter(pk=termo_id).first()
+            if termo:
+                total_processado = processo.termos_processados[termo_id]
+                tot_tweets = termo.tweetinput_set.count()
+                termo.last_count = tot_tweets
+                tot_termos += 1
+                termo.save()
+                termo.projeto.tot_twits = (termo.projeto.tot_twits or 0) + total_processado
+                termo.projeto.save()
+                log_message(termo.projeto, f'{total_processado} registros importados no termo {termo.busca}')
+
+        # Caso só exista um termo processado, gravar no processo de importação
+        if tot_termos == 1:
             processo_ativo.termo = termo
             processo_ativo.save()
 
-        # Atualiza o contador de tweets de cada termo importado
-        for termo in Termo.objects.filter(id__in=processo.termos):
-            ultima_contagem = termo.last_count
-            tot_tweets = termo.tweetinput_set.count()
-            termo.last_count = tot_tweets
-            termo.save()
-            diferenca = termo.last_count - ultima_contagem
-            log_message(termo.projeto, f'{diferenca} registros importados no termo {termo.busca}')
         commit()
 
         '''
@@ -385,7 +403,7 @@ class Command(BaseCommand):
             print('Arquivos processados: %d' % tot_files)
             if optimize:
                 print('Arquivos duplicados: %d' % tot_dup)
-            print('Termos processados: %d' % len(processo.termos))
+            print('Termos processados: %d' % tot_termos)
             print('Arquivos com erro: %d' % tot_erros)
             print('Novos Usuários: %d' % processo.counter_users)
             print('Novos Tweets: %d' % processo.counter_tweets)

@@ -211,6 +211,11 @@ class Termo(models.Model):
             total = cursor.fetchone()[0]
         return total or 0
 
+    def id_link(self):
+        return mark_safe(f'<a href="/admin/core/termo/{self.id}">{self.id}</a>')
+    id_link.allow_tags = True
+    id_link.short_description = 'ID'
+
     @property
     def tot_favorites(self):
         with connection.cursor() as cursor:
