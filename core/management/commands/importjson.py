@@ -358,7 +358,7 @@ class Command(BaseCommand):
                                 print('Mais de 10 erros encontrados')
                                 break
                         tot_files += 1
-                        if tot_files == 10:
+                        if tot_files == 100:
                             break
             finally:
                 if tot_files == 0:
@@ -385,7 +385,9 @@ class Command(BaseCommand):
                 termo.save()
                 termo.projeto.tot_twits = (termo.projeto.tot_twits or 0) + total_processado
                 termo.projeto.save()
-                log_message(termo.projeto, f'{total_processado} registros importados no termo {termo.busca}')
+                mensagem = f'{total_processado} registros importados no termo {termo.busca}'
+                print(mensagem)
+                log_message(termo.projeto, mensagem)
 
         # Caso só exista um termo processado, gravar no processo de importação
         if tot_termos == 1:
