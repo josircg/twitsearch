@@ -274,7 +274,7 @@ class Crawler:
             # se for um processamento de correção que terminou, deve-se restaurar o último tweet carregado
             if self.correcao:
                 proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA).order_by('-twit_id').first()
-                last = TweetInput.objects.filter(termo=termo).select_related('tweet').order_by('-tweet.twit_id').first()
+                last = TweetInput.objects.filter(termo=termo).select_related('tweet').order_by('-tweet__twit_id').first()
                 termo.ult_tweet = max(proc.twit_id, last.tweet.twit_id)
 
             # se a data atual for maior que o final programado
@@ -292,12 +292,15 @@ def processa_termo(termo, limite, fake_run):
     agora = timezone.now()
     mensagem = ''
 
-    # se a data inicial já for superior a data final, concluir a carga
+    if termo.tipo_busca not in (PROC_FULL, PROC_PREMIUM):
+        print('O Crawler só funciona para cargas via API')
+
     if termo.tipo_busca == PROC_FULL:
         inicio_processamento = termo.dtinicio
     else:
         inicio_processamento = max(termo.dtinicio, agora - timedelta(days=7))
 
+    # se a data inicial já for superior a data final, concluir a carga
     if termo.dtfinal and inicio_processamento > termo.dtfinal:
         termo.status = 'C'
         termo.save()
@@ -401,6 +404,7 @@ class Command(BaseCommand):
         else:
             tot_termos = 0
             for termo in Termo.objects.filter(status__in=('A','I'), projeto__status='A',
+                                              tipo_busca__in=(PROC_FULL, PROC_PREMIUM),
                                               projeto__redes=rede_twitter).order_by('ult_processamento'):
                 processa_termo(termo, limite, fake_run)
                 time.sleep(2)

@@ -307,7 +307,6 @@ class Command(BaseCommand):
                     tweet, user = processo.load_twitter(twitter_data)
                     if tweet:
                         commit()
-                    tot_files = 1
             else:
                 print('Arquivo %s não encontrado' % filename)
         else:
@@ -369,31 +368,38 @@ class Command(BaseCommand):
                     processo_ativo.tot_registros = tot_files
                     processo_ativo.save()
                 commit()
-                print('Processamento concluído')
 
-        # Atualiza o contador de tweets de cada termo importado
-        tot_termos = 0
-        for termo_id in processo.termos_processados.keys():
-            termo = Termo.objects.filter(pk=termo_id).first()
-            if termo:
-                total_processado = processo.termos_processados[termo_id]
-                tot_tweets = termo.tweetinput_set.count()
-                termo.last_count = tot_tweets
-                tot_termos += 1
-                termo.save()
-                termo.projeto.tot_twits = (termo.projeto.tot_twits or 0) + total_processado
-                termo.projeto.save()
-                mensagem = f'{total_processado} registros importados no termo {termo.busca}'
-                print(mensagem)
-                log_message(termo.projeto, mensagem)
+                # Atualiza o contador de tweets de cada termo importado
+                tot_termos = 0
+                for termo_id in processo.termos_processados.keys():
+                    termo = Termo.objects.filter(pk=termo_id).first()
+                    if termo:
+                        total_processado = processo.termos_processados[termo_id]
+                        tot_tweets = termo.tweetinput_set.count()
+                        termo.last_count = tot_tweets
+                        tot_termos += 1
+                        termo.save()
+                        termo.projeto.tot_twits = (termo.projeto.tot_twits or 0) + total_processado
+                        termo.projeto.save()
+                        print(f'Termo {termo.id}: importados {total_processado}')
+                        log_message(termo.projeto, f'{total_processado} registros importados no termo {termo.busca}')
 
-        # Caso só exista um termo processado, gravar no processo de importação
-        if tot_termos == 1:
-            processo_ativo.termo = termo
-            processo_ativo.save()
+                # Caso só exista um termo processado, gravar no processo de importação
+                if tot_termos == 1:
+                    processo_ativo.termo = termo
+                    processo_ativo.save()
 
-        commit()
+                commit()
 
+                if tot_files != 0:
+                    print('Arquivos processados: %d' % tot_files)
+                    if optimize:
+                        print('Arquivos duplicados: %d' % tot_dup)
+                    print('Termos processados: %d' % tot_termos)
+                    print('Arquivos com erro: %d' % tot_erros)
+                    print('Novos Usuários: %d' % processo.counter_users)
+                    print('Novos Tweets: %d' % processo.counter_tweets)
+                    print('Novos Retweets: %d' % processo.counter_retweets)
         '''
         from core.apps import find_first_tweet
         termo = Termo.objects.get(id=7)
@@ -401,12 +407,3 @@ class Command(BaseCommand):
         termo.save()
         '''
 
-        if tot_files != 0:
-            print('Arquivos processados: %d' % tot_files)
-            if optimize:
-                print('Arquivos duplicados: %d' % tot_dup)
-            print('Termos processados: %d' % tot_termos)
-            print('Arquivos com erro: %d' % tot_erros)
-            print('Novos Usuários: %d' % processo.counter_users)
-            print('Novos Tweets: %d' % processo.counter_tweets)
-            print('Novos Retweets: %d' % processo.counter_retweets)
