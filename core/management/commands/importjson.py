@@ -235,9 +235,12 @@ class Processo:
                     self.termos_processados[termo_atual.id] += 1
                 else:
                     self.termos_processados[termo_atual.id] = 1
+                input_log = TweetInput.objects.filter(tweet=tweet, termo=termo_atual).first()
+            else:
+                input_log = TweetInput.objects.filter(tweet=tweet, termo__isnull=True).first()
 
-            TweetInput.objects.get_or_create(tweet=tweet, termo=termo_atual,
-                                             defaults={'processamento': processo_atual})
+            if not input_log:
+                TweetInput.objects.create(tweet=tweet, termo=termo_atual, processamento=processo_atual)
 
         return tweet, user
 
@@ -355,7 +358,8 @@ class Command(BaseCommand):
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))
                             traceback.print_exc()
-                            rename(filename, join(dest_dir, 'ruim', arquivo.name))
+                            if exists(filename):
+                                rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
                             tot_erros += 1
                             if tot_erros > 10:
