@@ -331,6 +331,7 @@ class Command(BaseCommand):
                                 texto = file.read()
                                 twitter_data = json.loads(texto)
 
+                            tot_files += 1
                             if 'data' in twitter_data:
                                 data = twitter_data.get('data')
                                 if type(data) == list:
@@ -348,7 +349,8 @@ class Command(BaseCommand):
                                 rename(filename, join(cached_dir, arquivo.name))
 
                             if tot_files % 1000 == 0:
-                                print(f'Total de arquivos:{tot_files} {tweet.termo}')
+                                if tweet:
+                                    print(f'Total de arquivos:{tot_files} {tweet.termo}')
 
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))
@@ -359,7 +361,7 @@ class Command(BaseCommand):
                             if tot_erros > 10:
                                 print('Mais de 10 erros encontrados')
                                 break
-                        tot_files += 1
+
             finally:
                 if tot_files == 0:
                     if processo_ativo.tot_registros == 0:
