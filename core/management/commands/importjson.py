@@ -335,11 +335,11 @@ class Command(BaseCommand):
                                 data = twitter_data.get('data')
                                 if type(data) == list:
                                     for record in twitter_data.get('data'):
-                                        processo.load_twitter(record)
+                                        tweet, user = processo.load_twitter(record)
                                 else:
-                                    processo.load_twitter(data)
+                                    tweet, user = processo.load_twitter(data)
                             else:
-                                processo.load_twitter(twitter_data)
+                                tweet, user = processo.load_twitter(twitter_data)
 
                             commit()
                             if settings.OPENSEARCH_SERVERS:
@@ -348,7 +348,7 @@ class Command(BaseCommand):
                                 rename(filename, join(cached_dir, arquivo.name))
 
                             if tot_files % 1000 == 0:
-                                print(f'{tot_files}: {processo_ativo}')
+                                print(f'Total de arquivos:{tot_files} {tweet.termo}')
 
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))

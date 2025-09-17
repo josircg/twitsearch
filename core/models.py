@@ -5,7 +5,7 @@ from django.db.models import Sum
 from django.contrib.auth.models import User, Group
 from django.utils.safestring import mark_safe
 
-from core import clean_pontuation, stopwords
+from core import clean_pontuation, stopwords, log_message
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium
@@ -191,6 +191,7 @@ class Termo(models.Model):
     ult_processamento = models.DateTimeField(null=True, blank=True)  # Última vez que o crawler foi executado
     last_count = models.IntegerField('Total de Tweets', default=0)
     estimativa = models.IntegerField('Total Estimado', default=0)
+    obs = models.TextField('Observação sobre a coleta', null=True, blank=True)
 
     def __str__(self):
         return self.busca
@@ -244,6 +245,12 @@ class Termo(models.Model):
             return last.twit_id
         else:
             return None
+
+    def save(self, *args, **kwargs):
+        inserted = not self.id
+        super().save(*args, **kwargs)
+        if inserted:
+            log_message(self, f'Termo adicionado')
 
     class Meta:
         verbose_name = 'Termo de Busca'
