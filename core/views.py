@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.http import HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render, redirect
+from django.contrib.admin.views.decorators import staff_member_required
 
 from django.http import HttpResponse
 from django.template import RequestContext
@@ -24,6 +25,7 @@ from core.actions import generate_tags_file, busca_local, import_xlsx, import_li
 from core.forms import ImportForm
 from core.models import *
 from core.management.commands.remove_json import remove_json
+from core.opensearch import connect_opensearch
 from twitsearch.settings import BASE_DIR, TIME_ZONE
 import networkx as nx
 import numpy as np
@@ -471,3 +473,67 @@ def importacao_arquivo(request):
 #     data = np.random.rand(4,6)
 #     heat_map = sb.heatmap(data)
 #     plt.show()
+
+
+@staff_member_required
+def status_coleta(request, termo_id):
+    if not getattr(settings, 'OPENSEARCH_SERVERS', None):
+        messages.error(request, "Gráfico não implementado para a base local")
+        return redirect(reverse('admin:core_termo_change', args=(termo_id,)))
+    
+    client = connect_opensearch('minerva-teste')
+    
+    query = {
+        "size": 0, 
+        "query": {
+            "bool": {
+                "must": [
+                    { "term": { "termo": termo_id} },                    
+                ],            
+            }
+        },
+        "aggs": {
+            "tweets_por_dia": {
+                "date_histogram": {
+                    "field": "created_at",
+                    "calendar_interval": "day",
+                    "format": "yyyy-MM-dd"
+                }
+            }
+        }
+    }
+    
+    response = client.search(index="twitter*", body=query)    
+    agg = response.get('aggregations', {}).get('tweets_por_dia')
+    
+    dias_formatted = []
+    dias_valores = []
+    for item in agg.get('buckets', []):
+        date = item['key_as_string']
+        value = item['doc_count']
+        
+        dias_valores.append(value)
+        dias_formatted.append(date)
+    
+    fig2 = graph_objs.Figure(graph_objs.Bar(
+        x=dias_formatted,
+        y=dias_valores
+    ))
+
+    fig2.update_layout(title='Tweets por dia',
+        xaxis_nticks=36,
+        xaxis=graph_objs.layout.XAxis(
+                title=graph_objs.layout.xaxis.Title(
+                    text='Dias do mês'
+            )
+        ),
+        yaxis=graph_objs.layout.YAxis(
+            title=graph_objs.layout.yaxis.Title(
+                text="Total de Tweets",
+                )
+        )
+    )
+    
+    grafico_div = plot(fig2, output_type='div')
+                        
+    return render(request, 'core/termo_stats.html', {'grafico_div': grafico_div })

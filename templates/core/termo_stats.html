@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+{% block title %}{{block.super}}{% endblock %}
+{% block extrahead %}<meta charset="UTF-8">{% endblock %}
+{% block extrastyle %}{{ block.super }}
+{% endblock %}
+
+{% block breadcrumbs %}
+{% endblock %}
+
+{% block content_title %}<h1>Status da Coleta</h1>{% endblock %}
+
+{% block content %}
+<div id="content-main">    
+	<div>
+		<fieldset class="module aligned ">						   
+            <div class="block" style="display: flex;">                
+                 <div class="graficos" style="display: flex; flex-direction: column; align-items: start">
+                     {% autoescape off %}                         
+                         {{ grafico_div }}
+                     {% endautoescape %}
+                 </div>
+            </div>
+		</fieldset>
+	</div>
+</div>
+{% endblock %}
