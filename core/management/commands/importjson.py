@@ -347,6 +347,9 @@ class Command(BaseCommand):
                             else:
                                 rename(filename, join(cached_dir, arquivo.name))
 
+                            if tot_files % 1000 == 0:
+                                print(f'{tot_files}: {processo_ativo}')
+
                         except Exception as e:
                             print('Erro no arquivo %s: %s' % (filename, e))
                             traceback.print_exc()

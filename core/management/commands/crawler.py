@@ -74,15 +74,15 @@ def processa_item_unico(twit_id, termo_id):
 class Crawler:
 
     def __init__(self, limite=2000, opensearch_client=None):
-        self.since_id = None
-        self.until_id = None
-        self.tot_registros = 0
-        self.limite = limite
-        self.ultimo_tweet = 0
-        self.menor_tweet = 0
+        self.tot_registros = 0      # total de registros capturados
+        self.limite = limite        # limite máximo de tweets para capturar
+        self.ultimo_tweet = 0       # ultimo tweet capturado
+        self.menor_tweet = 0        # menor tweet capturado
+        self.since_id = None        # limite inferior para informar para a API
+        self.until_id = None        # limite superior para informar para a API
         self.dt_inicial = None
         self.dt_final = None
-        self.correcao = False
+        self.correcao = False       # indica que é um processamento de correção
         self.client = opensearch_client
 
     def search_recent(self, processo, fake=False):
@@ -101,7 +101,7 @@ class Crawler:
                     self.dt_final = termo.dtfinal
                 print(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
             else:
-                print(f'Execução regular {termo.id}: {self.since_id}')
+                print(f'Execução regular {termo.id}: de {self.since_id} até agora')
 
         else:
             # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
@@ -267,9 +267,14 @@ class Crawler:
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
-            # Agenda o processamento de correção
+            # Agenda o próximo processamento de correção, marcando qual o since_id
+            if self.since_id:
+                proximo_inicio = min(self.since_id, self.menor_tweet)
+            else:
+                proximo_inicio = self.menor_tweet
+
             Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
-                                         twit_id=self.menor_tweet)
+                                         twit_id=proximo_inicio)
         else:
             # se for um processamento de correção que terminou, deve-se restaurar o último tweet carregado
             if self.correcao:
