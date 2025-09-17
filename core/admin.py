@@ -378,6 +378,10 @@ class TermoAdmin(PowerModelAdmin):
                 PowerButton(url='/admin/core/tweetinput/?termo__id=%d' % object_id,
                             label="Tweets", attrs={'target': '_blank'})
             )
+            buttons.append(
+                PowerButton(url='/termo_stat/%d' % object_id,
+                            label="Status Coleta")
+            )
             #buttons.append(
             #    PowerButton(url=reverse('teste_termo', kwargs={'id': object_id, }),
             #                label=u'Testar'))
