@@ -255,39 +255,32 @@ class Crawler:
 
         termo.ult_processamento = agora
 
-        # marca o agendamento como concluído
-        if self.correcao:
-            if proc:
-                proc.status = Processamento.CONCLUIDO
-                proc.save()
-        else:
-            # se algum registro foi recebido, atualizar
-            if self.tot_registros > 0 and self.ultimo_tweet:
-                termo.ult_tweet = max(termo.ult_tweet or 0,self.ultimo_tweet)
+        # se algum registro foi recebido, atualizar
+        if self.tot_registros > 0 and self.ultimo_tweet:
+            termo.ult_tweet = max(termo.ult_tweet or 0, self.ultimo_tweet)
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
-            # Agenda o próximo processamento de correção, marcando qual o since_id
-            if self.since_id:
-                proximo_inicio = min(self.since_id, self.menor_tweet)
-            else:
-                proximo_inicio = self.menor_tweet
-
+            # o limite superior é gravado para que o próximo processamento comece a partir dele
             Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
-                                         twit_id=proximo_inicio)
+                                         twit_id=self.menor_tweet)
         else:
-            # se for um processamento de correção que terminou, deve-se restaurar o último tweet carregado
-            if self.correcao:
-                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA).order_by('-twit_id').first()
-                last = TweetInput.objects.filter(termo=termo).select_related('tweet').order_by('-tweet__twit_id').first()
-                termo.ult_tweet = max(proc.twit_id, last.tweet.twit_id)
+            # só marcar o agendamento como concluído, se tiver recuperado menos que o limite
+            if self.correcao and proc:
+                proc.status = Processamento.CONCLUIDO
+                proc.save()
 
             # se a data atual for maior que o final programado
             if termo.dtfinal and menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
                 print(f'Termo {termo.id} finalizado')
                 termo.status = 'C'
             else:
-                termo.status = 'A'
+                # só marcar o status A se não tiver restado nenhum processamento agendado
+                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.AGENDADO).first()
+                if proc:
+                    termo.status = 'I'
+                else:
+                    termo.status = 'A'
         termo.save()
 
         return
@@ -296,6 +289,7 @@ def processa_termo(termo, limite, fake_run):
 
     agora = timezone.now()
     mensagem = ''
+    erro = False
 
     if termo.tipo_busca not in (PROC_FULL, PROC_PREMIUM):
         print('O Crawler só funciona para cargas via API')
@@ -333,7 +327,6 @@ def processa_termo(termo, limite, fake_run):
         crawler.search_recent(processo, fake_run)
         mensagem = f'{crawler.tot_registros} obtidos'
         commit()
-        erro = False
 
     except BadRequest as e:
         if len(e.api_messages) > 0:
@@ -352,7 +345,6 @@ def processa_termo(termo, limite, fake_run):
         if erro:
             log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
             print(f'Erro na montagem da busca. Termo:{termo.id} since_id:{crawler.since_id}')
-            print(f'Data inicial:{crawler.dt_inicial} Data Final:{crawler.dt_final}')
             print(mensagem)
 
             if crawler.menor_tweet:
