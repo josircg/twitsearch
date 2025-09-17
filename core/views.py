@@ -477,6 +477,8 @@ def importacao_arquivo(request):
 
 @staff_member_required
 def status_coleta(request, termo_id):
+    termo = get_object_or_404(Termo, pk=termo_id)
+    
     if not getattr(settings, 'OPENSEARCH_SERVERS', None):
         messages.error(request, "Gráfico não implementado para a base local")
         return redirect(reverse('admin:core_termo_change', args=(termo_id,)))
@@ -488,8 +490,16 @@ def status_coleta(request, termo_id):
         "query": {
             "bool": {
                 "must": [
-                    { "term": { "termo": termo_id} },                    
-                ],            
+                    { "term": { "termo": termo_id} },
+                    {
+                       "range": {
+                            "created_at": {
+                                "gte": termo.dtinicio.strftime("%Y-%m-%d"),
+                                "format": "yyyy-MM-dd"
+                            }
+                       }
+                    }                    
+                ],
             }
         },
         "aggs": {
