@@ -1,3 +1,4 @@
+from datetime import datetime
 from urllib.parse import urlencode
 
 from django.contrib import admin
@@ -49,12 +50,13 @@ class TermoInlineForm(forms.ModelForm):
         }
 
 
-class TermoInline(StackedInline):
+class TermoInline(PowerTabularInline):
     model = Termo
     form = TermoInlineForm
     extra = 0
-    fields = (('descritivo', 'id_link'), 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
-
+    fields = (( 'id_link','descritivo',), 'busca', 'busca_complementar', ('tipo_busca', 'dtinicio', 'dtfinal', 'language'), ('status', 'estimativa', 'last_count'),)
+    can_delete = False
+    
     def get_readonly_fields(self, request, obj=None):
         if obj:
             readonly = projeto_readonly(request.user, obj)
@@ -67,11 +69,10 @@ class TermoInline(StackedInline):
             return 'busca', 'tipo_busca', 'busca_complementar', 'dtinicio', 'dtfinal', 'language', 'status', 'estimativa', 'last_count', 'id_link'
 
     def has_add_permission(self, request, obj):
-        projeto = get_object_from_path(request, Projeto)
-        return not projeto_readonly(request.user, projeto)
-
-    def has_delete_permission(self, request, obj=None):
-        return not projeto_readonly(request.user, obj)
+        return False
+    
+    def has_change_permission(self, request, obj = None):
+        return False
 
 
 @admin.register(Rede)
@@ -176,7 +177,9 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def get_buttons(self, request, object_id=None):
         buttons = super(ProjetoAdmin, self).get_buttons(request, object_id)
-        if object_id:
+        if object_id:            
+            object = self.get_object(request, object_id)
+            
             buttons.append(
                 PowerButton(url=reverse('core_projeto_stats', kwargs={'project_id': object_id, }),
                             label=u'Estatísticas'))
@@ -196,8 +199,23 @@ class ProjetoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url='https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query', label=u'Como utilizar a busca', attrs={'target': '_blank'})
             )
+            
             buttons.append(
                 PowerButton(url=reverse('graph', kwargs={'project_id': object_id}), label='Grafo')
+            )
+            
+            termo = object.termo_set.last()
+            url = f"{reverse('admin:core_termo_add')}?projeto={object_id}"
+            if termo and termo.dtinicio:
+                url += f"&dtinicio={termo.dtinicio.strftime('%Y-%m-%d %H:%M:%S')}"
+            if object.language:
+                url += f"&language={object.language}"
+            
+            buttons.append(
+                PowerButton(
+                    url=url,
+                    label='Adicionar termo'
+                )
             )
 
         return buttons
@@ -360,11 +378,22 @@ class RetweetAdmin(PowerModelAdmin):
 
 class TermoAdmin(PowerModelAdmin):
     search_fields = ('busca', 'projeto__nome')
-    list_filter = ('status','projeto__redes__nome')
+    list_filter = ('status','projeto__redes__nome', 'projeto__eixo',)
     list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'last_count',)
     list_select_related = ('projeto', )
     list_per_page = 30
 
+    def get_changeform_initial_data(self, request):
+        initial = super().get_changeform_initial_data(request)
+        
+        if request.GET.get("dtinicio"):
+            try:
+                initial["dtinicio"] = datetime.fromisoformat(request.GET["dtinicio"])
+            except ValueError:
+                pass  # caso venha inválido, ignora
+        
+        return initial
+    
     def get_form(self, request, obj=None, **kwargs):
         form = super(TermoAdmin, self).get_form(request, obj, **kwargs)
         form.base_fields['busca'].widget.attrs['style'] = 'width: 80em;'
@@ -374,6 +403,7 @@ class TermoAdmin(PowerModelAdmin):
     def get_buttons(self, request, object_id=None):
         buttons = super(TermoAdmin, self).get_buttons(request, object_id)
         if object_id:
+            object = self.get_object(request, object_id)
             buttons.append(
                 PowerButton(url='/admin/core/tweetinput/?termo__id=%d' % object_id,
                             label="Tweets", attrs={'target': '_blank'})
@@ -381,6 +411,9 @@ class TermoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(url='/termo_stat/%d' % object_id,
                             label="Status Coleta")
+            )
+            buttons.append(
+                PowerButton(url=reverse('admin:core_projeto_change', args=(object.projeto_id,)), label="Projeto")
             )
             #buttons.append(
             #    PowerButton(url=reverse('teste_termo', kwargs={'id': object_id, }),
