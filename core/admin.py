@@ -207,7 +207,7 @@ class ProjetoAdmin(PowerModelAdmin):
             termo = object.termo_set.last()
             url = f"{reverse('admin:core_termo_add')}?projeto={object_id}"
             if termo and termo.dtinicio:
-                url += f"&dtinicio={termo.dtinicio.strftime('%Y-%m-%d %H:%M:%S')}"
+                url += f"&dtinicio={termo.dtinicio.strftime('%Y-%m-%dT%H:%M:%S')}"
             if object.language:
                 url += f"&language={object.language}"
             
@@ -388,7 +388,7 @@ class TermoAdmin(PowerModelAdmin):
         
         if request.GET.get("dtinicio"):
             try:
-                initial["dtinicio"] = datetime.fromisoformat(request.GET["dtinicio"])
+                initial["dtinicio"] = datetime.strptime(request.GET["dtinicio"], "%Y-%m-%dT%H:%M:%S")
             except ValueError:
                 pass  # caso venha inválido, ignora
         
