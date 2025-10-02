@@ -311,7 +311,8 @@ def processa_termo(termo, limite, fake_run):
     set_autocommit(False)
     processo = Processamento.objects.create(termo=termo, dt=agora,
                                             tipo=termo.tipo_busca, status=Processamento.PROCESSANDO)
-    Termo.objects.filter(id=termo.id).update(status='P')
+    if not fake_run:
+        Termo.objects.filter(id=termo.id).update(status='P')
     commit()
 
     if settings.OPENSEARCH_SERVERS:
@@ -341,21 +342,25 @@ def processa_termo(termo, limite, fake_run):
         erro = True
 
     finally:
-        log_message(termo, mensagem)
+        if not fake_run:
+            log_message(termo, mensagem)
+
         if erro:
-            log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
+            if not fake_run:
+                log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
             print(f'Erro na montagem da busca. Termo:{termo.id} since_id:{crawler.since_id}')
             print(mensagem)
 
-            if crawler.menor_tweet:
-                Processamento.objects.create(termo=termo, dt=agora,
-                                             tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
-                                             twit_id=crawler.menor_tweet)
+            if not fake_run:
+                if crawler.menor_tweet:
+                    Processamento.objects.create(termo=termo, dt=agora,
+                                                 tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
+                                                 twit_id=crawler.menor_tweet)
 
-            if crawler.ultimo_tweet != 0:
-                Termo.objects.filter(id=termo.id).update(status='E', ult_tweet=crawler.ultimo_tweet)
-            else:
-                Termo.objects.filter(id=termo.id).update(status='E')
+                if crawler.ultimo_tweet != 0:
+                    Termo.objects.filter(id=termo.id).update(status='E', ult_tweet=crawler.ultimo_tweet)
+                else:
+                    Termo.objects.filter(id=termo.id).update(status='E')
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet

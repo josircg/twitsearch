@@ -39,12 +39,11 @@ def save_result(data, processo, grava_termo=True, overwrite=True, opensearch=Non
 def find_first_tweet(termo):
     client = get_api_client()
     start_time = termo.dtinicio
-    end_time = termo.dtinicio
     dt_final = termo.dtfinal or (timezone.now() - timedelta(days=1))
     busca = termo.busca
     if termo.language:
         busca = f'{busca} lang:{termo.language}'
-    minutes = 10
+    minutes = 30
     tot_registros = 0
     prim_tweet = None
     print('Encontrando primeiro tweet')
@@ -68,7 +67,7 @@ def find_first_tweet(termo):
         if tot_registros == 0:
             minutes = minutes * 60
             start_time = end_time
-            time.sleep(5)
+            time.sleep(10)
     return prim_tweet
 
 
