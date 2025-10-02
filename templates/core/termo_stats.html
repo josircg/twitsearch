@@ -19,6 +19,17 @@
                          {{ grafico_div }}
                      {% endautoescape %}
                  </div>
+                 {% if agendamentos_pendentes %}
+                    <div class="agendamentos" style="margin-left: 20px;">
+                        <h2>Agendamentos Pendentes</h2>
+                        {% endif %}
+                        {% for agendamento in agendamentos_pendentes %}
+                            <div class="agendamento">
+                                <p>ID: {{ agendamento.twit_id }}</p>
+                                <p>Data: {{ agendamento.dt|date:"d/m/Y" }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
             </div>
 		</fieldset>
 	</div>
