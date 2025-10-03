@@ -80,9 +80,16 @@ def calcula_estimativa(termo, dt_inicial):
         end_time = min(termo.dtfinal, agora).isoformat()
     else:
         end_time = agora.isoformat()
+
+    busca = termo.busca
+    if termo.language:
+        busca = f'{busca} lang:{termo.language}'
+    if not termo.retweets:
+        busca = f'{busca} -is:retweet'
+
     # se a última estimativa for maior que duas horas para traz, não trazer nada
     if start_time < end_time:
-        response = client.get_recent_tweets_count(termo.busca, granularity="day",
+        response = client.get_recent_tweets_count(busca, granularity="day",
                                                   start_time=start_time,
                                                   end_time=end_time)
         for count in response.data:

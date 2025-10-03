@@ -8,7 +8,7 @@ from django.utils.safestring import mark_safe
 from core import clean_pontuation, stopwords, log_message
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
-PROC_PREMIUM = 'A'      # Importação Premium
+PROC_PREMIUM = 'A'      # Importação Premium/Básica (antiga Academic)
 PROC_FULL = 'F'         # Importação Full Archive
 PROC_CONTINUA = 'C'     # Captura Continuada (Quando um processo é interrompido)
 PROC_YOUTUBE = 'Y'      # Importação Youtube

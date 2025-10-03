@@ -36,19 +36,23 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     else:
                         last_estimate = Processamento.objects.filter(tipo=PROC_ESTIMATE, termo=termo).last()
 
-                    # por default, a data mínima deve ser 7 dias para trás
-                    ult_estimativa = hoje - datetime.timedelta(days=7) + datetime.timedelta(hours=2)
-                    # busca a última data de estimativa ou o início da coleta caso não encontre nenhuma
-                    if not last_estimate:
-                        if termo.dtinicio:
-                            ult_estimativa = max(ult_estimativa, termo.dtinicio)
+                    if termo.tipo_busca != PROC_PREMIUM:
+                        ult_estimativa = termo.dtinicio
                     else:
-                        ult_estimativa = max(last_estimate.dt, ult_estimativa)
+                        # por default, a data mínima deve ser 7 dias para trás
+                        ult_estimativa = hoje - datetime.timedelta(days=7) + datetime.timedelta(hours=2)
+                        # busca a última data de estimativa ou o início da coleta caso não encontre nenhuma
+                        if not last_estimate:
+                            if termo.dtinicio:
+                                ult_estimativa = max(ult_estimativa, termo.dtinicio)
+                        else:
+                            ult_estimativa = max(last_estimate.dt, ult_estimativa)
 
                     if termo.dtfinal:
                         dt_limite = min(hoje, termo.dtfinal)
                     else:
                         dt_limite = hoje
+
                     # obtem uma nova estimativa na API apenas se a data da última coleta
                     # for menor que hoje e menor que a data final de coleta
                     if ult_estimativa < dt_limite:
@@ -64,8 +68,10 @@ def update_stats_action(description=u"Recalcular estatísticas"):
                     alterados += 1
                 soma += termo.last_count
 
-                if termo.dtfinal and (termo.dtfinal < hoje + datetime.timedelta(days=8)):
-                    termo.status = 'C'
+                # se for busca premium e se a data final for menor que hoje+8, encerrrar o processamento
+                if termo.tipo_busca == PROC_PREMIUM:
+                    if termo.dtfinal and (termo.dtfinal < hoje + datetime.timedelta(days=8)):
+                        termo.status = 'C'
 
                 if termo.status == 'E':
                     status_projeto = 'E'
