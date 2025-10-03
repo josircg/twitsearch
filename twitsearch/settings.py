@@ -108,9 +108,21 @@ TIME_ZONE = 'America/Sao_Paulo'
 LANGUAGE_CODE = 'pt-BR'
 USE_I18N = True
 USE_TZ = True
-USE_L10N = True
+USE_L10N = False
 DATE_FORMAT = 'd/m/Y'
-DATETIME_FORMAT = 'd/m/Y H:i:s'
+DATETIME_FORMAT = 'd/m/Y'
+
+LANGUAGE_CODE = "pt-br"
+
+DATE_INPUT_FORMATS = [
+    "%d/%m/%Y",           # 26/09/2025
+    "%d-%m-%Y",           # 26-09-2025 (opcional)
+]
+
+DATETIME_INPUT_FORMATS = [
+    "%d/%m/%Y %H:%M",     # 26/09/2025 14:30
+    "%d/%m/%Y %H:%M:%S",  # 26/09/2025 14:30:59
+]
 
 # Decimal format
 DECIMAL_SEPARATOR = ','
