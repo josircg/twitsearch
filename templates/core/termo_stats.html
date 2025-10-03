@@ -13,7 +13,7 @@
 <div id="content-main">    
 	<div>
 		<fieldset class="module aligned ">						   
-            <div class="block" style="display: flex;">                
+            <div class="block" style="display: flex; flex-direction: column;">                
                  <div class="graficos" style="display: flex; flex-direction: column; align-items: start">
                      {% autoescape off %}                         
                          {{ grafico_div }}
@@ -26,7 +26,7 @@
                         {% for agendamento in agendamentos_pendentes %}
                             <div class="agendamento">
                                 <p>ID: {{ agendamento.twit_id }}</p>
-                                <p>Data: {{ agendamento.dt|date:"d/m/Y" }}</p>
+                                <p>Data:<a href="{% url 'admin:core_processamento_change' agendamento.id %}"> {{ agendamento.dt|date:"d/m/Y" }}</a></p>
                             </div>
                         {% endfor %}
                     </div>
