@@ -12,12 +12,45 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.contrib import messages
 
-from .apps import calcula_estimativa, save_result
+from .apps import save_result
 from .models import *
 from core import intdef, log_message
 
 from twitsearch.local import get_api_client
 from core.management.commands.importjson import Processo
+from datetime import timedelta, datetime
+
+
+def calcula_estimativa(termo, dt_inicial):
+    client = get_api_client()
+    agora = timezone.now() - timedelta(hours=2)
+    start_time = dt_inicial.isoformat()
+    total = 0
+    if termo.dtfinal:
+        end_time = min(termo.dtfinal, agora).isoformat()
+    else:
+        end_time = agora.isoformat()
+
+    busca = termo.busca
+    if termo.language:
+        busca = f'{busca} lang:{termo.language}'
+    if not termo.retweets:
+        busca = f'{busca} -is:retweet'
+
+    # se a última estimativa for maior que duas horas para traz, não trazer nada
+    if start_time < end_time:
+        if termo.tipo_busca == PROC_FULL:
+            response = client.get_all_tweets_count(busca, granularity="day",
+                                                   start_time=start_time,
+                                                   end_time=end_time)
+        else:
+            response = client.get_recent_tweets_count(busca, granularity="day",
+                                                      start_time=start_time,
+                                                      end_time=end_time)
+        for count in response.data:
+            total +=  count['tweet_count']
+    return total
+
 
 def update_stats_action(description=u"Recalcular estatísticas"):
     # Calcula a estimativa de tweets e o status do Projeto
@@ -55,7 +88,7 @@ def update_stats_action(description=u"Recalcular estatísticas"):
 
                     # obtem uma nova estimativa na API apenas se a data da última coleta
                     # for menor que hoje e menor que a data final de coleta
-                    if ult_estimativa < dt_limite:
+                    if ult_estimativa <= dt_limite:
                         try:
                             termo.estimativa += calcula_estimativa(termo, ult_estimativa)
                             proc = Processamento(tipo=PROC_ESTIMATE, termo=termo, dt=hoje, status='C',

@@ -4,7 +4,6 @@ import time
 from datetime import timedelta, datetime
 
 from django.apps import AppConfig
-from django.utils import timezone
 
 from django.conf import settings
 from django.utils import timezone
@@ -69,29 +68,3 @@ def find_first_tweet(termo):
             start_time = end_time
             time.sleep(10)
     return prim_tweet
-
-
-def calcula_estimativa(termo, dt_inicial):
-    client = get_api_client()
-    agora = timezone.now() - timedelta(hours=2)
-    start_time = dt_inicial.isoformat()
-    total = 0
-    if termo.dtfinal:
-        end_time = min(termo.dtfinal, agora).isoformat()
-    else:
-        end_time = agora.isoformat()
-
-    busca = termo.busca
-    if termo.language:
-        busca = f'{busca} lang:{termo.language}'
-    if not termo.retweets:
-        busca = f'{busca} -is:retweet'
-
-    # se a última estimativa for maior que duas horas para traz, não trazer nada
-    if start_time < end_time:
-        response = client.get_recent_tweets_count(busca, granularity="day",
-                                                  start_time=start_time,
-                                                  end_time=end_time)
-        for count in response.data:
-            total +=  count['tweet_count']
-    return total

@@ -173,6 +173,7 @@ class Crawler:
             if termo.tipo_busca == PROC_FULL:
                 tweets = client.search_all_tweets(
                              query=busca,
+                             sort_order='relevancy',
                              tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                              next_token=next_token,
                              since_id=self.since_id,
