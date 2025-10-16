@@ -113,6 +113,7 @@ class Crawler:
             # Busca o último processamento anterior ao agendamento
             if proc:
                 self.until_id = int(proc.twit_id)
+                print(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
                 ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
@@ -140,7 +141,7 @@ class Crawler:
                         self.until_id = int(primeiro.tweet_id)
                         print(f'Until: {self.until_id}')
 
-                if self.since_id and self.since_id > self.until_id:
+                if self.since_id and self.until_id and self.since_id > self.until_id:
                     print('Não foi possível encontrar a faixa')
                     next_token = 'Fim'
 
