@@ -207,7 +207,6 @@ class Crawler:
         busca = processo.termo.busca
         if processo.termo.language:
             busca = f'{busca} lang:{processo.termo.language}'
-        print(busca)
 
         if not processo.termo.retweets:
             busca = f'{busca} -is:retweet'
@@ -216,6 +215,8 @@ class Crawler:
             sort_order = 'relevancy'
         else:
             sort_order = 'recency'
+
+        print(f'{busca} / {sort_order}')
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             # se a busca não for a acadêmica (Premium), executar search_all
