@@ -214,7 +214,7 @@ class Crawler:
         if mais_relevantes:
             sort_order = 'relevancy'
         else:
-            sort_order = 'recency'
+            sort_order = None
 
         print(f'{busca} / {sort_order}')
 
