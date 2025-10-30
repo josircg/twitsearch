@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.template import RequestContext
 from django import forms
 
+from core.forms import ProjetoAdminForm
 from core.models import *
 
 from core.actions import export_tags_action, export_extra_action, detach_action, \
@@ -97,6 +98,7 @@ class ProjetoAdmin(PowerModelAdmin):
               'tot_estimado', 'tot_twits', 'tot_retwits', 'tot_favorites', 'stopwords')
     list_per_page = 25
     inlines = [TermoInline]
+    form = ProjetoAdminForm
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(ProjetoAdmin, self).get_form(request, obj, **kwargs)
