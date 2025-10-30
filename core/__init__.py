@@ -2,9 +2,10 @@ import os
 import re
 import shlex
 import subprocess
-import time
 import pytz
-from datetime import date, time, datetime, timezone
+
+from datetime import date, time, datetime
+from time import strptime, mktime
 
 from twitsearch import settings
 
@@ -46,13 +47,13 @@ def find_urls(text):
 
 
 # Converte datas que venham no formato do Twitter
-def convert_date(date_str) -> datetime:
+def convert_date(date_str: str) -> datetime:
     if 'Z' in date_str:
         '2022-03-05T13:17:21.000Z'
-        time_struct = time.strptime(date_str, '%Y-%m-%dT%H:%M:%S.000Z')
+        time_struct = strptime(date_str, '%Y-%m-%dT%H:%M:%S.000Z')
     else:
-        time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
-    return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
+        time_struct = strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
+    return datetime.fromtimestamp(mktime(time_struct)).replace(tzinfo=pytz.UTC)
 
 
 def convert_date_datetime(data_objeto: date, hora: int = 0, minuto: int = 0, segundo: int  = 0) -> datetime:

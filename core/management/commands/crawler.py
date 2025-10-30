@@ -79,6 +79,7 @@ class Crawler:
         self.limite = limite        # limite máximo de tweets para capturar
         self.ultimo_tweet = 0       # ultimo tweet capturado
         self.menor_tweet = 0        # menor tweet capturado
+        self.menor_data = None      # menor data capturada
         self.since_id = None        # limite inferior para informar para a API
         self.until_id = None        # limite superior para informar para a API
         self.dt_inicial = None
@@ -156,111 +157,9 @@ class Crawler:
                 self.dt_final = termo.dtfinal
             self.since_id = None
 
-        client = get_api_client()
-        menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-        busca = termo.busca
-        if termo.language:
-            busca = f'{busca} lang:{termo.language}'
-
-        if not termo.retweets:
-            busca = f'{busca} -is:retweet'
-
-        print(busca)
-
-        if fake:
-            return
-
-        while self.tot_registros < self.limite and next_token != 'Fim':
-            if termo.tipo_busca == PROC_FULL:
-                tweets = client.search_all_tweets(
-                             query=busca,
-                             sort_order='relevancy',
-                             tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
-                             next_token=next_token,
-                             since_id=self.since_id,
-                             until_id=self.until_id,
-                             start_time=self.dt_inicial,
-                             end_time = self.dt_final,
-                             max_results=100)
-            else:
-                tweets = client.search_recent_tweets(
-                             query=busca,
-                             tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS, user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
-                             next_token=next_token,
-                             since_id=self.since_id,
-                             start_time=self.dt_inicial,
-                             end_time =self.dt_final,
-                             max_results=100)
-
-            if tweets.source.get('meta'):
-                if tweets.source['meta'].get('result_count',0) == 0:
-                    break
-
-            users = {}
-            if tweets.source.get('includes'):
-                for user in tweets.source['includes']['users']:
-                    users[str(user['id'])] = {'username': user['username'], 'name': user['name'], 'verified': user['verified'],
-                                              'followers_count': user['public_metrics']['followers_count'],
-                                              'following_count': user['public_metrics']['following_count'],
-                                              'tweet_count': user['public_metrics']['tweet_count']}
-            else:
-                print('No includes found', tweets.source)
-                break
-
-            # os tweets primários, retweets, replies e quotes são gravados em 'data'
-            for indice, tweet in enumerate(tweets.source['data']):
-                # os dados do autor devem ser reidratados no tweet original
-                user_record = users.get(str(tweet['author_id']),None)
-                if user_record:
-                    tweet['user'] = user_record
-
-                if len(tweets.data[indice].context_annotations) > 0:
-                    tweet['context'] = tweets.data[indice].context_annotations
-
-                save_result(tweet, processo, opensearch=self.client)
-                if 'created_at' in tweet:
-                    menor_data = min(menor_data, tweet['created_at'])
-                current_id = intdef(tweet['id'],0)
-                if current_id != 0:
-                    self.ultimo_tweet = max(current_id, self.ultimo_tweet or current_id)
-                    self.menor_tweet = min(current_id, self.menor_tweet or current_id)
-                self.tot_registros += 1
-
-            # os tweets pais (que geraram retweets ou quotes) são registrados nos includes
-            if tweets.source['includes'].get('tweets'):
-                for tweet in tweets.source['includes']['tweets']:
-                    author_id = tweet.get('author_id', None)
-                    # se o author do tweet original não estiver registrado, não gravar o pai
-                    if author_id:
-                        created_at = tweet.created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z") if tweet.created_at else None
-                        record = {
-                            'id': tweet.id,
-                            'author_id': tweet.author_id,
-                            'user': users.get(str(author_id), None),
-                            'created_at': created_at,
-                            'text': tweet.text,
-                            'public_metrics': tweet.public_metrics,
-                            'lang': tweet.lang,
-                            'geo': tweet.geo,
-                        }
-                        if tweet.referenced_tweets:
-                            record['referenced_tweet'] = []
-                            for ref in tweet.referenced_tweets:
-                                record['referenced_tweet'].append(ref.data)
-
-                        # o registro é gravado mas não será associado ao projeto
-                        save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
-                        self.tot_registros += 1
-
-            print(f'Total registros: {self.tot_registros} / {menor_data}')
-            next_token = tweets.source.get('meta',{}).get('next_token','Fim')
-
-        termo.ult_processamento = agora
-
-        # se algum registro foi recebido, atualizar
-        if self.tot_registros > 0 and self.ultimo_tweet:
-            termo.ult_tweet = max(termo.ult_tweet or 0, self.ultimo_tweet)
+        # A busca regular dos termos é sempre pela relevância
+        if not fake:
+            self.search(processo, mais_relevantes=True)
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
@@ -274,7 +173,7 @@ class Crawler:
                 proc.save()
 
             # se a data atual for maior que o final programado
-            if termo.dtfinal and menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
+            if termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
                 print(f'Termo {termo.id} finalizado')
                 termo.status = 'C'
             else:
@@ -285,7 +184,6 @@ class Crawler:
                 else:
                     termo.status = 'A'
         termo.save()
-
         return
 
 
@@ -298,14 +196,14 @@ class Crawler:
 
         if not fake:
             print(f'\nProcesso {processo.id}')
-            self.search(processo)
+            self.search(processo, processo.tipo == PROC_RELEVANTE)
 
 
-    def search(self, processo):
+    def search(self, processo, mais_relevantes: bool):
         agora = timezone.now()
         next_token = None
         twitter_api = get_api_client()
-        menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        self.menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         busca = processo.termo.busca
         if processo.termo.language:
             busca = f'{busca} lang:{processo.termo.language}'
@@ -314,7 +212,7 @@ class Crawler:
         if not processo.termo.retweets:
             busca = f'{busca} -is:retweet'
 
-        if processo.tipo == PROC_RELEVANTE:
+        if mais_relevantes:
             sort_order = 'relevancy'
         else:
             sort_order = 'recency'
@@ -372,7 +270,7 @@ class Crawler:
 
                 save_result(tweet, processo, opensearch=self.client)
                 if 'created_at' in tweet:
-                    menor_data = min(menor_data, tweet['created_at'])
+                    self.menor_data = min(self.menor_data, tweet['created_at'])
                 current_id = intdef(tweet['id'], 0)
                 if current_id != 0:
                     self.ultimo_tweet = max(current_id, self.ultimo_tweet or current_id)
@@ -405,7 +303,7 @@ class Crawler:
                         save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
                         self.tot_registros += 1
 
-            print(f'Total registros: {self.tot_registros} / {menor_data}')
+            print(f'Total registros: {self.tot_registros} / {self.menor_data}')
             next_token = tweets.source.get('meta', {}).get('next_token', 'Fim')
 
         # se algum registro foi recebido, atualizar
