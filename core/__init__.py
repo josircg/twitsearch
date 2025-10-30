@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import time
 import pytz
-from datetime import datetime
+from datetime import date, time, datetime, timezone
 
 from twitsearch import settings
 
@@ -53,6 +53,25 @@ def convert_date(date_str) -> datetime:
     else:
         time_struct = time.strptime(date_str, '%a %b %d %H:%M:%S +0000 %Y')
     return datetime.fromtimestamp(time.mktime(time_struct)).replace(tzinfo=pytz.UTC)
+
+
+def convert_date_datetime(data_objeto: date, hora: int = 0, minuto: int = 0, segundo: int  = 0) -> datetime:
+    """
+    Converte um objeto 'date' para um objeto 'datetime'.
+
+    Args:
+        data_objeto: O objeto date a ser convertido.
+        hora: hora
+        minuto: hora
+        segundo: hora
+
+    Returns:
+        Um novo objeto datetime, sem informação de fuso horário (naive).
+    """
+    # datetime.combine() junta o objeto date e o objeto time
+    hora = time(hora,minuto,segundo)
+    data_hora_combinada = datetime.combine(data_objeto, hora)
+    return data_hora_combinada
 
 
 def OSRun(command, stop=False):

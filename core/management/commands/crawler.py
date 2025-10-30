@@ -10,14 +10,15 @@ from django.utils import timezone
 
 from tweepy import BadRequest
 
-from core import log_message, intdef
+from core import log_message, intdef, convert_date_datetime
 from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 
 from django.conf import settings
 
 from core.apps import save_result, find_first_tweet
-from core.models import Termo, Rede, TweetInput, Processamento, PROC_PREMIUM, PROC_IMPORTACAO, PROC_FULL, PROC_CONTINUA
+from core.models import Termo, Rede, TweetInput, Agendamento, Processamento, PROC_PREMIUM, PROC_IMPORTACAO, PROC_FULL, \
+    PROC_CONTINUA, PROC_RELEVANTE
 
 API_FIELDS = (
     "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,public_metrics,"
@@ -287,6 +288,203 @@ class Crawler:
 
         return
 
+
+    def search_agenda(self, processo, fake=False):
+        termo = processo.termo
+        if self.dt_inicial:
+            print(f'Agendamento {termo.id}: {self.dt_inicial} - {self.dt_final}')
+        else:
+            print(f'Execução regular {termo.id}: de {self.since_id} até agora')
+
+        if not fake:
+            print(f'\nProcesso {processo.id}')
+            self.search(processo)
+
+
+    def search(self, processo):
+        agora = timezone.now()
+        next_token = None
+        twitter_api = get_api_client()
+        menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        busca = processo.termo.busca
+        if processo.termo.language:
+            busca = f'{busca} lang:{processo.termo.language}'
+        print(busca)
+
+        if not processo.termo.retweets:
+            busca = f'{busca} -is:retweet'
+
+        if processo.tipo == PROC_RELEVANTE:
+            sort_order = 'relevancy'
+        else:
+            sort_order = 'recency'
+
+        while self.tot_registros < self.limite and next_token != 'Fim':
+            # se a busca não for a acadêmica (Premium), executar search_all
+            if processo.tipo != PROC_PREMIUM:
+                tweets = twitter_api.search_all_tweets(
+                    query=busca,
+                    sort_order=sort_order,
+                    tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS,
+                    user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
+                    next_token=next_token,
+                    since_id=self.since_id,
+                    until_id=self.until_id,
+                    start_time=self.dt_inicial,
+                    end_time=self.dt_final,
+                    max_results=100)
+            else:
+                tweets = twitter_api.search_recent_tweets(
+                             query=busca,
+                             tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS,
+                             user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
+                             next_token=next_token,
+                             since_id=self.since_id,
+                             start_time=self.dt_inicial,
+                             end_time =self.dt_final,
+                             max_results=100)
+
+            if tweets.source.get('meta'):
+                if tweets.source['meta'].get('result_count', 0) == 0:
+                    break
+
+            users = {}
+            if tweets.source.get('includes'):
+                for user in tweets.source['includes']['users']:
+                    users[str(user['id'])] = {'username': user['username'], 'name': user['name'],
+                                              'verified': user['verified'],
+                                              'followers_count': user['public_metrics']['followers_count'],
+                                              'following_count': user['public_metrics']['following_count'],
+                                              'tweet_count': user['public_metrics']['tweet_count']}
+            else:
+                print('No includes found', tweets.source)
+                break
+
+            # os tweets primários, retweets, replies e quotes são gravados em 'data'
+            for indice, tweet in enumerate(tweets.source['data']):
+                # os dados do autor devem ser reidratados no tweet original
+                user_record = users.get(str(tweet['author_id']), None)
+                if user_record:
+                    tweet['user'] = user_record
+
+                if len(tweets.data[indice].context_annotations) > 0:
+                    tweet['context'] = tweets.data[indice].context_annotations
+
+                save_result(tweet, processo, opensearch=self.client)
+                if 'created_at' in tweet:
+                    menor_data = min(menor_data, tweet['created_at'])
+                current_id = intdef(tweet['id'], 0)
+                if current_id != 0:
+                    self.ultimo_tweet = max(current_id, self.ultimo_tweet or current_id)
+                    self.menor_tweet = min(current_id, self.menor_tweet or current_id)
+                self.tot_registros += 1
+
+            # os tweets pais (que geraram retweets ou quotes) são registrados nos includes
+            if tweets.source['includes'].get('tweets'):
+                for tweet in tweets.source['includes']['tweets']:
+                    author_id = tweet.get('author_id', None)
+                    # se o author do tweet original não estiver registrado, não gravar o pai
+                    if author_id:
+                        created_at = tweet.created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z") if tweet.created_at else None
+                        record = {
+                            'id': tweet.id,
+                            'author_id': tweet.author_id,
+                            'user': users.get(str(author_id), None),
+                            'created_at': created_at,
+                            'text': tweet.text,
+                            'public_metrics': tweet.public_metrics,
+                            'lang': tweet.lang,
+                            'geo': tweet.geo,
+                        }
+                        if tweet.referenced_tweets:
+                            record['referenced_tweet'] = []
+                            for ref in tweet.referenced_tweets:
+                                record['referenced_tweet'].append(ref.data)
+
+                        # o registro é gravado mas não será associado ao projeto
+                        save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
+                        self.tot_registros += 1
+
+            print(f'Total registros: {self.tot_registros} / {menor_data}')
+            next_token = tweets.source.get('meta', {}).get('next_token', 'Fim')
+
+        # se algum registro foi recebido, atualizar
+        processo.termo.ult_processamento = agora
+        if self.tot_registros > 0 and self.ultimo_tweet:
+            processo.termo.ult_tweet = max(processo.termo.ult_tweet or 0, self.ultimo_tweet)
+        processo.termo.save()
+        return
+
+
+def processa_agenda(agenda, fake_run):
+
+    agora = timezone.now()
+    mensagem = ''
+    erro = False
+
+    set_autocommit(False)
+    processo = Processamento.objects.create(termo=agenda.termo, dt=agora,
+                                            tipo=agenda.tipo, status=Processamento.PROCESSANDO)
+    if not fake_run:
+        Agendamento.objects.filter(id=agenda.id).update(status=Agendamento.Status.PROCESSANDO)
+    commit()
+
+    try:
+        if settings.OPENSEARCH_SERVERS:
+            index_name = f"twitter-{agora.year}-{agora.month}"
+            client = connect_opensearch('minerva-teste')
+            if client and index_name:
+                create_if_not_exists_index(client, index_name)
+        else:
+            client = None
+
+        crawler = Crawler(agenda.limite, opensearch_client=client)
+        crawler.termo = agenda.termo
+        if agenda.dt_inicial:
+            crawler.dt_inicial = convert_date_datetime(agenda.dt_inicial)
+            crawler.dt_final = convert_date_datetime(agenda.dt_final, 23, 59, 59)
+        else:
+            crawler.since_id = agenda.since_id
+            crawler.until_id = agenda.until_id
+        crawler.search_agenda(processo, fake_run)
+        mensagem = f'{crawler.tot_registros} obtidos'
+        if not fake_run and agenda.dt_inicial:
+            agenda.until_id = crawler.ultimo_tweet
+            agenda.since_id = crawler.menor_tweet
+            agenda.status = Agendamento.Status.CONCLUIDO
+            agenda.save()
+            log_message(agenda, f'Processamento concluído: {agenda.since_id} - {agenda.until_id}')
+            commit()
+
+    except BadRequest as e:
+        if len(e.api_messages) > 0:
+            mensagem = ''.join(e.api_messages)
+        else:
+            mensagem = f'Erro {e}\n'
+        erro = True
+
+    except Exception as e:
+        mensagem = f'Erro {e}\n'
+        mensagem += traceback.format_exc()
+        erro = True
+
+    finally:
+        if not fake_run:
+            log_message(agenda, mensagem)
+
+        if erro:
+            if not fake_run:
+                log_message(agenda.termo.projeto, f'Erro durante a captura do termo {agenda.termo.id}')
+            print(f'Erro na montagem da busca. Termo:{agenda.termo.id} since_id:{crawler.since_id}')
+            print(mensagem)
+
+        processo.tot_registros = crawler.tot_registros
+        processo.twit_id = crawler.ultimo_tweet
+        processo.status = Processamento.CONCLUIDO
+        processo.save()
+        commit()
+
+
 def processa_termo(termo, limite, fake_run):
 
     agora = timezone.now()
@@ -378,6 +576,7 @@ class Command(BaseCommand):
         parser.add_argument('--twit', type=str, help='Twitter ID')
         parser.add_argument('--proc', type=str, help='Processo')
         parser.add_argument('--termo', type=str, help='Termo ID')
+        parser.add_argument('--agenda', type=str, help='Agendamento')
         parser.add_argument('--limite', type=int, help='Limite de Tweets')
         parser.add_argument('--verbose', type=int, help='Aumento do Log')
         parser.add_argument('--fake', action='store_true', help='Indica quais os termos que seriam processados')
@@ -391,19 +590,24 @@ class Command(BaseCommand):
 
         if 'twit' in options and options['twit']:
             processa_item_unico(options['twit'], options.get('termo'))
-            return
+
+        elif 'agenda' in options and options['agenda']:
+            agenda = Agendamento.objects.filter(id=options['agenda']).first()
+            if agenda:
+                processa_agenda(agenda, fake_run)
+            else:
+                print('Agendamento não encontrado: %s' % options['agenda'])
 
         # Existem 3 estratégias de busca: Padrão, Contínua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
         # Contínua: para cargas em andamento: começa do since_id
         # Recuperação: para caso de cargas com erro: calcula o último e usa até o último capturado
-        if 'termo' in options and options['termo']:
+        elif 'termo' in options and options['termo']:
             termo = Termo.objects.filter(id=options['termo']).first()
             if termo:
                 processa_termo(termo, limite, fake_run)
             else:
                 print('Termo não encontrado: %s' % options['termo'])
-                return
 
         else:
             tot_termos = 0
@@ -414,9 +618,15 @@ class Command(BaseCommand):
                 time.sleep(2)
                 tot_termos += 1
 
+            for agenda in Agendamento.objects.filter(status=Agendamento.Status.AGENDADO,
+                                                     tipo__in=(PROC_FULL, PROC_PREMIUM, PROC_RELEVANTE),
+                                                     termo__projeto__redes=rede_twitter):
+                processa_agenda(agenda, fake_run)
+                time.sleep(2)
+                tot_termos += 1
+
             if tot_termos == 0:
                 print('Nenhum termo para processar %s' % timezone.now())
-                return
 
         # Revive qualquer projeto de busca em processamento há mais de 1 horas
         uma_hora = timezone.now() - timedelta(hours=1)

@@ -89,6 +89,7 @@ class EixoAdmin(PowerModelAdmin):
         return obj.projeto_set.count()
 
 
+@admin.register(Projeto)
 class ProjetoAdmin(PowerModelAdmin):
     list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
     search_fields = ('nome', )
@@ -278,7 +279,8 @@ class RetweetInline(admin.TabularInline):
         return False
 
 
-class UserAdmin(PowerModelAdmin):
+@admin.register(TweetUser)
+class TweetUserAdmin(PowerModelAdmin):
     search_fields = ('username', 'name')
     list_filter = ('verified', )
     list_display = ('username', 'name', 'location', 'verified', 'followers_str', )
@@ -304,6 +306,7 @@ class InputInline(PowerTabularInline):
     def has_add_permission(self, request, obj):
         return False
 
+@admin.register(Tweet)
 class TweetAdmin(PowerModelAdmin):
     multi_search = (
         ('q1', 'Texto', ['text']),
@@ -376,6 +379,7 @@ class RetweetAdmin(PowerModelAdmin):
     raw_id_fields = ('user', 'related_user', 'tweet')
 
 
+@admin.register(Termo)
 class TermoAdmin(PowerModelAdmin):
     search_fields = ('busca', 'projeto__nome')
     list_filter = ('status','projeto__redes__nome', 'projeto__eixo',)
@@ -434,6 +438,7 @@ class TermoAdmin(PowerModelAdmin):
         return actions
 
 
+@admin.register(Processamento)
 class ProcessamentoAdmin(PowerModelAdmin):
     list_display = ('tipo', 'dt', 'termo', 'twit_id', 'tot_twits', 'tot_registros')
     raw_id_fields = ('termo', )
@@ -447,6 +452,13 @@ class ProcessamentoAdmin(PowerModelAdmin):
                             label="Tweets", attrs={'target': '_blank'})
             )
         return buttons
+
+
+@admin.register(Agendamento)
+class AgendamentoAdmin(PowerModelAdmin):
+    list_filter = ('tipo', 'status')
+    list_display = ('termo', 'tipo', 'status', 'dt_inicial', 'since_id')
+    autocomplete_fields = ('termo',)
 
 
 class TweetInputAdmin(PowerModelAdmin):
@@ -467,10 +479,5 @@ class TweetInputAdmin(PowerModelAdmin):
         return instance.tweet.created_time
     tweet_dt.short_description = 'Dt'
 
-admin.site.register(Projeto, ProjetoAdmin)
-admin.site.register(TweetUser, UserAdmin)
 admin.site.register(Retweet, RetweetAdmin)
-admin.site.register(Tweet, TweetAdmin)
-admin.site.register(Termo, TermoAdmin)
 admin.site.register(TweetInput, TweetInputAdmin)
-admin.site.register(Processamento, ProcessamentoAdmin)

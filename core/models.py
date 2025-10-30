@@ -3,23 +3,25 @@ from collections import Counter
 from django.db import models, connection
 from django.db.models import Sum
 from django.contrib.auth.models import User, Group
+from django.forms import DateField
 from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium/Básica (antiga Academic)
-PROC_FULL = 'F'         # Importação Full Archive
+PROC_FULL = 'F'         # Importação Full Archive - Mais recentes
+PROC_RELEVANTE = 'L'    # Importação Full Archive - Mais relevantes
+PROC_COMMENTS = 'M'    # Importação Full Archive - Mais relevantes
 PROC_CONTINUA = 'C'     # Captura Continuada (Quando um processo é interrompido)
 PROC_YOUTUBE = 'Y'      # Importação Youtube
-PROC_RAPID = 'D'        # Importação Rapid API
 PROC_IMPORTUSER = 'U'   # Busca na rede tweets de um determinado usuário
 PROC_RETWEET = 'R'      # Busca na rede retweets de um determinado tweet
 PROC_BUSCAGLOBAL = 'G'  # Busca na própria base PostgreSQL
 PROC_OPENSEARCH = 'O'   # Busca na base do OpenSearch/ElasticSearch
 PROC_FILTROPROJ = 'P'   # Filtro dentro do projeto
 PROC_ESTIMATE = 'E'     # Calcula estimativa de tweets
-PROC_MATCH = 'M'        # Faz o match de tweets orfãos de projeto
+PROC_MATCH = 'H'        # Faz o match de tweets orfãos de projeto
 PROC_TAGS = 'T'         # Geração de arquivo CSV com as TAGs
 PROC_NETWORK = 'N'      # Geração de Grafo
 PROC_BACKUP = 'B'       # Backup JSON
@@ -194,7 +196,7 @@ class Termo(models.Model):
     obs = models.TextField('Observação sobre a coleta', null=True, blank=True)
 
     def __str__(self):
-        return self.busca
+        return self.descritivo or self.busca
 
     @property
     def tot_twits(self):
@@ -283,13 +285,35 @@ class Processamento(models.Model):
             return self.tweetinput_set.count() or 0
 
 
-class Credencial(models.Model):
-    username = models.CharField(max_length=100)
-    key = models.CharField(max_length=30)
-    secret = models.CharField(max_length=30)
-    token = models.CharField(max_length=30)
-    token_secret = models.CharField(max_length=30)
-    last_conn = models.DateTimeField(null=True)
+class Agendamento(models.Model):
+
+    class Tipo(models.TextChoices):
+        FULL = PROC_FULL, 'Mais Recentes'
+        RELEVANTES = PROC_RELEVANTE, 'Mais Relevantes'
+        RETWEETS = PROC_RETWEET, 'Retweets'
+        COMMENTS = PROC_COMMENTS, 'Comentários'
+
+    class Status(models.TextChoices):
+        AGENDADO = 'A', 'Agendado'
+        PROCESSANDO = 'P', 'Processando'
+        CONCLUIDO = 'C', 'Concluído'
+
+    tipo = models.CharField(max_length=1, choices=Tipo.choices, default=Tipo.FULL)
+    status = models.CharField(max_length=1, choices=Status.choices, default=Status.AGENDADO)
+    termo = models.ForeignKey(Termo, on_delete=models.CASCADE, blank=True, null=True)
+    twit_id = models.CharField(max_length=21, blank=True, null=True)
+    dt_inicial = models.DateField('Dt.Inicial', blank=True, null=True)
+    dt_final = models.DateField('Dt.Final', blank=True, null=True)
+    since_id = models.CharField(max_length=21, blank=True, null=True)
+    until_id = models.CharField(max_length=21, blank=True, null=True)
+    limite = models.IntegerField(blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.tipo}: {self.termo} ({self.dt_inicial})'
+
+    class Meta:
+        verbose_name = 'Agendamento'
+        verbose_name_plural = 'Agendamentos Especiais'
 
 
 class TweetUser(models.Model):
