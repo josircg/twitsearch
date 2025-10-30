@@ -6,10 +6,11 @@ from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.template.defaultfilters import capfirst
 from django.urls import reverse
 
-from core.models import Termo
+from core.models import Termo, Projeto
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Row, HTML, Div
 from .crispy_admin_layout import AdminFieldset, AdminSubmitRow, AdminField
+import re
 
 
 class ImportForm(forms.Form):
@@ -41,3 +42,20 @@ class ImportForm(forms.Form):
             # abre o arquivo e verifica se está delimitado com , e com os atributos mínimos necessários
             return
     '''
+class ProjetoAdminForm(forms.ModelForm):
+    
+    
+    def clean_prefix(self):
+        value = self.cleaned_data.get('prefix', '')
+        # Remove espaços em branco
+        value = value.replace(' ', '')
+        # Permitir apenas lowercase, alfanuméricos e '-'
+        value = re.sub(r'[^a-z0-9\-]', '', value.lower())
+       
+        if value and value[0].isdigit():
+            raise forms.ValidationError("O prefixo não pode começar com número.")
+        return value
+    
+    class Meta:
+        model = Projeto
+        fields = '__all__'
