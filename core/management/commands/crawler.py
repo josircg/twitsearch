@@ -4,6 +4,7 @@ import time
 import traceback
 
 from datetime import timedelta, date, datetime
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit
 from django.utils import timezone
@@ -21,9 +22,10 @@ from core.models import Termo, Rede, TweetInput, Agendamento, Processamento, PRO
     PROC_CONTINUA, PROC_RELEVANTE
 
 API_FIELDS = (
-    "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,public_metrics,"
+    "article,attachments,author_id,card_uri,community_id,conversation_id,created_at,public_metrics,"
     "entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,"
     "referenced_tweets,scopes,source,text,withheld")
+
 API_EXPANSIONS = ['article.cover_media', 'article.media_entities', 'attachments.media_keys',
               'attachments.media_source_tweet', 'author_id', 'entities.mentions.username',
               'geo.place_id',
@@ -86,6 +88,12 @@ class Crawler:
         self.dt_final = None
         self.correcao = False       # indica que é um processamento de correção
         self.client = opensearch_client
+        self.api_fields = API_FIELDS
+        if settings.FULL_CONTEXT:
+            self.api_fields += ',context_annotations'
+            self.max_results = 100
+        else:
+            self.max_results = 500
 
     def search_recent(self, processo, fake=False):
         agora = timezone.now()
@@ -205,6 +213,7 @@ class Crawler:
         agora = timezone.now()
         next_token = None
         twitter_api = get_api_client()
+
         if self.dt_final:
             self.menor_data = self.dt_final.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         else:
@@ -229,14 +238,14 @@ class Crawler:
                 tweets = twitter_api.search_all_tweets(
                     query=busca,
                     sort_order=sort_order,
-                    tweet_fields=API_FIELDS, media_fields=API_MEDIA_FIELDS,
+                    tweet_fields=self.api_fields, media_fields=API_MEDIA_FIELDS,
                     user_fields=API_USER_FIELDS, expansions=API_EXPANSIONS,
                     next_token=next_token,
                     since_id=self.since_id,
                     until_id=self.until_id,
                     start_time=self.dt_inicial,
                     end_time=self.dt_final,
-                    max_results=100)
+                    max_results=self.max_results)
             else:
                 tweets = twitter_api.search_recent_tweets(
                              query=busca,
@@ -246,7 +255,7 @@ class Crawler:
                              since_id=self.since_id,
                              start_time=self.dt_inicial,
                              end_time =self.dt_final,
-                             max_results=100)
+                             max_results=self.max_results)
 
             if tweets.source.get('meta'):
                 if tweets.source['meta'].get('result_count', 0) == 0:
@@ -385,7 +394,7 @@ def processa_agenda(agenda, fake_run):
         if erro:
             if not fake_run:
                 log_message(agenda.termo.projeto, f'Erro durante a captura do termo {agenda.termo.id}')
-            print(f'Erro na montagem da busca. Termo:{agenda.termo.id} since_id:{crawler.since_id}')
+            print(f'Erro Termo:{agenda.termo.id} since_id:{crawler.since_id}')
             print(mensagem)
 
         processo.tot_registros = crawler.tot_registros

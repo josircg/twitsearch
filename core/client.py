@@ -103,7 +103,7 @@ class BaseClient:
             if response.status_code == 429:
                 if self.wait_on_rate_limit:
                     reset_time = int(response.headers["x-rate-limit-reset"])
-                    sleep_time = reset_time - int(time.time()) + 1
+                    sleep_time = (reset_time - int(time.time()) + 1) / 2
                     if sleep_time > 0:
                         log.warning(
                             "Rate limit exceeded. "

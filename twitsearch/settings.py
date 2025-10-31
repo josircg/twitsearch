@@ -150,3 +150,6 @@ ADMIN_TOOLS_APP_INDEX_DASHBOARD = 'dashboard.CustomAppIndexDashboard'
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 AWS_PROFILE = None
+
+# Indica que a API do Twitter vai recuperar o contexto dos tweets (o que limita o número máximo de registros)
+FULL_CONTEXT = False
