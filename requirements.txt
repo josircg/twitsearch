@@ -7,7 +7,6 @@
 #   polyglot download embeddings2.pt sentiment2.pt ner2.pt
 
 Django<4
-mysqlclient==2.1.0
 git+https://bitbucket.org/josir/poweradmin.git@django32
 django-crispy-forms<2
 django-select2

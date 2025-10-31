@@ -297,16 +297,18 @@ class Agendamento(models.Model):
         AGENDADO = 'A', 'Agendado'
         PROCESSANDO = 'P', 'Processando'
         CONCLUIDO = 'C', 'Concluído'
+        ERRO = 'E', 'Erro na Captura'
 
     tipo = models.CharField(max_length=1, choices=Tipo.choices, default=Tipo.FULL)
     status = models.CharField(max_length=1, choices=Status.choices, default=Status.AGENDADO)
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE, blank=True, null=True)
     twit_id = models.CharField(max_length=21, blank=True, null=True)
-    dt_inicial = models.DateField('Dt.Inicial', blank=True, null=True)
-    dt_final = models.DateField('Dt.Final', blank=True, null=True)
+    dt_inicial = models.DateTimeField('Dt.Inicial', blank=True, null=True)
+    dt_final = models.DateTimeField('Dt.Final', blank=True, null=True)
     since_id = models.CharField(max_length=21, blank=True, null=True)
     until_id = models.CharField(max_length=21, blank=True, null=True)
-    limite = models.IntegerField(blank=True, null=True)
+    limite = models.IntegerField(default=10000)
+    dt_corte = models.DateTimeField('Dt.Corte', blank=True, null=True, help_text='Data da menor data obtida')
 
     def __str__(self):
         return f'{self.tipo}: {self.termo} ({self.dt_inicial})'

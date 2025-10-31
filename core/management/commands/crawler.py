@@ -157,9 +157,11 @@ class Crawler:
                 self.dt_final = termo.dtfinal
             self.since_id = None
 
+        if fake:
+            return
+
         # A busca regular dos termos é sempre pela relevância
-        if not fake:
-            self.search(processo, mais_relevantes=True)
+        self.search(processo, mais_relevantes=True)
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
@@ -203,7 +205,10 @@ class Crawler:
         agora = timezone.now()
         next_token = None
         twitter_api = get_api_client()
-        self.menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        if self.dt_final:
+            self.menor_data = self.dt_final.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        else:
+            self.menor_data = agora.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         busca = processo.termo.busca
         if processo.termo.language:
             busca = f'{busca} lang:{processo.termo.language}'
@@ -340,16 +345,18 @@ def processa_agenda(agenda, fake_run):
         crawler = Crawler(agenda.limite, opensearch_client=client)
         crawler.termo = agenda.termo
         if agenda.dt_inicial:
-            crawler.dt_inicial = convert_date_datetime(agenda.dt_inicial)
-            crawler.dt_final = convert_date_datetime(agenda.dt_final, 23, 59, 59)
+            crawler.dt_inicial = agenda.dt_inicial
+            crawler.dt_final = agenda.dt_final
         else:
             crawler.since_id = agenda.since_id
             crawler.until_id = agenda.until_id
         crawler.search_agenda(processo, fake_run)
-        mensagem = f'{crawler.tot_registros} obtidos'
-        if not fake_run and agenda.dt_inicial:
-            agenda.until_id = crawler.ultimo_tweet
-            agenda.since_id = crawler.menor_tweet
+        if not fake_run:
+            mensagem = f'{crawler.tot_registros} obtidos'
+            if agenda.dt_inicial:
+                agenda.until_id = crawler.ultimo_tweet
+                agenda.since_id = crawler.menor_tweet
+                agenda.dt_corte = crawler.menor_data
             agenda.status = Agendamento.Status.CONCLUIDO
             agenda.save()
             log_message(agenda, f'Processamento concluído: {agenda.since_id} - {agenda.until_id}')
@@ -366,6 +373,10 @@ def processa_agenda(agenda, fake_run):
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
         erro = True
+
+        agenda.status = Agendamento.Status.ERRO
+        agenda.dt_corte = crawler.menor_data
+        agenda.save()
 
     finally:
         if not fake_run:
