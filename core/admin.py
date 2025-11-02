@@ -424,7 +424,7 @@ class TermoAdmin(PowerModelAdmin):
             buttons.append(
                 PowerButton(
                     url=reverse('admin:core_agendamento_add') + f'?termo={object_id}',
-                    label="Novo Agendamento"
+                    label="Agendamento Especial"
                 )
             )
             #buttons.append(
