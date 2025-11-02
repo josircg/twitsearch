@@ -467,15 +467,8 @@ class AgendamentoAdmin(PowerModelAdmin):
     list_filter = ('tipo', 'status')
     list_display = ('termo', 'tipo', 'status', 'dt_inicial', 'since_id')
     autocomplete_fields = ('termo',)
-
-    def get_search_results(self, request, queryset, search_term):
-        # Se o campo autocomplete for 'termo', busca pelo campo 'descritivo'
-        if request.GET.get('field_name') == 'termo':
-            queryset = queryset.filter(termo__descritivo__icontains=search_term)
-            return queryset, False
-        return super().get_search_results(request, queryset, search_term)
-
-
+    
+    
 class TweetInputAdmin(PowerModelAdmin):
     search_fields = ('tweet__twit_id', )
     list_display = ('tweet', 'termo', 'tweet_text', 'tweet_dt')
