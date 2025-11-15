@@ -249,9 +249,10 @@ class Termo(models.Model):
             return None
 
     def save(self, *args, **kwargs):
-        inserted = not self.id
+        adicionado = not self.id
+        self.busca = self.busca.replace('“','"').replace('”','"').replace("'",'"')
         super().save(*args, **kwargs)
-        if inserted:
+        if adicionado:
             log_message(self, f'Termo adicionado')
 
     class Meta:

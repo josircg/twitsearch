@@ -98,7 +98,7 @@ class Crawler:
     def search_recent(self, processo, fake=False):
         agora = timezone.now()
         termo = processo.termo
-        next_token = None
+        faixa_ok = True
 
         print(f'\nProcesso {processo.id}')
         if termo.status == 'A':
@@ -117,34 +117,36 @@ class Crawler:
             # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
             self.correcao = True
             self.since_id = None
+            # busca o último processamento agendado
             proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA,
                                                 status=Processamento.AGENDADO).order_by('-id').first()
-
-            # Busca o último processamento anterior ao agendamento
-            if proc:
+            if not proc:
+                # se não achou o último processamento, o termo não pode ser processado
+                print('Nenhum agendamento encontrado para o termo')
+                faixa_ok = False
+            else:
+                # Busca o último processamento anterior ao agendamento
                 self.until_id = int(proc.twit_id)
                 print(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
                 ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
-                    if termo.prim_tweet:
-                        self.since_id = min(int(ult_proc.twit_id),termo.prim_tweet)
-                    else:
-                        self.since_id = int(ult_proc.twit_id)
+                    self.since_id = int(ult_proc.twit_id)
 
-            if not self.since_id:
-                if not termo.prim_tweet:
-                    termo.prim_tweet = find_first_tweet(termo)
-                    termo.save()
-                    commit()
-                    # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
+                if not self.since_id:
                     if not termo.prim_tweet:
-                        print('Nenhum registro encontrado para o termo')
-                        next_token = 'Fim'
-                self.since_id = termo.prim_tweet
+                        termo.prim_tweet = find_first_tweet(termo)
+                        termo.save()
+                        commit()
+                        # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
+                        if not termo.prim_tweet:
+                            print('Nenhum registro encontrado para o termo')
+                            faixa_ok = False
+                    self.since_id = termo.prim_tweet
 
-            if not next_token:
+            # se o agendamento ainda não foi descartado, tentar achar o primeiro tweet associado ao termo
+            if faixa_ok:
                 if not self.until_id:
                     primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
                     if primeiro:
@@ -152,8 +154,8 @@ class Crawler:
                         print(f'Until: {self.until_id}')
 
                 if self.since_id and self.until_id and self.since_id > self.until_id:
-                    print('Não foi possível encontrar a faixa')
-                    next_token = 'Fim'
+                    print(f'Faixa inconsistente: {self.since_id} - {self.until_id}')
+                    faixa_ok = False
 
                 print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
@@ -169,7 +171,8 @@ class Crawler:
             return
 
         # A busca regular dos termos é sempre pela relevância
-        self.search(processo, mais_relevantes=True)
+        if faixa_ok:
+            self.search(processo, mais_relevantes=True)
 
         if self.tot_registros >= self.limite:
             termo.status = 'I'
