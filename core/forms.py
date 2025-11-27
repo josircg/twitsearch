@@ -9,6 +9,8 @@ from django.urls import reverse
 from core.models import Termo, Projeto
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Submit, Layout, Row, HTML, Div
+
+from core.opensearch import connect_opensearch, create_if_not_exists_index
 from .crispy_admin_layout import AdminFieldset, AdminSubmitRow, AdminField
 import re
 
@@ -56,6 +58,25 @@ class ProjetoAdminForm(forms.ModelForm):
             raise forms.ValidationError("O prefixo não pode começar com número.")
         return value
     
+    def save(self, commit=True):
+        result = super().save(commit)
+        
+        if settings.OPENSEARCH_SERVERS and result.prefix:
+            index_name_catalog = "catalogo-vtrack"
+            client = connect_opensearch('minerva-teste')
+            if client and index_name_catalog:
+                create_if_not_exists_index(client, index_name_catalog)
+            
+            index_name = result.prefix.lower().replace('*', '')
+            client.index(
+                index=index_name_catalog,
+                id=index_name,
+                body={
+                    "index_name": index_name,
+                    "descricao": result.nome
+                })
+       
+        return result
     class Meta:
         model = Projeto
         fields = '__all__'
