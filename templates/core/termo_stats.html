@@ -25,8 +25,7 @@
                         {% endif %}
                         {% for agendamento in agendamentos_pendentes %}
                             <div class="agendamento">
-                                <p>ID: {{ agendamento.twit_id }}</p>
-                                <p>Data:<a href="{% url 'admin:core_processamento_change' agendamento.id %}"> {{ agendamento.dt|date:"d/m/Y" }}</a></p>
+                                <p>Twit ID: {{ agendamento.twit_id }} / Data:<a href="{% url 'admin:core_processamento_change' agendamento.id %}"> {{ agendamento.dt|date:"d/m/Y" }}</a></p>
                             </div>
                         {% endfor %}
                     </div>
