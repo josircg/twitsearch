@@ -413,6 +413,7 @@ def processa_termo(termo, limite, fake_run):
     agora = timezone.now()
     mensagem = ''
     erro = False
+    falha_twitter = False
 
     if termo.tipo_busca not in (PROC_FULL, PROC_PREMIUM):
         print('O Crawler só funciona para cargas via API')
