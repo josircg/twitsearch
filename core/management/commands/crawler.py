@@ -14,6 +14,7 @@ from tweepy import BadRequest
 from core import log_message, intdef, convert_date_datetime
 from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
+from tweepy.errors import TwitterServerError
 
 from django.conf import settings
 
@@ -186,7 +187,7 @@ class Crawler:
                 proc.save()
 
             # se a data atual for maior que o final programado
-            if termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
+            if faixa_ok and termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
                 print(f'Termo {termo.id} finalizado')
                 termo.status = 'C'
             else:
@@ -456,7 +457,10 @@ def processa_termo(termo, limite, fake_run):
             mensagem = ''.join(e.api_messages)
         else:
             mensagem = f'Erro {e}\n'
-        erro = True
+        falha_twitter = True
+
+    except TwitterServerError as e:
+        falha_twitter = True
 
     except Exception as e:
         mensagem = f'Erro {e}\n'
@@ -467,7 +471,7 @@ def processa_termo(termo, limite, fake_run):
         if not fake_run:
             log_message(termo, mensagem)
 
-        if erro:
+        if erro or falha_twitter:
             if not fake_run:
                 log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
             print(f'Erro na montagem da busca. Termo:{termo.id} since_id:{crawler.since_id}')
@@ -479,10 +483,16 @@ def processa_termo(termo, limite, fake_run):
                                                  tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
                                                  twit_id=crawler.menor_tweet)
 
-                if crawler.ultimo_tweet != 0:
-                    Termo.objects.filter(id=termo.id).update(status='E', ult_tweet=crawler.ultimo_tweet)
+                # se a falha foi na rede do twitter não marca o termo como erro
+                if falha_twitter:
+                    status = 'I'
                 else:
-                    Termo.objects.filter(id=termo.id).update(status='E')
+                    status = 'E'
+
+                if crawler.ultimo_tweet != 0:
+                    Termo.objects.filter(id=termo.id).update(status=status, ult_tweet=crawler.ultimo_tweet)
+                else:
+                    Termo.objects.filter(id=termo.id).update(status=status)
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet

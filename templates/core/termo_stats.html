@@ -12,6 +12,7 @@
 {% block content %}
 <div id="content-main">    
 	<div>
+        
 		<fieldset class="module aligned ">						   
             <div class="block" style="display: flex; flex-direction: column;">                
                  <div class="graficos" style="display: flex; flex-direction: column; align-items: start">
@@ -22,13 +23,13 @@
                  {% if agendamentos_pendentes %}
                     <div class="agendamentos" style="margin-left: 20px;">
                         <h2>Agendamentos Pendentes</h2>
-                        {% endif %}
                         {% for agendamento in agendamentos_pendentes %}
                             <div class="agendamento">
                                 <p>Twit ID: {{ agendamento.twit_id }} / Data:<a href="{% url 'admin:core_processamento_change' agendamento.id %}"> {{ agendamento.dt|date:"d/m/Y" }}</a></p>
                             </div>
                         {% endfor %}
                     </div>
+                 {% endif %}
             </div>
 		</fieldset>
 	</div>

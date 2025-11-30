@@ -52,7 +52,7 @@ def find_first_tweet(termo):
         if end_time > dt_final:
             break
         tweets = client.search_all_tweets(query=busca, tweet_fields='created_at,id',
-                                          start_time=start_time, end_time=end_time, max_results=50)
+                                          start_time=start_time, end_time=end_time, max_results=10)
         if tweets.source.get('meta'):
             if tweets.source['meta'].get('result_count', 0) > 0:
                 for tweet in tweets.source['data']:

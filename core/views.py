@@ -481,8 +481,7 @@ def status_coleta(request, termo_id):
     
     if not getattr(settings, 'OPENSEARCH_SERVERS', None):
         messages.error(request, "Gráfico não implementado para a base local")
-        return redirect(reverse('admin:core_termo_change', args=(termo_id,)))
-    
+
     client = connect_opensearch('minerva-teste')
     
     query = {
@@ -547,5 +546,10 @@ def status_coleta(request, termo_id):
     grafico_div = plot(fig2, output_type='div')
         
     dset = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.AGENDADO).order_by('-id')
-    
-    return render(request, 'core/termo_stats.html', {'grafico_div': grafico_div, 'agendamentos_pendentes': dset})
+
+    termo_url = reverse('admin:core_termo_change', args=(termo_id,))
+    termo = f'<a href="{termo_url}">{termo.descritivo}</a>'
+
+    return render(request, 'core/termo_stats.html', {'grafico_div': grafico_div,
+                                                     'termo': termo,
+                                                     'agendamentos_pendentes': dset})
