@@ -338,6 +338,7 @@ def processa_agenda(agenda, fake_run):
     agora = timezone.now()
     mensagem = ''
     erro = False
+    falha_twitter = False
 
     set_autocommit(False)
     processo = Processamento.objects.create(termo=agenda.termo, dt=agora,
@@ -359,7 +360,7 @@ def processa_agenda(agenda, fake_run):
         crawler.termo = agenda.termo
         if agenda.dt_inicial:
             crawler.dt_inicial = agenda.dt_inicial
-            crawler.dt_final = agenda.dt_final
+            crawler.dt_final = agenda.dt_corte or agenda.dt_final
         else:
             crawler.since_id = agenda.since_id
             crawler.until_id = agenda.until_id
@@ -380,26 +381,32 @@ def processa_agenda(agenda, fake_run):
             mensagem = ''.join(e.api_messages)
         else:
             mensagem = f'Erro {e}\n'
-        erro = True
+        falha_twitter = True
+
+    except TwitterServerError as e:
+        if len(e.api_messages) > 0:
+            mensagem = ''.join(e.api_messages)
+        else:
+            mensagem = f'Erro {e}\n'
+        falha_twitter = True
 
     except Exception as e:
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
         erro = True
 
-        agenda.status = Agendamento.Status.ERRO
-        agenda.dt_corte = crawler.menor_data
-        agenda.save()
-
     finally:
         if not fake_run:
             log_message(agenda, mensagem)
 
-        if erro:
+        if erro or falha_twitter:
             if not fake_run:
                 log_message(agenda.termo.projeto, f'Erro durante a captura do termo {agenda.termo.id}')
             print(f'Erro Termo:{agenda.termo.id} since_id:{crawler.since_id}')
             print(mensagem)
+            agenda.status = Agendamento.Status.ERRO if erro else Agendamento.Status.AGENDADO
+            agenda.dt_corte = crawler.menor_data
+            agenda.save()
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet
