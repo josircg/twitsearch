@@ -1,3 +1,6 @@
+#
+# Teste para verificar se a API do Twitter está operacional
+#
 import json
 import requests
 from django.core.management.base import BaseCommand
@@ -14,14 +17,13 @@ class Command(BaseCommand):
         twit_id = options['twit_id']
         
         url = f"https://api.twitter.com/2/tweets/{twit_id}"
-        url = f"https://api.twitter.com/2/tweets/{twit_id}"
 
         # Somente campos válidos permitidos
         queryparams = {
-            "tweet.fields": "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,display_text_range,entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,referenced_tweets,reply_settings,scopes,source,text,withheld,public_metrics",
+            "tweet.fields": "article,attachments,author_id,card_uri,community_id,context_annotations,conversation_id,created_at,display_text_range,entities,geo,id,in_reply_to_user_id,lang,media_metadata,note_tweet,possibly_sensitive,reply_settings,scopes,source,text,withheld,public_metrics",
             "media.fields": "alt_text,duration_ms,height,media_key,preview_image_url,public_metrics,type,url,variants,width",
             "place.fields": "contained_within,country,country_code,full_name,geo,id,name,place_type",
-            "expansions": "article.cover_media,article.media_entities,attachments.media_keys,attachments.media_source_tweet,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,entities.note.mentions.username,referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id",
+            "expansions": "article.cover_media,article.media_entities,attachments.media_keys,attachments.media_source_tweet,author_id,entities.mentions.username,geo.place_id,in_reply_to_user_id,entities.note.mentions.username",
             "user.fields": "username,name,public_metrics,created_at,location",
         }
 
