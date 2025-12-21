@@ -47,5 +47,5 @@ def save_object(client: OpenSearch, data, index_name):
         index=index_name,
         id=chave,
         body=data,
-        request_timeout=120,
+        request_timeout=60,
     )

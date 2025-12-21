@@ -11,7 +11,8 @@ class Command(BaseCommand):
         parser.add_argument('--index', type=str, help='Index')
 
     def handle(self, *args, **options):
-        conn = connect_opensearch(options.get('server'))
+        server_alias = options.get('server')
+        conn = connect_opensearch(server_alias)
         info = conn.info()
         if info:
             print(info)
@@ -19,6 +20,8 @@ class Command(BaseCommand):
             print('Erro na Conexão')
 
         if conn.indices.exists(index=options.get('index')):
-            print('Conexão realizada')
+            server = settings.OPENSEARCH_SERVERS[server_alias]
+            print(f"Host: {server['host']} Port: {server['port']}")
+            print('Conexão realizada com sucesso')
         else:
             print('Índice não encontrado')

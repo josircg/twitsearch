@@ -287,6 +287,9 @@ class Crawler:
                 if len(tweets.data[indice].context_annotations) > 0:
                     tweet['context'] = tweets.data[indice].context_annotations
 
+                if tweet.get('card_uri') and type(tweet['card_uri']) is not str:
+                    tweet['card_uri'] = None
+
                 save_result(tweet, processo, opensearch=self.client)
                 if 'created_at' in tweet:
                     self.menor_data = min(self.menor_data, tweet['created_at'])
@@ -470,6 +473,9 @@ def processa_termo(termo, limite, fake_run):
     except TwitterServerError as e:
         falha_twitter = True
 
+    except ConnectionResetError as e:
+        falha_twitter = True
+
     except Exception as e:
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
@@ -482,7 +488,7 @@ def processa_termo(termo, limite, fake_run):
         if erro or falha_twitter:
             if not fake_run:
                 log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
-            print(f'Erro na montagem da busca. Termo:{termo.id} since_id:{crawler.since_id}')
+            print(f'Erro na execução da busca. Termo:{termo.id} since_id:{crawler.since_id}')
             print(mensagem)
 
             if not fake_run:
