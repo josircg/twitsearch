@@ -110,7 +110,7 @@ USE_I18N = True
 USE_TZ = True
 USE_L10N = False
 DATE_FORMAT = 'd/m/Y'
-DATETIME_FORMAT = 'd/m/Y'
+DATETIME_FORMAT = 'd/m/Y H:i:s'
 
 DATE_INPUT_FORMATS = [
     "%d/%m/%Y",           # 26/09/2025

@@ -3,7 +3,7 @@ import json
 from django.http import HttpResponse, HttpResponseForbidden
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from .models import Eixo, Projeto, Termo, Rede
+from .models import Eixo, Projeto, Termo, Rede, Processamento
 
 
 def redes(request):
@@ -83,3 +83,14 @@ def termos_by_id(request, termo_id):
     }
     
     return HttpResponse(json.dumps(termo_data), content_type='application/json')
+
+
+def processo(request, processo_id):
+    auth = request.headers.get('auth','')
+    if not settings.AUTH_KEYS.get(auth):
+        return HttpResponseForbidden()
+    objeto = get_object_or_404(Processamento, id=processo_id)
+    record = {'dt': str(objeto.dt), 'count': objeto.tot_registros,
+              'tipo': objeto.get_tipo_display(),
+              'status': objeto.get_status_display() }
+    return HttpResponse(json.dumps(record), content_type='application/json')
