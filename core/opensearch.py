@@ -17,7 +17,7 @@ def connect_opensearch(server_alias):
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False,
-        timeout=2000,
+        timeout=240,
         # ca_certs=server['ca_certs_path']
     )
     return open_search_client
