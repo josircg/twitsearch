@@ -30,7 +30,7 @@ def get_management_logger(name):
         formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
         # Garante que a pasta de logs existe (bom para o seu Debian)
-        log_dir = 'logs'
+        log_dir = os.path.join(settings.BASE_DIR,'logs')
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
