@@ -262,17 +262,17 @@ class Termo(models.Model):
 
 class Processamento(models.Model):
 
-    AGENDADO = 'A'
-    PROCESSANDO = 'P'
-    CONCLUIDO = 'C'
+    class Status(models.TextChoices):
+        AGENDADO = 'A', 'Agendado'
+        PROCESSANDO = 'P', 'Procesando'
+        CONCLUIDO = 'C', 'Concluido'
+        ERRO = 'E', 'Finalizado com erro'
 
     dt = models.DateTimeField()
     tipo = models.CharField(max_length=1, choices=TIPO_PROCESSAMENTO, default=PROC_IMPORTACAO)
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE, null=True)
     twit_id = models.CharField('Último Tweet associado', max_length=21, blank=True, null=True)
-    status = models.CharField(max_length=1, choices=((AGENDADO, 'Agendado'),
-                                                     (PROCESSANDO, 'Em processamento'),
-                                                     (CONCLUIDO, 'Concluído')), default=CONCLUIDO, db_index=True)
+    status = models.CharField(max_length=1, choices=Status.choices, default=Status.AGENDADO, db_index=True)
     tot_registros = models.IntegerField(blank=True, null=True)
 
     def __str__(self):

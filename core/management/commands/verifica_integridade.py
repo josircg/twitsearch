@@ -16,7 +16,9 @@ class Command(BaseCommand):
         ))
         
         termos_erro = Termo.objects.filter(status__exact='E').count()
-        
+
+        processamentos_com_erro = Processamento.objects.filter(status=Processamento.Status.ERRO).count()
+
         duplicados = Agendamento.objects.filter(
             status=Agendamento.Status.AGENDADO
         ).filter(
@@ -39,25 +41,32 @@ class Command(BaseCommand):
             .annotate(qtd=Count('id'))
         )
 
-        if termos_erro > 0 or duplicados.exists() or resultado.exists():
+        if termos_erro > 0 or processamentos_com_erro > 0 or duplicados.exists() or resultado.exists():
             # Prepare email content
             subject = "[CAPITU] Integridade dos Monitoramentos"
             body = []
 
             if termos_erro > 0:
                 body.append(
-                    f"Termos com erro: {termos_erro}.<br>Verique em: https://capitu.minerva.ibict.br/admin/core/termo/?status__exact=E\n"
+                    f"Termos com erro: {termos_erro}.<br>"
+                    f"Verique em: https://capitu.minerva.ibict.br/admin/core/termo/?status__exact=E\n"
+                )
+
+            if processamentos_com_erro > 0:
+                body.append(
+                    f"Processamentos com erro: {processamentos_com_erro}.<br>"
+                    f"Verique em: https://capitu.minerva.ibict.br/admin/core/processamento/?status__exact=E"
                 )
 
             if duplicados.exists():
-                body.append("Excesso de agendamento para os termos abaixo:\n")
+                body.append("Excesso de agendamento para os termos abaixo:")
                 for ag in duplicados:
-                    body.append(f"https://capitu.minerva.ibict.br/admin/core/termo/{ag.termo_id}/\n")
+                    body.append(f"https://capitu.minerva.ibict.br/admin/core/termo/{ag.termo_id}/")
 
             if resultado:
-                body.append("Capturas com volume excessivo de dados:\n")
+                body.append("Capturas com volume excessivo de dados:")
                 for r in resultado:
-                    body.append(f"https://capitu.minerva.ibict.br/admin/core/termo/{r['termo']}/\n")            
+                    body.append(f"https://capitu.minerva.ibict.br/admin/core/termo/{r['termo']}/")
 
             message = "<br>".join(body)
 

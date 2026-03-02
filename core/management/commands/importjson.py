@@ -281,16 +281,16 @@ class Command(BaseCommand):
         # se o processamento não foi indicado como entrada ou se nenhum processo existe para o termo indicado
         if not processo_ativo:
             if force:
-                Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT).\
-                    update(status=Processamento.CONCLUIDO)
+                Processamento.objects.filter(status=Processamento.Status.PROCESSANDO, tipo=PROC_JSON_IMPORT).\
+                    update(status=Processamento.Status.CONCLUIDO)
                 logger.warning('Force Update')
             else:
-                proc = Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT)
+                proc = Processamento.objects.filter(status=Processamento.Status.PROCESSANDO, tipo=PROC_JSON_IMPORT)
                 if proc:
                     logger.error(f'Importação pendente {proc[0].id}')
                     return
             agora = timezone.now()
-            processo_ativo = Processamento.objects.create(status=Processamento.PROCESSANDO,
+            processo_ativo = Processamento.objects.create(status=Processamento.Status.PROCESSANDO,
                                                           tipo=PROC_JSON_IMPORT, dt=agora, termo=termo,
                                                           tot_registros=0)
             commit()
@@ -334,7 +334,12 @@ class Command(BaseCommand):
                         try:
                             with open(filename, 'r') as file:
                                 texto = file.read()
-                                twitter_data = json.loads(texto)
+                                if len(texto) > 0:
+                                    twitter_data = json.loads(texto)
+                                else:
+                                    tot_erros += 1
+                                    os.remove(filename)
+                                    continue
 
                             tot_files += 1
                             if 'data' in twitter_data:
@@ -357,7 +362,7 @@ class Command(BaseCommand):
                                 if tweet:
                                     logger.info(f'Total de arquivos:{tot_files} {tweet.termo}')
 
-                        except Exception:
+                        except:
                             logger.error(f'Erro no arquivo {filename}', exc_info=True)
                             if exists(filename):
                                 rename(filename, join(dest_dir, 'ruim', arquivo.name))
@@ -373,7 +378,10 @@ class Command(BaseCommand):
                         processo_ativo.delete()
                     logger.warning('Nenhum arquivo processado %s' % timezone.now())
                 else:
-                    processo_ativo.status = Processamento.CONCLUIDO
+                    if tot_erros > 10:
+                        processo_ativo.status = Processamento.Status.ERRO
+                    else:
+                        processo_ativo.status = Processamento.Status.CONCLUIDO
                     tot_files += (processo_ativo.tot_registros or 0)
                     processo_ativo.tot_registros = tot_files
                     processo_ativo.save()
