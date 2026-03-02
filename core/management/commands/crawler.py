@@ -1,24 +1,24 @@
 import json
 import requests
+import os
 import time
 import traceback
 
-from datetime import timedelta, date, datetime
-from django.conf import settings
+from datetime import timedelta, datetime
 from django.core.management.base import BaseCommand
 from django.db.transaction import set_autocommit, commit
 from django.utils import timezone
 
 from tweepy import BadRequest
 
-from core import log_message, intdef, convert_date_datetime
+from core import log_message, intdef
 from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 from tweepy.errors import TwitterServerError
 
 from django.conf import settings
 
-from core.apps import save_result, find_first_tweet
+from core.apps import save_result, find_first_tweet, get_management_logger
 from core.models import Termo, Rede, TweetInput, Agendamento, Processamento, PROC_PREMIUM, PROC_IMPORTACAO, PROC_FULL, \
     PROC_CONTINUA, PROC_RELEVANTE
 
@@ -39,40 +39,7 @@ API_MEDIA_FIELDS = "alt_text,duration_ms,height,media_key,preview_image_url,publ
 API_PLACE_FIELDS = "contained_within,country,country_code,full_name,geo,id,name,place_type"
 API_USER_FIELDS = "username,name,public_metrics,created_at,location"
 
-
-def processa_item_unico(twit_id, termo_id):
-
-    if termo_id:
-        termo = Termo.objects.filter(id=termo_id).first()
-    else:
-        termo = None
-
-    url = f"https://api.twitter.com/2/tweets/{twit_id}"
-    headers = {
-        "Authorization": f"Bearer {settings.BEARED_TOKEN}"
-    }
-
-    queryparams = {
-        "tweet.fields": API_FIELDS,
-        "media.fields": API_MEDIA_FIELDS,
-        "place.fields": API_PLACE_FIELDS,
-        "expansions": ','.join(API_EXPANSIONS),
-        "user.fields": API_USER_FIELDS,
-    }
-
-    response = requests.get(url, headers=headers, params=queryparams)
-    tweet = response.json()
-    if 'errors' in tweet:
-        print(f'Erro: {tweet}')
-        return
-
-    if termo:
-        tweet['termo'] = termo.id
-        tweet['projeto'] = termo.projeto.id
-
-    filename = '%s/data/%s.json' % (settings.BASE_DIR, twit_id)
-    with open(filename, 'w') as arquivo:
-        json.dump(tweet, arquivo)
+logger = get_management_logger("crawler")
 
 
 class Crawler:
@@ -90,6 +57,7 @@ class Crawler:
         self.correcao = False       # indica que é um processamento de correção
         self.client = opensearch_client
         self.api_fields = API_FIELDS
+        self.os_pid = os.getpid()
         if settings.FULL_CONTEXT:
             self.api_fields += ',context_annotations'
             self.max_results = 100
@@ -101,7 +69,7 @@ class Crawler:
         termo = processo.termo
         faixa_ok = True
 
-        print(f'\nProcesso {processo.id}')
+        logger.warning(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet or 0
@@ -110,9 +78,9 @@ class Crawler:
                 self.dt_inicial = termo.dtinicio
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
-                print(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
+                logger.info(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
             else:
-                print(f'Execução regular {termo.id}: de {self.since_id} até agora')
+                logger.info(f'Execução regular {termo.id}: de {self.since_id} até agora')
 
         else:
             # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
@@ -123,12 +91,12 @@ class Crawler:
                                                 status=Processamento.AGENDADO).order_by('-id').first()
             if not proc:
                 # se não achou o último processamento, o termo não pode ser processado
-                print('Nenhum agendamento encontrado para o termo')
+                logger.warning('Nenhum agendamento encontrado para o termo')
                 faixa_ok = False
             else:
                 # Busca o último processamento anterior ao agendamento
                 self.until_id = int(proc.twit_id)
-                print(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
+                logger.info(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
                 ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
                                                         status=Processamento.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
@@ -142,7 +110,7 @@ class Crawler:
                         commit()
                         # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
                         if not termo.prim_tweet:
-                            print('Nenhum registro encontrado para o termo')
+                            logger.info('Nenhum registro encontrado para o termo')
                             faixa_ok = False
                     self.since_id = termo.prim_tweet
 
@@ -152,13 +120,13 @@ class Crawler:
                     primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
                     if primeiro:
                         self.until_id = int(primeiro.tweet_id)
-                        print(f'Until: {self.until_id}')
+                        logger.info(f'Until: {self.until_id}')
 
                 if self.since_id and self.until_id and self.since_id > self.until_id:
-                    print(f'Faixa inconsistente: {self.since_id} - {self.until_id}')
+                    logger.info(f'Faixa inconsistente: {self.since_id} - {self.until_id}')
                     faixa_ok = False
 
-                print(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
+                logger.info(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
         # Caso não seja Full search e o último processamento tenha ultrapassado 7 dias, não considerar o since_id
         if termo.tipo_busca != PROC_FULL and self.dt_inicial:
@@ -188,7 +156,7 @@ class Crawler:
 
             # se a data atual for maior que o final programado
             if faixa_ok and termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
-                print(f'Termo {termo.id} finalizado')
+                logger.info(f'Termo {termo.id} finalizado')
                 termo.status = 'C'
             else:
                 # só marcar o status A se não tiver restado nenhum processamento agendado
@@ -204,12 +172,12 @@ class Crawler:
     def search_agenda(self, processo, fake=False):
         termo = processo.termo
         if self.dt_inicial:
-            print(f'Agendamento {termo.id}: {self.dt_inicial} - {self.dt_final}')
+            logger.info(f'Agendamento {termo.id}: {self.dt_inicial} - {self.dt_final}')
         else:
-            print(f'Execução regular {termo.id}: de {self.since_id} até agora')
+            logger.info(f'Execução regular {termo.id}: de {self.since_id} até agora')
 
         if not fake:
-            print(f'\nProcesso {processo.id}')
+            logger.warning(f'Processo {processo.id} pid:{self.os_pid}')
             self.search(processo, processo.tipo == PROC_RELEVANTE)
 
 
@@ -234,7 +202,7 @@ class Crawler:
         else:
             sort_order = None
 
-        print(f'{busca} / {sort_order}')
+        logger.info(f'{busca} / {sort_order}')
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             # se a busca não for a acadêmica (Premium), executar search_all
@@ -274,7 +242,7 @@ class Crawler:
                                               'following_count': user['public_metrics']['following_count'],
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
-                print('No includes found', tweets.source)
+                logger.warning('No includes found', tweets.source)
                 break
 
             # os tweets primários, retweets, replies e quotes são gravados em 'data'
@@ -325,7 +293,7 @@ class Crawler:
                         save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
                         self.tot_registros += 1
 
-            print(f'Total registros: {self.tot_registros} / {self.menor_data}')
+            logger.info(f'Total registros: {self.tot_registros} / {self.menor_data}')
             next_token = tweets.source.get('meta', {}).get('next_token', 'Fim')
 
         # se algum registro foi recebido, atualizar
@@ -405,8 +373,8 @@ def processa_agenda(agenda, fake_run):
         if erro or falha_twitter:
             if not fake_run:
                 log_message(agenda.termo.projeto, f'Erro durante a captura do termo {agenda.termo.id}')
-            print(f'Erro Termo:{agenda.termo.id} since_id:{crawler.since_id}')
-            print(mensagem)
+            logger.error(f'Erro Termo:{agenda.termo.id} since_id:{crawler.since_id}')
+            logger.error(mensagem)
             agenda.status = Agendamento.Status.ERRO if erro else Agendamento.Status.AGENDADO
             agenda.dt_corte = crawler.menor_data
             agenda.save()
@@ -426,7 +394,7 @@ def processa_termo(termo, limite, fake_run):
     falha_twitter = False
 
     if termo.tipo_busca not in (PROC_FULL, PROC_PREMIUM):
-        print('O Crawler só funciona para cargas via API')
+        logger.warning('O Crawler só funciona para cargas via API')
 
     if termo.tipo_busca == PROC_FULL:
         inicio_processamento = termo.dtinicio
@@ -439,7 +407,7 @@ def processa_termo(termo, limite, fake_run):
         termo.save()
         mensagem = f'{termo.busca}: Busca Concluída. Fora do período possível ({inicio_processamento})'
         log_message(termo.projeto, mensagem)
-        print(mensagem)
+        logger.warning(mensagem)
         return
 
     set_autocommit(False)
@@ -459,6 +427,7 @@ def processa_termo(termo, limite, fake_run):
 
     crawler = Crawler(limite, opensearch_client=client)
     try:
+        crawler.logger = logger
         crawler.search_recent(processo, fake_run)
         mensagem = f'{crawler.tot_registros} obtidos'
         commit()
@@ -488,8 +457,8 @@ def processa_termo(termo, limite, fake_run):
         if erro or falha_twitter:
             if not fake_run:
                 log_message(termo.projeto, f'Erro durante a captura do termo {termo.id}')
-            print(f'Erro na execução da busca. Termo:{termo.id} since_id:{crawler.since_id}')
-            print(mensagem)
+            logger.error(f'Erro na execução da busca. Termo:{termo.id} since_id:{crawler.since_id}')
+            logger.error(mensagem)
 
             if not fake_run:
                 if crawler.menor_tweet:
@@ -526,23 +495,65 @@ class Command(BaseCommand):
         parser.add_argument('--limite', type=int, help='Limite de Tweets')
         parser.add_argument('--verbose', type=int, help='Aumento do Log')
         parser.add_argument('--fake', action='store_true', help='Indica quais os termos que seriam processados')
+        parser.add_argument('--console', action='store_true', help='Log para o console')
+
+    @staticmethod
+    def processa_item_unico(twit_id, termo_id):
+        if termo_id:
+            termo = Termo.objects.filter(id=termo_id).first()
+        else:
+            termo = None
+
+        url = f"https://api.twitter.com/2/tweets/{twit_id}"
+        headers = {
+            "Authorization": f"Bearer {settings.BEARED_TOKEN}"
+        }
+
+        queryparams = {
+            "tweet.fields": API_FIELDS,
+            "media.fields": API_MEDIA_FIELDS,
+            "place.fields": API_PLACE_FIELDS,
+            "expansions": ','.join(API_EXPANSIONS),
+            "user.fields": API_USER_FIELDS,
+        }
+
+        response = requests.get(url, headers=headers, params=queryparams)
+        tweet = response.json()
+        if 'errors' in tweet:
+            logger.error(f'Processamento único:{tweet}')
+            return
+
+        if termo:
+            tweet['termo'] = termo.id
+            tweet['projeto'] = termo.projeto.id
+
+        filename = '%s/data/%s.json' % (settings.BASE_DIR, twit_id)
+        with open(filename, 'w') as arquivo:
+            json.dump(tweet, arquivo)
+
 
     def handle(self, *args, **options):
 
         limite = options['limite'] or 2000
 
+        # não executar o crawler entre 23 e 01 da manhã (backup do Opensearch)
+        hora_atual = datetime.now().time().hour
+        if hora_atual in (23,0):
+            return
+
+        pid = os.getpid()
         fake_run = options.get('fake')
         rede_twitter = Rede.objects.get(nome='Twitter/X')
 
         if 'twit' in options and options['twit']:
-            processa_item_unico(options['twit'], options.get('termo'))
+            self.processa_item_unico(options['twit'], options.get('termo'))
 
         elif 'agenda' in options and options['agenda']:
             agenda = Agendamento.objects.filter(id=options['agenda']).first()
             if agenda:
                 processa_agenda(agenda, fake_run)
             else:
-                print('Agendamento não encontrado: %s' % options['agenda'])
+                logger.error('Agendamento não encontrado: %s' % options['agenda'])
 
         # Existem 3 estratégias de busca: Padrão, Contínua e Recuperação
         # Padrão: novo termo: começa do ínicio da carga do termo
@@ -553,7 +564,7 @@ class Command(BaseCommand):
             if termo:
                 processa_termo(termo, limite, fake_run)
             else:
-                print('Termo não encontrado: %s' % options['termo'])
+                logger.error('Termo não encontrado: %s' % options['termo'])
 
         else:
             tot_termos = 0
@@ -572,7 +583,7 @@ class Command(BaseCommand):
                 tot_termos += 1
 
             if tot_termos == 0:
-                print('Nenhum termo para processar %s' % timezone.now())
+                logger.info('Nenhum termo para processar')
 
         # Revive qualquer projeto de busca em processamento há mais de 1 horas
         uma_hora = timezone.now() - timedelta(hours=1)
@@ -580,3 +591,4 @@ class Command(BaseCommand):
                              tipo_busca__in=(PROC_IMPORTACAO, PROC_PREMIUM, PROC_FULL),
                              ult_processamento__lt=uma_hora).update(status='A')
         commit()
+        logger.info(f'PID {pid} finalizado')

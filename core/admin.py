@@ -383,7 +383,7 @@ class RetweetAdmin(PowerModelAdmin):
 
 @admin.register(Termo)
 class TermoAdmin(PowerModelAdmin):
-    search_fields = ('busca', 'projeto__nome')
+    search_fields = ('busca', 'projeto__nome', 'descritivo')
     list_filter = ('status','projeto__redes__nome', 'projeto__eixo',)
     list_display = ('busca', 'projeto', 'dtinicio', 'ult_processamento', 'status', 'last_count',)
     list_select_related = ('projeto', )
@@ -448,9 +448,9 @@ class TermoAdmin(PowerModelAdmin):
 
 @admin.register(Processamento)
 class ProcessamentoAdmin(PowerModelAdmin):
-    list_display = ('tipo', 'dt', 'termo', 'twit_id', 'tot_twits', 'tot_registros')
+    list_display = ('tipo', 'dt', 'termo', 'twit_id', 'tot_twits', 'tot_registros', 'status')
     raw_id_fields = ('termo', )
-    list_filter = ('tipo', 'dt')
+    list_filter = ('tipo', 'dt', 'status')
 
     def get_buttons(self, request, object_id=None):
         buttons = super(ProcessamentoAdmin, self).get_buttons(request, object_id)

@@ -10,8 +10,11 @@ from django.utils import timezone
 from django.db.transaction import set_autocommit, commit, rollback
 from django.core.management.base import BaseCommand
 
-from core import convert_date, intdef, log_message
+from core import convert_date, intdef
+from core.apps import get_management_logger
 from core.models import *
+
+logger = get_management_logger("importjson")
 
 # tentativa de remover tweets que não faziam referência à busca.
 # Não funcionou pois o Twitter realiza a busca nos títulos das URLs adicionadas
@@ -95,7 +98,7 @@ class Processo:
         else:
             if new_user:
                 if not user.twit_id:
-                    print('User sem ID')
+                    logger.warning('User sem ID')
                 else:
                     user.save()
 
@@ -128,7 +131,7 @@ class Processo:
         if termo_id:
             termo_atual = Termo.objects.filter(id=termo_id).first()
             if not termo_atual:
-                print(f'Termo não encontrado {termo_id}')
+                logger.error(f'Termo não encontrado {termo_id}')
         else:
             termo_atual = None
 
@@ -255,7 +258,6 @@ class Command(BaseCommand):
         parser.add_argument('-f', '--force', help='Aceita importações paralelas', action='store_true')
         parser.add_argument('-o', '--optimize', help='Não duplica os arquivos', action='store_true')
         parser.add_argument('-d', '--verbose', help='Inclui detalhamento durante o processo', action='store_true')
-
     def handle(self, *args, **options):
 
         force = options.get('force')
@@ -265,7 +267,7 @@ class Command(BaseCommand):
         if options['projeto']:
             termo = Termo.objects.filter(projeto_id=options['projeto']).first()
             if not termo:
-                self.stdout.write(self.style.ERROR('Nenhum termo ativo para o projeto %s' % options['projeto']))
+                logger.error('Nenhum termo ativo para o projeto %s' % options['projeto'])
                 return
             processo_ativo = Processamento.objects.filter(termo=termo, tipo=PROC_IMPORTACAO).first()
         elif options['processo']:
@@ -273,7 +275,7 @@ class Command(BaseCommand):
                 processo_ativo = Processamento.objects.get(id=options['processo'])
             except Processamento.DoesNotExist:
                 # Se o processo determinado não foi encontrado, deve-se interromper a rotina
-                self.stdout.write(self.style.WARNING('Processo %s não encontrado' % options['processo']))
+                logger.error('Processo %s não encontrado' % options['processo'])
                 return
 
         # se o processamento não foi indicado como entrada ou se nenhum processo existe para o termo indicado
@@ -281,18 +283,18 @@ class Command(BaseCommand):
             if force:
                 Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT).\
                     update(status=Processamento.CONCLUIDO)
-                print('Force Update')
+                logger.warning('Force Update')
             else:
                 proc = Processamento.objects.filter(status=Processamento.PROCESSANDO, tipo=PROC_JSON_IMPORT)
                 if proc:
-                    print('Importação pendente %d' % proc[0].id)
+                    logger.error(f'Importação pendente {proc[0].id}')
                     return
             agora = timezone.now()
             processo_ativo = Processamento.objects.create(status=Processamento.PROCESSANDO,
                                                           tipo=PROC_JSON_IMPORT, dt=agora, termo=termo,
                                                           tot_registros=0)
             commit()
-            print('Processo ativo: %d' % processo_ativo.id)
+            logger.info(f'Processo ativo: {processo_ativo.id}')
 
         tot_files = 0
         tot_erros = 0
@@ -311,7 +313,7 @@ class Command(BaseCommand):
                     if tweet:
                         commit()
             else:
-                print('Arquivo %s não encontrado' % filename)
+                logger.warning(f'Arquivo {filename} não encontrado')
         else:
 
             try:
@@ -326,7 +328,7 @@ class Command(BaseCommand):
                             os.remove(filename)
                             tot_dup += 1
                             if tot_dup % 100 == 0:
-                                print(f'Duplicados {tot_dup}')
+                                logger.info(f'Duplicados {tot_dup}')
                             continue
 
                         try:
@@ -353,24 +355,23 @@ class Command(BaseCommand):
 
                             if tot_files % 1000 == 0:
                                 if tweet:
-                                    print(f'Total de arquivos:{tot_files} {tweet.termo}')
+                                    logger.info(f'Total de arquivos:{tot_files} {tweet.termo}')
 
-                        except Exception as e:
-                            print('Erro no arquivo %s: %s' % (filename, e))
-                            traceback.print_exc()
+                        except Exception:
+                            logger.error(f'Erro no arquivo {filename}', exc_info=True)
                             if exists(filename):
                                 rename(filename, join(dest_dir, 'ruim', arquivo.name))
                             rollback()
                             tot_erros += 1
                             if tot_erros > 10:
-                                print('Mais de 10 erros encontrados')
+                                logger.error('Mais de 10 erros encontrados')
                                 break
 
             finally:
                 if tot_files == 0:
                     if processo_ativo.tot_registros == 0:
                         processo_ativo.delete()
-                    print('Nenhum arquivo processado %s' % timezone.now())
+                    logger.warning('Nenhum arquivo processado %s' % timezone.now())
                 else:
                     processo_ativo.status = Processamento.CONCLUIDO
                     tot_files += (processo_ativo.tot_registros or 0)
@@ -390,7 +391,7 @@ class Command(BaseCommand):
                         termo.save()
                         termo.projeto.tot_twits = (termo.projeto.tot_twits or 0) + total_processado
                         termo.projeto.save()
-                        print(f'Termo {termo.id}: importados {total_processado}')
+                        logger.info(f'Termo {termo.id}: importados {total_processado}')
                         log_message(termo.projeto, f'{total_processado} registros importados no termo {termo.busca}')
 
                 # Caso só exista um termo processado, gravar no processo de importação
@@ -401,14 +402,14 @@ class Command(BaseCommand):
                 commit()
 
                 if tot_files != 0:
-                    print('Arquivos processados: %d' % tot_files)
+                    logger.info('Arquivos processados: %d' % tot_files)
                     if optimize:
-                        print('Arquivos duplicados: %d' % tot_dup)
-                    print('Termos processados: %d' % tot_termos)
-                    print('Arquivos com erro: %d' % tot_erros)
-                    print('Novos Usuários: %d' % processo.counter_users)
-                    print('Novos Tweets: %d' % processo.counter_tweets)
-                    print('Novos Retweets: %d' % processo.counter_retweets)
+                        logger.info('Arquivos duplicados: %d' % tot_dup)
+                    logger.info('Termos processados: %d' % tot_termos)
+                    logger.info('Arquivos com erro: %d' % tot_erros)
+                    logger.info('Novos Usuários: %d' % processo.counter_users)
+                    logger.info('Novos Tweets: %d' % processo.counter_tweets)
+                    logger.info('Novos Retweets: %d' % processo.counter_retweets)
         '''
         from core.apps import find_first_tweet
         termo = Termo.objects.get(id=7)

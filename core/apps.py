@@ -1,6 +1,9 @@
 import json
+import logging
 import os
+import sys
 import time
+
 from datetime import timedelta, datetime
 
 from django.apps import AppConfig
@@ -15,6 +18,34 @@ from core import intdef
 class CoreConfig(AppConfig):
     name = 'core'
 
+
+def get_management_logger(name):
+    logger = logging.getLogger(name)
+
+    # Se o logger já tem handlers, não adiciona de novo (evita duplicados)
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+
+        formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+
+        # Garante que a pasta de logs existe (bom para o seu Debian)
+        log_dir = 'logs'
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+
+        # Handler de Arquivo
+        fh = logging.FileHandler(f'{log_dir}/{name}.log')
+        fh.setFormatter(formatter)
+
+        # Handler de Console
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setFormatter(formatter)
+
+        logger.addHandler(fh)
+        logger.addHandler(ch)
+
+    return logger
 
 def save_result(data, processo, grava_termo=True, overwrite=True, opensearch=None):
     data['process'] = processo.id
