@@ -88,7 +88,7 @@ class Crawler:
             self.since_id = None
             # busca o último processamento agendado
             proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA,
-                                                status=Processamento.AGENDADO).order_by('-id').first()
+                                                status=Processamento.Status.AGENDADO).order_by('-id').first()
             if not proc:
                 # se não achou o último processamento, o termo não pode ser processado
                 logger.warning('Nenhum agendamento encontrado para o termo')
@@ -98,7 +98,7 @@ class Crawler:
                 self.until_id = int(proc.twit_id)
                 logger.info(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
                 ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
-                                                        status=Processamento.CONCLUIDO,
+                                                        status=Processamento.Status.CONCLUIDO,
                                                         twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
                     self.since_id = int(ult_proc.twit_id)
@@ -146,12 +146,12 @@ class Crawler:
         if self.tot_registros >= self.limite:
             termo.status = 'I'
             # o limite superior é gravado para que o próximo processamento comece a partir dele
-            Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
+            Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO,
                                          twit_id=self.menor_tweet)
         else:
             # só marcar o agendamento como concluído, se tiver recuperado menos que o limite
             if self.correcao and proc:
-                proc.status = Processamento.CONCLUIDO
+                proc.status = Processamento.Status.CONCLUIDO
                 proc.save()
 
             # se a data atual for maior que o final programado
@@ -160,7 +160,7 @@ class Crawler:
                 termo.status = 'C'
             else:
                 # só marcar o status A se não tiver restado nenhum processamento agendado
-                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.AGENDADO).first()
+                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO).first()
                 if proc:
                     termo.status = 'I'
                 else:
@@ -312,8 +312,7 @@ def processa_agenda(agenda, fake_run):
     falha_twitter = False
 
     set_autocommit(False)
-    processo = Processamento.objects.create(termo=agenda.termo, dt=agora,
-                                            tipo=agenda.tipo, status=Processamento.PROCESSANDO)
+    processo = Processamento.objects.create(termo=agenda.termo, dt=agora, tipo=agenda.tipo)
     if not fake_run:
         Agendamento.objects.filter(id=agenda.id).update(status=Agendamento.Status.PROCESSANDO)
     commit()
@@ -381,7 +380,7 @@ def processa_agenda(agenda, fake_run):
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet
-        processo.status = Processamento.CONCLUIDO
+        processo.status = Processamento.Status.CONCLUIDO
         processo.save()
         commit()
 
@@ -411,8 +410,7 @@ def processa_termo(termo, limite, fake_run):
         return
 
     set_autocommit(False)
-    processo = Processamento.objects.create(termo=termo, dt=agora,
-                                            tipo=termo.tipo_busca, status=Processamento.PROCESSANDO)
+    processo = Processamento.objects.create(termo=termo, dt=agora, tipo=termo.tipo_busca)
     if not fake_run:
         Termo.objects.filter(id=termo.id).update(status='P')
     commit()
@@ -439,10 +437,10 @@ def processa_termo(termo, limite, fake_run):
             mensagem = f'Erro {e}\n'
         falha_twitter = True
 
-    except TwitterServerError as e:
+    except TwitterServerError:
         falha_twitter = True
 
-    except ConnectionResetError as e:
+    except ConnectionResetError:
         falha_twitter = True
 
     except Exception as e:
@@ -463,7 +461,7 @@ def processa_termo(termo, limite, fake_run):
             if not fake_run:
                 if crawler.menor_tweet:
                     Processamento.objects.create(termo=termo, dt=agora,
-                                                 tipo=PROC_CONTINUA, status=Processamento.AGENDADO,
+                                                 tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO,
                                                  twit_id=crawler.menor_tweet)
 
                 # se a falha foi na rede do twitter não marca o termo como erro
@@ -479,7 +477,7 @@ def processa_termo(termo, limite, fake_run):
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet
-        processo.status = Processamento.CONCLUIDO
+        processo.status = Processamento.Status.CONCLUIDO
         processo.save()
         commit()
 

@@ -2,6 +2,9 @@ import re
 import string
 from collections import Counter
 
+#
+# Rotina ainda em desenvolvimento - 2/3/2026
+#
 from opensearchpy import OpenSearch
 
 from django.core.management.base import BaseCommand

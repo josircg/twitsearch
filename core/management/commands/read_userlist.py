@@ -1,4 +1,6 @@
-# -*- coding: utf-8 -*-
+#
+# Rotina está desatualizada - deve-se buscar outras formas de capturar os dados de usuários
+#
 import os
 import pytz
 import csv

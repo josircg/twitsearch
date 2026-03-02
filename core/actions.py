@@ -297,7 +297,7 @@ def generate_tags_file(queryset, project_id):
             termo = Termo.objects.filter(projeto_id=project_id).first()
             p,_ = Processamento.objects.get_or_create(
                     termo=termo, tipo=PROC_TAGS, defaults={'dt': timezone.now()})
-            p.status = Processamento.CONCLUIDO
+            p.status = Processamento.Status.CONCLUIDO
             p.tot_registros = num_lines
             p.save()
 
@@ -380,6 +380,7 @@ def busca_local(id):
     termo.status = 'C'
     termo.save()
     proc.twit_id = maior
+    proc.status = Processamento.Status.CONCLUIDO
     proc.save()
     return
 
@@ -481,7 +482,7 @@ def importa_tweets(processo_db, lista):
             processo.load_twitter(tweet)
 
     processo_db.tot_registros = processo.counter_tweets
-    processo_db.status = 'C'
+    processo_db.status = Processamento.Status.CONCLUIDO
     processo_db.save()
     processo_db.termo.last_count = processo_db.termo.tweetinput_set.count() or 0
     processo_db.termo.save()
@@ -501,7 +502,7 @@ def import_list(termo_id, arquivo):
 
     tot_registros = len(fila)
     if tot_registros > 0:
-        processo = Processamento.objects.create(tipo=PROC_MATCH, termo=termo, dt=hoje, status='A')
+        processo = Processamento.objects.create(tipo=PROC_MATCH, termo=termo, dt=hoje)
         processo.tot_registros = tot_registros
         processo.save()
         th = Thread(target=importa_tweets, args=(processo, fila))

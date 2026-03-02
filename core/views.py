@@ -54,7 +54,7 @@ def stats(request, project_id, termo_id=None):
     if not proc_importacao:
         termo_base = projeto.termo_set.all().first()
         proc_importacao = Processamento.objects.create(tipo=PROC_MATCH, termo=termo_base,
-                                                       dt=agora, status=Processamento.CONCLUIDO)
+                                                       dt=agora, status=Processamento.Status.CONCLUIDO)
 
     filename_csv = 'users-%s.csv' % project_id
 
@@ -83,11 +83,11 @@ def stats(request, project_id, termo_id=None):
         proc_tags, created = Processamento.objects.get_or_create(
                                 termo__projeto=projeto, tipo=PROC_TAGS,
                                 defaults={'dt': agora,
-                                          'status': Processamento.AGENDADO,
+                                          'status': Processamento.Status.AGENDADO,
                                           'tot_registros': tot_registros})
         if not created:
             proc_tags.dt = agora
-            proc_tags.status = Processamento.AGENDADO
+            proc_tags.status = Processamento.Status.AGENDADO
             proc_tags.tot_registros = tot_registros
             proc_tags.save()
 
@@ -196,7 +196,7 @@ def stats(request, project_id, termo_id=None):
     )
     grafico_div = plot(fig2, output_type='div')
 
-    if proc_tags.status == Processamento.CONCLUIDO:
+    if proc_tags.status == Processamento.Status.CONCLUIDO:
         csv_tags = 'tags-%d.zip' % projeto.id
         csv_completo = 'full-%d.zip' % projeto.id
     else:
@@ -234,12 +234,12 @@ def backup_json(request, project_id):
     # Verifica primeiro se já não existe um backup agendado
     proc = Processamento.objects.filter(termo=termo, tipo=PROC_BACKUP).first()
     if proc:
-        if proc.status == Processamento.CONCLUIDO:
+        if proc.status == Processamento.Status.CONCLUIDO:
             messages.success(request, 'O backup já foi concluído. Verifique no S3')
         else:
             messages.warning(request, 'Backup não concluído')
     else:
-        Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status=Processamento.AGENDADO)
+        Processamento.objects.create(dt=agora, termo=termo, tipo=PROC_BACKUP, status=Processamento.Status.AGENDADO)
         messages.success(request, 'A montagem do backup foi iniciada. '
                                   'Verifique se o processo foi concluído diretamente no S3'
                                   'ou clicando no botão de Backup novamente')
@@ -249,7 +249,7 @@ def backup_json(request, project_id):
 def exclui_json(request, project_id):
     projeto = get_object_or_404(Projeto, pk=project_id)
     proc = Processamento.objects.filter(termo__projeto=projeto, tipo=PROC_BACKUP,
-                                        status=Processamento.CONCLUIDO)
+                                        status=Processamento.Status.CONCLUIDO)
     if proc:
         remove_json(projeto)
     else:
@@ -545,7 +545,7 @@ def status_coleta(request, termo_id):
     
     grafico_div = plot(fig2, output_type='div')
         
-    dset = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.AGENDADO).order_by('-id')
+    dset = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO).order_by('-id')
 
     termo_url = reverse('admin:core_termo_change', args=(termo_id,))
     termo = f'<a href="{termo_url}">{termo.descritivo}</a>'
