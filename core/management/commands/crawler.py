@@ -69,7 +69,7 @@ class Crawler:
         termo = processo.termo
         faixa_ok = True
 
-        logger.warning(f'Processo {processo.id} pid:{self.os_pid}')
+        logger.info(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet or 0
@@ -242,7 +242,7 @@ class Crawler:
                                               'following_count': user['public_metrics']['following_count'],
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
-                logger.warning('No includes found', tweets.source)
+                logger.error('No includes found', tweets.source)
                 break
 
             # os tweets primários, retweets, replies e quotes são gravados em 'data'
@@ -295,6 +295,11 @@ class Crawler:
 
             logger.info(f'Total registros: {self.tot_registros} / {self.menor_data}')
             next_token = tweets.source.get('meta', {}).get('next_token', 'Fim')
+
+            hora_atual = datetime.now().time().hour
+            if hora_atual == 0:
+                next_token = 'Fim'
+                logger.info('Rotina interrompida para execução do backup')
 
         # se algum registro foi recebido, atualizar
         processo.termo.ult_processamento = agora
