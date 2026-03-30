@@ -55,6 +55,7 @@ class Crawler:
         self.dt_inicial = None
         self.dt_final = None
         self.correcao = False       # indica que é um processamento de correção
+        self.interrompido = False
         self.client = opensearch_client
         self.api_fields = API_FIELDS
         self.os_pid = os.getpid()
@@ -67,7 +68,7 @@ class Crawler:
     def search_recent(self, processo, fake=False):
         agora = timezone.now()
         termo = processo.termo
-        faixa_ok = True
+        faixa_ok = not fake
 
         logger.info(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
@@ -92,6 +93,8 @@ class Crawler:
             if not proc:
                 # se não achou o último processamento, o termo não pode ser processado
                 logger.warning('Nenhum agendamento encontrado para o termo')
+                termo.status = 'A'
+                termo.save()
                 faixa_ok = False
             else:
                 # Busca o último processamento anterior ao agendamento
@@ -105,13 +108,17 @@ class Crawler:
 
                 if not self.since_id:
                     if not termo.prim_tweet:
+                        logger.warning('Buscando o primeiro tweet no intervalo')
                         termo.prim_tweet = find_first_tweet(termo)
-                        termo.save()
-                        commit()
                         # se não foi encontrado nenhum tweet então o termo não está trazendo nenhum registro!
                         if not termo.prim_tweet:
                             logger.info('Nenhum registro encontrado para o termo')
                             faixa_ok = False
+                            if termo.dtfinal and termo.dtfinal < agora:
+                                termo.status = 'C'
+                                log_message(termo,'Busca finalizada já que nenhum registro foi encontrado')
+                                logger.info('Busca finalizada')
+                        termo.save()
                     self.since_id = termo.prim_tweet
 
             # se o agendamento ainda não foi descartado, tentar achar o primeiro tweet associado ao termo
@@ -123,10 +130,10 @@ class Crawler:
                         logger.info(f'Until: {self.until_id}')
 
                 if self.since_id and self.until_id and self.since_id > self.until_id:
-                    logger.info(f'Faixa inconsistente: {self.since_id} - {self.until_id}')
+                    logger.warning(f'Faixa inconsistente: {self.since_id} - {self.until_id}')
                     faixa_ok = False
-
-                logger.info(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
+                else:
+                    logger.info(f'Rotina de Correção {termo.id}: {self.since_id} - {self.until_id}')
 
         # Caso não seja Full search e o último processamento tenha ultrapassado 7 dias, não considerar o since_id
         if termo.tipo_busca != PROC_FULL and self.dt_inicial:
@@ -136,36 +143,37 @@ class Crawler:
                 self.dt_final = termo.dtfinal
             self.since_id = None
 
-        if fake:
-            return
-
         # A busca regular dos termos é sempre pela relevância
         if faixa_ok:
             self.search(processo, mais_relevantes=True)
-
-        if self.tot_registros >= self.limite:
-            termo.status = 'I'
-            # o limite superior é gravado para que o próximo processamento comece a partir dele
-            Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO,
-                                         twit_id=self.menor_tweet)
-        else:
-            # só marcar o agendamento como concluído, se tiver recuperado menos que o limite
-            if self.correcao and proc:
-                proc.status = Processamento.Status.CONCLUIDO
-                proc.save()
-
-            # se a data atual for maior que o final programado
-            if faixa_ok and termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
-                logger.info(f'Termo {termo.id} finalizado')
-                termo.status = 'C'
+            if self.tot_registros >= self.limite:
+                termo.status = 'I'
+                termo.save()
+                # o limite superior é gravado para que o próximo processamento comece a partir dele
+                Processamento.objects.create(termo=termo, dt=agora, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO,
+                                             twit_id=self.menor_tweet)
             else:
-                # só marcar o status A se não tiver restado nenhum processamento agendado
-                proc = Processamento.objects.filter(termo=termo, tipo=PROC_CONTINUA, status=Processamento.Status.AGENDADO).first()
-                if proc:
-                    termo.status = 'I'
+                # marcar o agendamento como concluído, se tiver recuperado menos que o limite
+                if self.correcao and proc:
+                    proc.status = Processamento.Status.CONCLUIDO
+                    proc.save()
+
+                Processamento.objects.filter(termo=termo,
+                                             tipo=PROC_CONTINUA,
+                                             status=Processamento.Status.AGENDADO).update(status=Processamento.Status.CONCLUIDO)
+
+                # se a data atual for maior que o final programado
+                if termo.dtfinal and self.menor_data > termo.dtfinal.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
+                    logger.info(f'Termo {termo.id} finalizado ao chegar na data final')
+                    termo.status = 'C'
                 else:
-                    termo.status = 'A'
-        termo.save()
+                    if termo.dtinicio and self.menor_data < termo.dtinicio.strftime("%Y-%m-%dT%H:%M:%S.000Z"):
+                        logger.info(f'Termo {termo.id} finalizado ao chegar na data inicial')
+                        termo.status = 'C'
+                    else:
+                        termo.status = 'A'
+                termo.save()
+
         return
 
 
@@ -231,6 +239,8 @@ class Crawler:
 
             if tweets.source.get('meta'):
                 if tweets.source['meta'].get('result_count', 0) == 0:
+                    self.interrompido = True
+                    logger.warning(f'Meta não encontrado {tweets.source}')
                     break
 
             users = {}
@@ -242,7 +252,8 @@ class Crawler:
                                               'following_count': user['public_metrics']['following_count'],
                                               'tweet_count': user['public_metrics']['tweet_count']}
             else:
-                logger.error('No includes found', tweets.source)
+                self.interrompido = True
+                logger.error(f'Includes não encontrado {tweets.source}')
                 break
 
             # os tweets primários, retweets, replies e quotes são gravados em 'data'
@@ -482,7 +493,7 @@ def processa_termo(termo, limite, fake_run):
 
         processo.tot_registros = crawler.tot_registros
         processo.twit_id = crawler.ultimo_tweet
-        processo.status = Processamento.Status.CONCLUIDO
+        processo.status = Processamento.Status.CONCLUIDO if not erro else Processamento.Status.ERRO
         processo.save()
         commit()
 

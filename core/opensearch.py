@@ -17,9 +17,9 @@ def connect_opensearch(server_alias):
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False,
-        timeout=30,
-        max_retries=5,           # <-- Tenta algumas vezes antes de falhar
-        retry_on_timeout=True    # <-- Reenvia a requisição no timeout  # ,
+        timeout=60,
+        max_retries=3,           # <-- Tenta algumas vezes antes de falhar
+        retry_on_timeout=True    # <-- Reenvia a requisição no timeout
     )
     return open_search_client
 
@@ -29,7 +29,8 @@ def create_if_not_exists_index(client: OpenSearch, index_name):
         'settings': {
             'index': {
                 'number_of_replicas': 1,
-                'number_of_shards': 2
+                'number_of_shards': 2,
+                "refresh_interval": "30s"
             }
         }
     }
