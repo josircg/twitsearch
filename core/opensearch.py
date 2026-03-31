@@ -38,6 +38,7 @@ def create_if_not_exists_index(client: OpenSearch, index_name):
     try:
         if not client.indices.exists(index=index_name):
             client.indices.create(index=index_name, body=index_body)
+            print(f'Índice {index_name} criado')
     except Exception as e:
         print('Erro na conexão com o Opensearch')
         raise ValueError(e)

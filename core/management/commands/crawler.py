@@ -240,7 +240,6 @@ class Crawler:
             if tweets.source.get('meta'):
                 if tweets.source['meta'].get('result_count', 0) == 0:
                     self.interrompido = True
-                    logger.warning(f'Meta não encontrado {tweets.source}')
                     break
 
             users = {}

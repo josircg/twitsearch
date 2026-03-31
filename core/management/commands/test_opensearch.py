@@ -1,16 +1,14 @@
-import time
-import sys
+
 import os
+import json
+import time
+import uuid
 
 from opensearchpy import helpers
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from core.opensearch import connect_opensearch
-
-import os
-import json
-import time
+from core.opensearch import connect_opensearch, create_if_not_exists_index
 
 
 def carregar_dados_da_pasta(pasta_origem, limite=500):
@@ -33,64 +31,86 @@ def carregar_dados_da_pasta(pasta_origem, limite=500):
 
             # Verifica se é um ficheiro JSON
             if entrada.is_file() and entrada.name.endswith('.json'):
-                try:
-                    with open(entrada.path, 'r', encoding='utf-8') as f:
-                        dados_na_memoria.append(json.load(f))
-                        contador += 1
+                with open(entrada.path, 'r', encoding='utf-8') as f:
+                    registro = json.load(f)
+                    if 'created_at' in registro:
+                         del registro['created_at']
+                    if 'id' in registro:
+                        registro['id'] = str(registro['id'])
+                    if 'user' in registro:
+                        if 'id' in registro['user']:
+                            registro['user']['id'] = str(registro['user']['id'])
+                        if 'created_at' in registro['user']:
+                             del registro['user']['created_at']
 
-                        # Opcional: Log de progresso a cada 100 arquivos
-                        if contador % 100 == 0:
-                            print(f"Lidos {contador} arquivos...", end='\r')
+                    dados_na_memoria.append(registro)
+                    contador += 1
 
-                except Exception as e:
-                    print(f"\nErro ao ler {entrada.name}: {e}")
+                    # Opcional: Log de progresso a cada 100 arquivos
+                    if contador % 100 == 0:
+                        print(f"Lidos {contador} arquivos...", end='\r')
+
 
     end_load = time.time()
     print(f"\nConcluído: {len(dados_na_memoria)} arquivos carregados em {end_load - start_load:.2f}s.")
     return dados_na_memoria
 
 
-def medir_velocidade_gravacao(client, index_name, dados, batch_size=500):
-    print(f"--- Iniciando Benchmark de Gravação no índice: {index_name} ---")
+def get_disk_stats(client):
+    """Captura as estatísticas de escrita de todos os nós."""
+    stats = client.nodes.stats(metric="fs")
+    nodes_data = {}
+    for node_id, data in stats['nodes'].items():
+        # Focamos no dispositivo rbd0 (ou no primeiro disponível)
+        device = data['fs']['io_stats']['devices'][0]
+        nodes_data[node_id] = {
+            "name": data['name'],
+            "writes": device['write_operations'],
+            "write_ms": device['write_time']
+        }
+    return nodes_data
 
-    total_docs = len(dados)
+
+def executar_benchmark_com_io(client, nome_indice, lista_docs, lote_tamanho=200):
+    if not lista_docs: return
+
+    print(f"\n--- Iniciando Stress Test (Lote: {len(lista_docs)}/{lote_tamanho}) ---")
+
+    # 1. Captura estado inicial do disco
+    stats_inicio = get_disk_stats(client)
+
+    actions = [{"_op_type": "index", "_id": str(uuid.uuid4()), "_index": nome_indice, "_source": doc} for doc in lista_docs]
     start_time = time.time()
 
-    # Preparar as ações para o bulk
-    actions = [
-        {
-            "_op_type": "index",
-            "_index": index_name,
-            "_source": doc
-        }
-        for doc in dados
-    ]
-
-    print(f"Enviando {total_docs} documentos em lotes de {batch_size}...")
-
-    # Executar a gravação usando helpers.bulk
-    sucesso, erros = helpers.bulk(
-        client,
-        actions,
-        chunk_size=batch_size,
-        request_timeout=60
-    )
+    # 2. Executa a carga
+    sucesso, _ = helpers.bulk(client, actions, chunk_size=lote_tamanho, request_timeout=120)
 
     end_time = time.time()
-    duracao_total = end_time - start_time
 
-    # Cálculos de Performance
-    docs_por_segundo = total_docs / duracao_total
-    tempo_por_doc_ms = (duracao_total / total_docs) * 1000
+    # 3. Captura estado final do disco
+    stats_fim = get_disk_stats(client)
 
-    print("-" * 50)
-    print(f"RESULTADOS:")
-    print(f"Tempo Total: {duracao_total:.2f} segundos")
-    print(f"Documentos Gravados: {sucesso}")
-    print(f"Erros: {len(erros) if isinstance(erros, list) else 0}")
-    print(f"Velocidade Média: {docs_por_segundo:.2f} docs/s")
-    print(f"Latência Média por Doc: {tempo_por_doc_ms:.2f} ms")
-    print("-" * 50)
+    # 4. Cálculos de Performance
+    duracao = end_time - start_time
+    print("\n" + "=" * 60)
+    print(f"MÉTRICAS DE APLICAÇÃO (Python -> Rede -> OpenSearch):")
+    print(f"Velocidade: {len(lista_docs) / duracao:.2f} docs/s | Tempo: {duracao:.2f}s")
+    print("=" * 60)
+    print(f"MÉTRICAS DE INFRAESTRUTURA (Latência de Disco por Nó):")
+
+    for n_id in stats_inicio:
+        # Delta de operações e tempo
+        d_writes = stats_fim[n_id]['writes'] - stats_inicio[n_id]['writes']
+        d_ms = stats_fim[n_id]['write_ms'] - stats_inicio[n_id]['write_ms']
+
+        # Cálculo da latência média de escrita durante este teste
+        # Fórmula: Latência = Tempo Total de Escrita / Número de Operações
+        latencia_io = d_ms / d_writes if d_writes > 0 else 0
+
+        status_disco = "🔴 CRÍTICO" if latencia_io > 100 else "🟡 LENTO" if latencia_io > 20 else "🟢 OK"
+
+        print(f"Nó: {stats_inicio[n_id]['name']:<25} | Latência I/O: {latencia_io:>7.2f} ms/op | {status_disco}")
+    print("=" * 60)
 
 
 class Command(BaseCommand):
@@ -114,15 +134,12 @@ class Command(BaseCommand):
             print('Sem acesso de monitoramento')
 
         if options.get('index'):
-            if conn.indices.exists(index=options.get('index')):
-                print('Conexão realizada com sucesso')
-
-            else:
-                print('Índice não encontrado')
+            create_if_not_exists_index(conn, options.get('index'))
 
             dest_dir = settings.BASE_DIR + '/data/cached'
-            info = carregar_dados_da_pasta(dest_dir, 10)
+            info = carregar_dados_da_pasta(dest_dir, 20)
             if len(info) == 0:
                 print(f"Nenhum arquivo JSON encontrado em: {dest_dir}")
                 return
-            medir_velocidade_gravacao(conn, options.get('index'), info)
+
+            executar_benchmark_com_io(conn, options.get('index'), info)
