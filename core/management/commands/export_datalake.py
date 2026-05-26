@@ -62,7 +62,8 @@ class Processo:
 
     def commit(self):
         """
-        Move o antigo para o histórico (mantendo o batch_id antigo) e insere o novo com o batch_id atual.
+        Caso o tweet já exista, move o antigo para o histórico (mantendo o batch_id antigo)
+        e insere o novo com o batch_id atual. Também inclui os tweets relevantes na fila para processamento pelo Mage
         """
         cursor = self.pg_client.cursor()
         batch_keys = list(self.batch.keys())
@@ -87,10 +88,17 @@ class Processo:
         """
         cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
 
+        # Os tweets que não tiverem termo associado não entram na fila de processamento
+        relevantes = []
+        for record in batch_values:
+            d_record = json.loads(record)
+            if d_record.get('termo'):
+                relevantes.append(record)
+
         sql_insert = f"""
         INSERT INTO fila_twitter (source) SELECT unnest_source::jsonb FROM unnest(%s::text[]) AS t(unnest_source);
         """
-        cursor.execute(sql_insert, (batch_values,))
+        cursor.execute(sql_insert, (relevantes,))
 
         self.pg_client.commit()
         self.batch = {}
@@ -98,6 +106,7 @@ class Processo:
         for arquivo in self.arquivos:
             os.remove(arquivo)
         self.arquivos = []
+        return len(relevantes)
 
 
 class Command(BaseCommand):
@@ -113,6 +122,7 @@ class Command(BaseCommand):
 
         tot_files = 0
         tot_erros = 0
+        tot_fila = 0
         tot_registros = 0
         estimate = options.get('estimate')
         dest_dir = settings.BASE_DIR + '/data/cached'
@@ -120,8 +130,8 @@ class Command(BaseCommand):
         for arquivo in os.scandir(dest_dir):
             if arquivo.name.endswith(".json"):
                 try:
-                    #if tot_files > 20:
-                    #    break
+                    if tot_files >= 100:
+                        break
                     tot_files += 1
                     if estimate:
                         continue
@@ -137,7 +147,7 @@ class Command(BaseCommand):
                         continue
 
                     if len(processo.batch) >= processo.batch_size:
-                        processo.commit()
+                        tot_fila += processo.commit()
                 except:
                     logger.error(f'Erro no arquivo {filename}', exc_info=True)
                     if exists(filename):
@@ -148,9 +158,10 @@ class Command(BaseCommand):
                         break
 
         if len(processo.batch) > 0:
-            processo.commit()
+            tot_fila += processo.commit()
 
         logger.info(f'Arquivos processados: {tot_files}')
-        logger.info(f'Registros: {tot_registros}')
+        logger.info(f'Registros Lidos: {tot_registros}')
+        logger.info(f'Registros Relevantes: {tot_fila}')
         logger.info(f'Arquivos com erro: {tot_erros}')
 

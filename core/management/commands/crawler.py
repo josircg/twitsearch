@@ -84,7 +84,8 @@ class Crawler:
                 logger.info(f'Execução regular {termo.id}: de {self.since_id} até agora')
 
         else:
-            # Caso o Status seja 'I' então entra a Estratégia de Correção: irá buscar registros anteriores ao último capturado
+            # Caso o Status seja 'I' então executá-se a Estratégia de Correção:
+            # A rotina irá buscar registros anteriores ao último capturado
             self.correcao = True
             self.since_id = None
             # busca o último processamento agendado
@@ -102,7 +103,8 @@ class Crawler:
                 logger.info(f'Buscando último processamento anterior ao agendamento ({self.until_id})')
                 ult_proc = Processamento.objects.filter(termo=termo, tipo=termo.tipo_busca,
                                                         status=Processamento.Status.CONCLUIDO,
-                                                        twit_id__lt=self.until_id).exclude(twit_id='0').order_by('-id').first()
+                                                        twit_id__lt=self.until_id
+                                                        ).exclude(twit_id='0').order_by('-id').first()
                 if ult_proc and intdef(ult_proc.twit_id,0) != 0:
                     self.since_id = int(ult_proc.twit_id)
 
@@ -124,7 +126,8 @@ class Crawler:
             # se o agendamento ainda não foi descartado, tentar achar o primeiro tweet associado ao termo
             if faixa_ok:
                 if not self.until_id:
-                    primeiro = TweetInput.objects.filter(termo=termo, tweet_id__gt=self.since_id).order_by('tweet_id').first()
+                    primeiro = TweetInput.objects.filter(termo=termo,
+                                                         tweet_id__gt=self.since_id).order_by('tweet_id').first()
                     if primeiro:
                         self.until_id = int(primeiro.tweet_id)
                         logger.info(f'Until: {self.until_id}')
@@ -176,7 +179,6 @@ class Crawler:
 
         return
 
-
     def search_agenda(self, processo, fake=False):
         termo = processo.termo
         if self.dt_inicial:
@@ -187,7 +189,6 @@ class Crawler:
         if not fake:
             logger.warning(f'Processo {processo.id} pid:{self.os_pid}')
             self.search(processo, processo.tipo == PROC_RELEVANTE)
-
 
     def search(self, processo, mais_relevantes: bool):
         agora = timezone.now()
