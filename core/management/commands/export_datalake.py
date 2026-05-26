@@ -5,6 +5,7 @@
 
 import json
 import os
+from itertools import islice
 
 from os.path import join, exists
 
@@ -127,35 +128,40 @@ class Command(BaseCommand):
         estimate = options.get('estimate')
         dest_dir = settings.BASE_DIR + '/data/cached'
         processo = Processo('pg_baoba', 500)
-        for arquivo in os.scandir(dest_dir):
-            if arquivo.name.endswith(".json"):
-                try:
-                    if tot_files >= 100:
-                        break
-                    tot_files += 1
-                    if estimate:
-                        continue
-                    filename = join(dest_dir, arquivo.name)
-                    with open(filename, 'r') as file:
-                        texto = file.read()
-                    if len(texto) > 0:
-                        twitter_data = json.loads(texto)
-                        tot_registros += processo.insere_docs(twitter_data)
-                        processo.arquivos.append(filename)
-                    else:
-                        tot_erros += 1
-                        continue
 
-                    if len(processo.batch) >= processo.batch_size:
-                        tot_fila += processo.commit()
-                except:
-                    logger.error(f'Erro no arquivo {filename}', exc_info=True)
-                    if exists(filename):
-                        os.rename(filename, join(dest_dir, 'ruim', arquivo.name))
-                    tot_erros += 1
-                    if tot_erros > 10:
-                        logger.error('Mais de 10 erros encontrados')
-                        break
+        with os.scandir(dest_dir) as it:
+            primeiros_arquivos = islice(it, 500)
+            for arquivo in primeiros_arquivos:
+                if arquivo.name.endswith(".json"):
+                    try:
+                        if tot_fila >= 100:
+                            break
+                        tot_files += 1
+                        if tot_files % 1000 == 0:
+                            print(f'Lidos {tot_files}')
+                        if estimate:
+                            continue
+                        filename = join(dest_dir, arquivo.name)
+                        with open(filename, 'r') as file:
+                            texto = file.read()
+                        if len(texto) > 0:
+                            twitter_data = json.loads(texto)
+                            tot_registros += processo.insere_docs(twitter_data)
+                            processo.arquivos.append(filename)
+                        else:
+                            tot_erros += 1
+                            continue
+
+                        if len(processo.batch) >= processo.batch_size:
+                            tot_fila += processo.commit()
+                    except:
+                        logger.error(f'Erro no arquivo {filename}', exc_info=True)
+                        if exists(filename):
+                            os.rename(filename, join(dest_dir, 'ruim', arquivo.name))
+                        tot_erros += 1
+                        if tot_erros > 10:
+                            logger.error('Mais de 10 erros encontrados')
+                            break
 
         if len(processo.batch) > 0:
             tot_fila += processo.commit()
