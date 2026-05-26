@@ -13,6 +13,7 @@ from core.opensearch import connect_opensearch
 
 padrao_re = re.compile(r"[^a-zA-Z0-9\sÁáÀàÂâÉéÊêÍíÓóÚúüÃãÕõÇç-]", re.UNICODE)
 
+
 def match_query(query: str, text: str) -> bool:
     """
     Verifica se algum termo do query está presente em text.
@@ -32,6 +33,7 @@ def match_query(query: str, text: str) -> bool:
 #             }
 #         },
 #     }
+
 
 def get_records(opensearch: OpenSearch, index_name, size=1000, search_after=None):
     search_body = {

@@ -16,6 +16,7 @@ from core.models import *
 
 logger = get_management_logger("importjson")
 
+
 # tentativa de remover tweets que não faziam referência à busca.
 # Não funcionou pois o Twitter realiza a busca nos títulos das URLs adicionadas
 def find_termo(termo, texto):
@@ -24,6 +25,7 @@ def find_termo(termo, texto):
         if cleaned.strip() in texto.upper():
             return True
     return False
+
 
 class Processo:
 
@@ -254,10 +256,13 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('twit', type=str, help='Twitter File',)
         parser.add_argument('-p', '--processo', type=str, help='Processo Default', nargs='?')
-        parser.add_argument('-j', '--projeto', type=str, help='Projeto onde será gravado os tweets caso não o projeto não exista', nargs='?')
+        parser.add_argument('-j', '--projeto', type=str,
+                            help='Projeto onde será gravado os tweets caso não o projeto não exista', nargs='?')
         parser.add_argument('-f', '--force', help='Aceita importações paralelas', action='store_true')
         parser.add_argument('-o', '--optimize', help='Não duplica os arquivos', action='store_true')
-        parser.add_argument('-d', '--verbose', help='Inclui detalhamento durante o processo', action='store_true')
+        parser.add_argument('-d', '--verbose',
+                            help='Inclui detalhamento durante o processo', action='store_true')
+
     def handle(self, *args, **options):
 
         force = options.get('force')

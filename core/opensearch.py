@@ -29,7 +29,7 @@ def create_if_not_exists_index(client: OpenSearch, index_name):
         'settings': {
             'index': {
                 'number_of_replicas': 1,
-                'number_of_shards': 2,
+                'number_of_shards': 1,
                 "refresh_interval": "30s"
             }
         }
@@ -50,5 +50,4 @@ def save_object(client: OpenSearch, data, index_name):
         index=index_name,
         id=chave,
         body=data,
-        request_timeout=60,
     )

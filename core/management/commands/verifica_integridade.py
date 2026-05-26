@@ -1,3 +1,17 @@
+'''
+Informa por email situações de erro durante a captura dos dados do Twitter
+Josir 08/2025
+
+* Erros de comunicação: O Twitter travou a captura por algum erro interno da API. Quando isso ocorre, o termo é
+  marcado com Erro para notificar os analistaas de que o problema ocorreu.
+
+* Erros de agendamento: O agendamento ocorre quando uma captura (crawler na API) estoura o limite de tweets
+  (5000 por default). Esse limite é necessário para que a captura de um único projeto não trave todos os demais
+  projetos. Nesse caso, o crawler cria um agendamento para que o processo continue de onde parou.
+
+  Entretanto, pode ocorrer casos em que o número de agendamentos podem ficar recorrentes, ou seja, um
+  agendamento criar um novo agendamento pois ele próprio estourou o limite de 5000.
+'''
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db.models import Count
@@ -35,7 +49,7 @@ class Command(BaseCommand):
             .filter(
                 tipo=PROC_FULL,
                 dt__gte=limite,
-                tot_registros__gt=1000,
+                tot_registros__gt=3000,
             )
             .values('termo')
             .annotate(qtd=Count('id'))

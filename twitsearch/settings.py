@@ -5,6 +5,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 DEBUG = True
+DEBUG_TOOLBAR = True
 
 ALLOWED_HOSTS = []
 SITE_NAME = 'Capitu'
@@ -39,12 +40,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if DEBUG:
-    import debug_toolbar
-    INSTALLED_APPS += ('debug_toolbar',)
-    INTERNAL_IPS = ('127.0.0.1',)
-    MIDDLEWARE += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
-    DEBUG_TOOLBAR_CONFIG = {'INTERCEPT_REDIRECTS': False, }
+# if DEBUG_TOOLBAR:
+#    import debug_toolbar
+#    INSTALLED_APPS += ('debug_toolbar',)
+#    INTERNAL_IPS = ('127.0.0.1',)
+#    MIDDLEWARE += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+#    DEBUG_TOOLBAR_CONFIG = {'INTERCEPT_REDIRECTS': False, }
 
 
 ROOT_URLCONF = 'twitsearch.urls'
