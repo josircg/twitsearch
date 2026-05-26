@@ -47,7 +47,9 @@ def get_management_logger(name):
 
     return logger
 
-def save_result(data, processo, grava_termo=True, overwrite=True, opensearch=None):
+
+def save_result(data, processo,
+                grava_termo=True, overwrite=True, opensearch=None):
     data['process'] = processo.id
     if grava_termo:
         data['termo'] = processo.termo.id

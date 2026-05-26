@@ -18,10 +18,10 @@ from core.apps import get_management_logger
 logger = get_management_logger("export_datalake")
 
 
-def connect_postgresql(server: str):
-    server = settings.PG_SERVERS.get(server)
+def connect_postgresql(server_alias: str):
+    server = settings.PG_SERVERS.get(server_alias)
     if not server:
-        raise Exception('PG_SERVERS não encontrado')
+        raise Exception(f'Entrada {server_alias} não encontrada')
     host = server['host']
     port = server.get('port',5432)
     database = server['database']
@@ -86,6 +86,12 @@ class Processo:
         FROM unnest(%s::text[], %s::text[]) AS t(unnest_id, unnest_source);
         """
         cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
+
+        sql_insert = f"""
+        INSERT INTO fila_twitter (source) SELECT unnest_source::jsonb FROM unnest(%s::text[]) AS t(unnest_source);
+        """
+        cursor.execute(sql_insert, (batch_values,))
+
         self.pg_client.commit()
         self.batch = {}
         # Exclui os arquivos que foram processados
