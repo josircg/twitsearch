@@ -104,23 +104,27 @@ class Command(BaseCommand):
     label = 'Importa Tweets'
 
     def add_arguments(self, parser):
-        parser.add_argument('-t', '--tweet', type=str, help='Tweet específico', nargs='?')
-        parser.add_argument('-d', '--verbose', help='Inclui detalhamento durante o processo',
-                            action='store_true')
+        parser.add_argument('-e', '--estimate', action='store_true',
+                            help='Estima número de registros a procesar')
+        parser.add_argument('-d', '--verbose', action='store_true',
+                            help='Inclui detalhamento durante o processo')
 
     def handle(self, *args, **options):
 
         tot_files = 0
         tot_erros = 0
         tot_registros = 0
+        estimate = options.get('estimate')
         dest_dir = settings.BASE_DIR + '/data/cached'
         processo = Processo('pg_baoba', 500)
         for arquivo in os.scandir(dest_dir):
             if arquivo.name.endswith(".json"):
                 try:
-                    if tot_files > 20:
-                        break
+                    #if tot_files > 20:
+                    #    break
                     tot_files += 1
+                    if estimate:
+                        continue
                     filename = join(dest_dir, arquivo.name)
                     with open(filename, 'r') as file:
                         texto = file.read()
