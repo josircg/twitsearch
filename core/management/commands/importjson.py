@@ -84,14 +84,14 @@ class Processo:
 
         # se contiver info sobre o usuário, verificar se é necessário preencher os campos
         if 'user' in src:
-            username = src['user'].get('username',src['user'].get('screen_name',None))
+            username = src['user'].get('username', src['user'].get('screen_name'))
         else:
             username = None
 
         if user and not user.username and username:
             user.username = username
             user.name = src['user'].get('name', None)
-            user.verified=src['user'].get('verified',None)
+            user.verified = src['user'].get('verified',None)
             if user.verified is None:
                 user.verified = False
             if 'created_at' in src['user']:
@@ -152,11 +152,11 @@ class Processo:
                 tweet_type = 'Q' if src['quoted_status']['type'] == 'quoted' else 'C'
             else:
                 tweet_type = 'Q'
-            # self.create_reference(src['quoted_status'], tweet_type, src['id'], user, dt)
+            self.create_reference(src['quoted_status'], tweet_type, src['id'], user, dt)
             retweet = False
 
         elif 'retweeted_status' in src and 'id' in src['retweeted_status']:
-            # self.create_reference(src['retweeted_status'], 'R', src['id'], user, dt)
+            self.create_reference(src['retweeted_status'], 'R', src['id'], user, dt)
             retweet = True
 
         elif 'referenced_tweets' in src:
@@ -171,7 +171,7 @@ class Processo:
                 else:
                     tweet_type = 'Q'
                     retweet = False
-                # self.create_reference(parent_tweet, tweet_type, src['id'], user, dt)
+                self.create_reference(parent_tweet, tweet_type, src['id'], user, dt)
 
         else:
             retweet = False

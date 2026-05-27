@@ -116,8 +116,8 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-e', '--estimate', action='store_true',
                             help='Estima número de registros a procesar')
-        parser.add_argument('-d', '--verbose', action='store_true',
-                            help='Inclui detalhamento durante o processo')
+        parser.add_argument('-d', '--source_dir', type=str, nargs='?',
+                            help='which folder to read files')
 
     def handle(self, *args, **options):
 
@@ -126,7 +126,8 @@ class Command(BaseCommand):
         tot_fila = 0
         tot_registros = 0
         estimate = options.get('estimate')
-        dest_dir = settings.BASE_DIR + '/data/queue'
+        dest_dir = options.get('source_dir') or 'queue'
+        dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
         processo = Processo('pg_baoba', 500)
 
         with os.scandir(dest_dir) as it:
