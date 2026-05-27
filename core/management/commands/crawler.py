@@ -307,10 +307,10 @@ class Crawler:
             logger.info(f'Total registros: {self.tot_registros} / {self.menor_data}')
             next_token = tweets.source.get('meta', {}).get('next_token', 'Fim')
 
-            hora_atual = datetime.now().time().hour
-            if hora_atual == 0:
-                next_token = 'Fim'
-                logger.info('Rotina interrompida para execução do backup')
+            # hora_atual = datetime.now().time().hour
+            # if hora_atual == 0:
+            #     next_token = 'Fim'
+            #     logger.info('Rotina interrompida para execução do backup')
 
         # se algum registro foi recebido, atualizar
         processo.termo.ult_processamento = agora
@@ -545,15 +545,14 @@ class Command(BaseCommand):
         with open(filename, 'w') as arquivo:
             json.dump(tweet, arquivo)
 
-
     def handle(self, *args, **options):
 
         limite = options['limite'] or 2000
 
         # não executar o crawler entre 23 e 01 da manhã (backup do Opensearch)
         hora_atual = datetime.now().time().hour
-        if hora_atual in (23,0):
-            return
+        # if hora_atual in (23,0):
+        #     return
 
         pid = os.getpid()
         fake_run = options.get('fake')
