@@ -358,10 +358,9 @@ class Command(BaseCommand):
                                     tweet, user = processo.load_twitter(twitter_data)
 
                                 commit()
-                                if settings.OPENSEARCH_SERVERS:
-                                    remove(filename)
-                                else:
-                                    rename(filename, join(cached_dir, arquivo.name))
+                                remove(filename)
+                                # else:
+                                #     rename(filename, join(cached_dir, arquivo.name))
 
                                 if tot_files % 1000 == 0:
                                     if tweet:
