@@ -97,9 +97,10 @@ class Processo:
                 relevantes.append(record)
 
         sql_insert = f"""
-        INSERT INTO fila_twitter (source) SELECT unnest_source::jsonb FROM unnest(%s::text[]) AS t(unnest_source);
+        INSERT INTO fila_twitter (processo, source) SELECT %s, unnest_source::jsonb 
+          FROM unnest(%s::text[]) AS t(unnest_source);
         """
-        cursor.execute(sql_insert, (relevantes,))
+        cursor.execute(sql_insert, (self.processo_id, relevantes,))
 
         self.pg_client.commit()
         self.batch = {}
@@ -128,6 +129,7 @@ class Command(BaseCommand):
         estimate = options.get('estimate')
         dest_dir = options.get('source_dir') or 'queue'
         dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
+        print(dest_dir)
         processo = Processo('pg_baoba', 500)
 
         with os.scandir(dest_dir) as it:
@@ -169,4 +171,3 @@ class Command(BaseCommand):
         logger.info(f'Registros Lidos: {tot_registros}')
         logger.info(f'Registros Relevantes: {tot_fila}')
         logger.info(f'Arquivos com erro: {tot_erros}')
-
