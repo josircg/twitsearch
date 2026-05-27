@@ -84,7 +84,7 @@ class Processo:
 
         # se contiver info sobre o usuário, verificar se é necessário preencher os campos
         if 'user' in src:
-            username =  src['user'].get('username',src['user'].get('screen_name',None))
+            username = src['user'].get('username',src['user'].get('screen_name',None))
         else:
             username = None
 
@@ -152,11 +152,11 @@ class Processo:
                 tweet_type = 'Q' if src['quoted_status']['type'] == 'quoted' else 'C'
             else:
                 tweet_type = 'Q'
-            self.create_reference(src['quoted_status'], tweet_type, src['id'], user, dt)
+            # self.create_reference(src['quoted_status'], tweet_type, src['id'], user, dt)
             retweet = False
 
         elif 'retweeted_status' in src and 'id' in src['retweeted_status']:
-            self.create_reference(src['retweeted_status'], 'R', src['id'], user, dt)
+            # self.create_reference(src['retweeted_status'], 'R', src['id'], user, dt)
             retweet = True
 
         elif 'referenced_tweets' in src:
@@ -171,7 +171,7 @@ class Processo:
                 else:
                     tweet_type = 'Q'
                     retweet = False
-                self.create_reference(parent_tweet, tweet_type, src['id'], user, dt)
+                # self.create_reference(parent_tweet, tweet_type, src['id'], user, dt)
 
         else:
             retweet = False
@@ -193,8 +193,8 @@ class Processo:
                 if tweet.termo:
                     tweet.text = texto
                 else:
-                    # caso o tweet tenha sido criado apenas como referência a partir de um outro tweet, o texto pode vir truncado
-                    # assim, só gravar o texto se não houver o texto original
+                    # caso o tweet tenha sido criado apenas como referência a partir de um outro tweet,
+                    # o texto pode vir truncado. Dessa forma, só gravar o texto se não houver o texto original
                     tweet.text = tweet.text or texto
             except Tweet.DoesNotExist:
                 tweet = Tweet(
@@ -325,7 +325,7 @@ class Command(BaseCommand):
                 if not exists(cached_dir):
                     makedirs(cached_dir)
                 with os.scandir(dest_dir) as it:
-                    primeiros_arquivos = islice(it, 10000)
+                    primeiros_arquivos = islice(it, 50000)
                     for arquivo in primeiros_arquivos:
                         if arquivo.name.endswith(".json"):
                             filename = join(dest_dir, arquivo.name)
@@ -365,7 +365,10 @@ class Command(BaseCommand):
 
                                 if tot_files % 1000 == 0:
                                     if tweet:
-                                        logger.info(f'Total de arquivos:{tot_files} {tweet.termo}')
+                                        termo = tweet.termo
+                                    else:
+                                        termo = None
+                                    logger.info(f'Total de arquivos:{tot_files} {termo}')
 
                             except:
                                 logger.error(f'Erro no arquivo {filename}', exc_info=True)
