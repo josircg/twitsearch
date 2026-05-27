@@ -130,7 +130,7 @@ class Command(BaseCommand):
         processo = Processo('pg_baoba', 500)
 
         with os.scandir(dest_dir) as it:
-            primeiros_arquivos = islice(it, 500)
+            primeiros_arquivos = islice(it, 5000)
             for arquivo in primeiros_arquivos:
                 if arquivo.name.endswith(".json"):
                     try:
