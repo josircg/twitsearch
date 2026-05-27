@@ -1,6 +1,6 @@
 import json
 import os
-import traceback
+from itertools import islice
 
 from os import remove, rename, makedirs
 from os.path import isfile, join, exists
@@ -320,62 +320,62 @@ class Command(BaseCommand):
             else:
                 logger.warning(f'Arquivo {filename} não encontrado')
         else:
-
             try:
-                cached_dir = dest_dir + '/cached'
+                cached_dir = dest_dir + '/queue'
                 if not exists(cached_dir):
                     makedirs(cached_dir)
-                for arquivo in os.scandir(dest_dir):
+                with os.scandir(dest_dir) as it:
+                    primeiros_arquivos = islice(it, 5000)
+                    for arquivo in primeiros_arquivos:
+                        if arquivo.name.endswith(".json"):
+                            filename = join(dest_dir, arquivo.name)
+                            if optimize and isfile(join(cached_dir,arquivo.name)):
+                                os.remove(filename)
+                                tot_dup += 1
+                                if tot_dup % 100 == 0:
+                                    logger.info(f'Duplicados {tot_dup}')
+                                continue
 
-                    if arquivo.name.endswith(".json"):
-                        filename = join(dest_dir, arquivo.name)
-                        if optimize and isfile(join(cached_dir,arquivo.name)):
-                            os.remove(filename)
-                            tot_dup += 1
-                            if tot_dup % 100 == 0:
-                                logger.info(f'Duplicados {tot_dup}')
-                            continue
+                            try:
+                                with open(filename, 'r') as file:
+                                    texto = file.read()
+                                    if len(texto) > 0:
+                                        twitter_data = json.loads(texto)
+                                    else:
+                                        tot_erros += 1
+                                        os.remove(filename)
+                                        continue
 
-                        try:
-                            with open(filename, 'r') as file:
-                                texto = file.read()
-                                if len(texto) > 0:
-                                    twitter_data = json.loads(texto)
+                                tot_files += 1
+                                if 'data' in twitter_data:
+                                    data = twitter_data.get('data')
+                                    if type(data) == list:
+                                        for record in twitter_data.get('data'):
+                                            tweet, user = processo.load_twitter(record)
+                                    else:
+                                        tweet, user = processo.load_twitter(data)
                                 else:
-                                    tot_erros += 1
-                                    os.remove(filename)
-                                    continue
+                                    tweet, user = processo.load_twitter(twitter_data)
 
-                            tot_files += 1
-                            if 'data' in twitter_data:
-                                data = twitter_data.get('data')
-                                if type(data) == list:
-                                    for record in twitter_data.get('data'):
-                                        tweet, user = processo.load_twitter(record)
+                                commit()
+                                if settings.OPENSEARCH_SERVERS:
+                                    remove(filename)
                                 else:
-                                    tweet, user = processo.load_twitter(data)
-                            else:
-                                tweet, user = processo.load_twitter(twitter_data)
+                                    rename(filename, join(cached_dir, arquivo.name))
 
-                            commit()
-                            if settings.OPENSEARCH_SERVERS:
-                                remove(filename)
-                            else:
-                                rename(filename, join(cached_dir, arquivo.name))
+                                if tot_files % 1000 == 0:
+                                    if tweet:
+                                        logger.info(f'Total de arquivos:{tot_files} {tweet.termo}')
 
-                            if tot_files % 1000 == 0:
-                                if tweet:
-                                    logger.info(f'Total de arquivos:{tot_files} {tweet.termo}')
-
-                        except:
-                            logger.error(f'Erro no arquivo {filename}', exc_info=True)
-                            if exists(filename):
-                                rename(filename, join(dest_dir, 'ruim', arquivo.name))
-                            rollback()
-                            tot_erros += 1
-                            if tot_erros > 10:
-                                logger.error('Mais de 10 erros encontrados')
-                                break
+                            except:
+                                logger.error(f'Erro no arquivo {filename}', exc_info=True)
+                                if exists(filename):
+                                    rename(filename, join(dest_dir, 'ruim', arquivo.name))
+                                rollback()
+                                tot_erros += 1
+                                if tot_erros > 10:
+                                    logger.error('Mais de 10 erros encontrados')
+                                    break
 
             finally:
                 if tot_files == 0:

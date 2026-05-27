@@ -24,7 +24,7 @@ def connect_postgresql(server_alias: str):
     if not server:
         raise Exception(f'Entrada {server_alias} não encontrada')
     host = server['host']
-    port = server.get('port',5432)
+    port = server.get('port', 5432)
     database = server['database']
     username = server['username']
     password = server['password']
@@ -126,7 +126,7 @@ class Command(BaseCommand):
         tot_fila = 0
         tot_registros = 0
         estimate = options.get('estimate')
-        dest_dir = settings.BASE_DIR + '/data/cached'
+        dest_dir = settings.BASE_DIR + '/data/queue'
         processo = Processo('pg_baoba', 500)
 
         with os.scandir(dest_dir) as it:
