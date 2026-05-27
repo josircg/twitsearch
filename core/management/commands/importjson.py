@@ -325,7 +325,7 @@ class Command(BaseCommand):
                 if not exists(cached_dir):
                     makedirs(cached_dir)
                 with os.scandir(dest_dir) as it:
-                    primeiros_arquivos = islice(it, 5000)
+                    primeiros_arquivos = islice(it, 10000)
                     for arquivo in primeiros_arquivos:
                         if arquivo.name.endswith(".json"):
                             filename = join(dest_dir, arquivo.name)
