@@ -134,8 +134,6 @@ class Command(BaseCommand):
             for arquivo in primeiros_arquivos:
                 if arquivo.name.endswith(".json"):
                     try:
-                        if tot_fila >= 100:
-                            break
                         tot_files += 1
                         if tot_files % 1000 == 0:
                             print(f'Lidos {tot_files}')
