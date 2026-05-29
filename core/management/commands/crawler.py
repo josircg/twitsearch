@@ -69,16 +69,13 @@ class Crawler:
         agora = timezone.now()
         termo = processo.termo
         faixa_ok = not fake
-        primeira_execucao = False
-
+        
         logger.info(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet or 0
             if self.since_id == 0:
                 self.since_id = None
-                self.dt_inicial = None
-                primeira_execucao = True
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
                 logger.info(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
