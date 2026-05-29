@@ -15,6 +15,7 @@ from twitsearch.local import get_api_client
 from .opensearch import save_object
 from core import intdef
 
+
 class CoreConfig(AppConfig):
     name = 'core'
 

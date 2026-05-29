@@ -12,7 +12,6 @@ from django.utils import timezone
 from tweepy import BadRequest
 
 from core import log_message, intdef
-from core.opensearch import connect_opensearch, create_if_not_exists_index
 from twitsearch.local import get_api_client
 from tweepy.errors import TwitterServerError
 
@@ -44,7 +43,7 @@ logger = get_management_logger("crawler")
 
 class Crawler:
 
-    def __init__(self, limite=2000, opensearch_client=None):
+    def __init__(self, limite):
         self.tot_registros = 0      # total de registros capturados
         self.limite = limite        # limite máximo de tweets para capturar
         self.ultimo_tweet = 0       # ultimo tweet capturado
@@ -56,7 +55,6 @@ class Crawler:
         self.dt_final = None
         self.correcao = False       # indica que é um processamento de correção
         self.interrompido = False
-        self.client = opensearch_client
         self.api_fields = API_FIELDS
         self.os_pid = os.getpid()
         if settings.FULL_CONTEXT:
@@ -69,13 +67,14 @@ class Crawler:
         agora = timezone.now()
         termo = processo.termo
         faixa_ok = not fake
-        
+
         logger.info(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
             # Estratégia Contínua: irá continuar de onde parou utilizando o since_id
             self.since_id = termo.ult_tweet or 0
             if self.since_id == 0:
                 self.since_id = None
+                self.dt_inicial = termo.dtinicio
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
                 logger.info(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
@@ -268,7 +267,7 @@ class Crawler:
                 if tweet.get('card_uri') and type(tweet['card_uri']) is not str:
                     tweet['card_uri'] = None
 
-                save_result(tweet, processo, opensearch=self.client)
+                save_result(tweet, processo)
                 if 'created_at' in tweet:
                     self.menor_data = min(self.menor_data, tweet['created_at'])
                 current_id = intdef(tweet['id'], 0)
@@ -300,7 +299,7 @@ class Crawler:
                                 record['referenced_tweet'].append(ref.data)
 
                         # o registro é gravado mas não será associado ao projeto
-                        save_result(record, processo, grava_termo=False, overwrite=False, opensearch=self.client)
+                        save_result(record, processo, grava_termo=False, overwrite=False)
                         self.tot_registros += 1
 
             logger.info(f'Total registros: {self.tot_registros} / {self.menor_data}')
@@ -333,15 +332,15 @@ def processa_agenda(agenda, fake_run):
     commit()
 
     try:
-        if settings.OPENSEARCH_SERVERS:
-            index_name = f"twitter-{agora.year}-{agora.month}"
-            client = connect_opensearch('minerva-teste')
-            if client and index_name:
-                create_if_not_exists_index(client, index_name)
-        else:
-            client = None
+        # if settings.OPENSEARCH_SERVERS:
+        #    index_name = f"twitter-{agora.year}-{agora.month}"
+        #    client = connect_opensearch('minerva-teste')
+        #    if client and index_name:
+        #        create_if_not_exists_index(client, index_name)
+        # else:
+        #    client = None
 
-        crawler = Crawler(agenda.limite, opensearch_client=client)
+        crawler = Crawler(agenda.limite)
         crawler.termo = agenda.termo
         if agenda.dt_inicial:
             crawler.dt_inicial = agenda.dt_inicial
@@ -379,7 +378,7 @@ def processa_agenda(agenda, fake_run):
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
         erro = True
-
+    
     finally:
         if not fake_run:
             log_message(agenda, mensagem)
@@ -430,15 +429,15 @@ def processa_termo(termo, limite, fake_run):
         Termo.objects.filter(id=termo.id).update(status='P')
     commit()
 
-    if settings.OPENSEARCH_SERVERS:
-        index_name = f"twitter-{agora.year}-{agora.month}"
-        client = connect_opensearch('minerva-teste')
-        if client and index_name:
-            create_if_not_exists_index(client, index_name)
-    else:
-        client = None
+    #if settings.OPENSEARCH_SERVERS:
+    #    index_name = f"twitter-{agora.year}-{agora.month}"
+    #    client = connect_opensearch('minerva-teste')
+    #    if client and index_name:
+    #        create_if_not_exists_index(client, index_name)
+    #else:
+    #    client = None
 
-    crawler = Crawler(limite, opensearch_client=client)
+    crawler = Crawler(limite)
     try:
         crawler.logger = logger
         crawler.search_recent(processo, fake_run)
@@ -546,7 +545,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        limite = options['limite'] or 2000
+        limite = options['limite'] or 5000
 
         # não executar o crawler entre 23 e 01 da manhã (backup do Opensearch)
         hora_atual = datetime.now().time().hour

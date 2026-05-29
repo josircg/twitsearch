@@ -11,12 +11,10 @@ from PIL import Image
 from django.conf import settings
 from django.contrib import messages
 from django.utils import timezone
-from django.http import HttpResponseNotFound
+from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.admin.views.decorators import staff_member_required
 
-from django.http import HttpResponse
-from django.template import RequestContext
 from django.urls import reverse
 from wordcloud import WordCloud
 
@@ -479,58 +477,72 @@ def importacao_arquivo(request):
 def status_coleta(request, termo_id):
     termo = get_object_or_404(Termo, pk=termo_id)
     
-    if not getattr(settings, 'OPENSEARCH_SERVERS', None):
-        messages.error(request, "Gráfico não implementado para a base local")
+    dias_formatted = []
+    dias_valores = []
 
-    client = connect_opensearch('minerva-teste')
-    
-    query = {
-        "size": 0, 
-        "query": {
-            "bool": {
-                "must": [
-                    { "term": { "termo": termo_id} },
-                    {
-                       "range": {
-                            "created_at": {
-                                "gte": termo.dtinicio.strftime("%Y-%m-%d"),
-                                "format": "yyyy-MM-dd"
-                            }
-                       }
-                    }                    
-                ],
-            }
-        },
-        "aggs": {
-            "tweets_por_dia": {
-                "date_histogram": {
-                    "field": "created_at",
-                    "calendar_interval": "day",
-                    "format": "yyyy-MM-dd"
+    if getattr(settings, 'OPENSEARCH_SERVERS', None):
+        client = connect_opensearch('minerva-teste')
+        query = {
+            "size": 0,
+            "query": {
+                "bool": {
+                    "must": [
+                        { "term": { "termo": termo_id} },
+                        {
+                           "range": {
+                                "created_at": {
+                                    "gte": termo.dtinicio.strftime("%Y-%m-%d"),
+                                    "format": "yyyy-MM-dd"
+                                }
+                           }
+                        }
+                    ],
+                }
+            },
+            "aggs": {
+                "tweets_por_dia": {
+                    "date_histogram": {
+                        "field": "created_at",
+                        "calendar_interval": "day",
+                        "format": "yyyy-MM-dd"
+                    }
                 }
             }
         }
-    }
-    
-    response = client.search(index="twitter*", body=query)    
-    agg = response.get('aggregations', {}).get('tweets_por_dia')
-    
-    dias_formatted = []
-    dias_valores = []
-    for item in agg.get('buckets', []):
-        date = item['key_as_string']
-        value = item['doc_count']
-        
-        dias_valores.append(value)
-        dias_formatted.append(date)
-    
+
+        response = client.search(index="twitter*", body=query)
+        agg = response.get('aggregations', {}).get('tweets_por_dia')
+
+        for item in agg.get('buckets', []):
+            date = item['key_as_string']
+            value = item['doc_count']
+
+            dias_valores.append(value)
+            dias_formatted.append(date)
+    else:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                select date_format(t.created_time,'%%Y-%%m-%%d'), count(*) from core_tweetinput i, core_tweet t
+                 where t.twit_id = i.tweet_id
+                  and i.termo_id = %s
+                    group by 1
+            """, (termo_id,))
+            for rec in cursor.fetchall():
+                dias_formatted.append(rec[0])
+                dias_valores.append(rec[1])
+
     fig2 = graph_objs.Figure(graph_objs.Bar(
         x=dias_formatted,
-        y=dias_valores
+        y=dias_valores,
+        marker_color='#1DA1F2',
+        # Opcional: Adiciona uma borda fina nas barras se quiser dar mais definição
+        marker_line=dict(width=1, color='#0d8bd9')
     ))
 
     fig2.update_layout(title='Tweets por dia',
         xaxis_nticks=36,
+        template='plotly_white',
+        bargap=0.2,
         xaxis=graph_objs.layout.XAxis(
                 title=graph_objs.layout.xaxis.Title(
                     text='Dias do mês'
