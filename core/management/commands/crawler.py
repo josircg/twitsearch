@@ -150,7 +150,7 @@ class Crawler:
 
         # Início da busca regular dos termos
         if faixa_ok:
-            self.search(processo, mais_relevantes=not primeira_execucao)
+            self.search(processo, mais_relevantes=True)
             if self.tot_registros >= self.limite:
                 termo.status = 'I'
                 termo.save()
@@ -213,7 +213,7 @@ class Crawler:
         else:
             sort_order = None
 
-        logger.info(f'{busca} / {sort_order} {self.dt_inicial} {self.dt_final} {self.since_id}')
+        logger.info(f'{busca} / sort:{sort_order} {self.dt_inicial} {self.dt_final} {self.since_id}')
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             # se a busca não for a acadêmica (Premium), executar search_all
