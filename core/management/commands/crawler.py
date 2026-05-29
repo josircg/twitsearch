@@ -69,6 +69,7 @@ class Crawler:
         agora = timezone.now()
         termo = processo.termo
         faixa_ok = not fake
+        primeira_execucao = False
 
         logger.info(f'Processo {processo.id} pid:{self.os_pid}')
         if termo.status == 'A':
@@ -77,6 +78,7 @@ class Crawler:
             if self.since_id == 0:
                 self.since_id = None
                 self.dt_inicial = None
+                primeira_execucao = True
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
                 logger.info(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
@@ -105,7 +107,7 @@ class Crawler:
                                                         status=Processamento.Status.CONCLUIDO,
                                                         twit_id__lt=self.until_id
                                                         ).exclude(twit_id='0').order_by('-id').first()
-                if ult_proc and intdef(ult_proc.twit_id,0) != 0:
+                if ult_proc and intdef(ult_proc.twit_id, 0) != 0:
                     self.since_id = int(ult_proc.twit_id)
 
                 if not self.since_id:
@@ -146,9 +148,9 @@ class Crawler:
                 self.dt_final = termo.dtfinal
             self.since_id = None
 
-        # A busca regular dos termos é sempre pela relevância
+        # Início da busca regular dos termos
         if faixa_ok:
-            self.search(processo, mais_relevantes=True)
+            self.search(processo, mais_relevantes=not primeira_execucao)
             if self.tot_registros >= self.limite:
                 termo.status = 'I'
                 termo.save()
