@@ -60,7 +60,7 @@ def save_result(data, processo,
         with open(filename, 'w') as arquivo:
             json.dump(data, arquivo)
 
-    filename = f"{settings.BASE_DIR}/queue/{data['id']}_{processo.termo.id}.json"
+    filename = f"{settings.BASE_DIR}/data/queue/{data['id']}_{processo.termo.id}.json"
     with open(filename, 'w') as arquivo:
         json.dump(data, arquivo)
 
