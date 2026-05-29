@@ -76,7 +76,7 @@ class Crawler:
             self.since_id = termo.ult_tweet or 0
             if self.since_id == 0:
                 self.since_id = None
-                self.dt_inicial = termo.dtinicio
+                self.dt_inicial = None
                 if termo.dtfinal and termo.dtfinal < agora:
                     self.dt_final = termo.dtfinal
                 logger.info(f'Primeira execução {termo.id}: {self.dt_inicial} - {self.dt_final}')
@@ -235,7 +235,7 @@ class Crawler:
                              next_token=next_token,
                              since_id=self.since_id,
                              start_time=self.dt_inicial,
-                             end_time =self.dt_final,
+                             end_time=self.dt_final,
                              max_results=self.max_results)
 
             if tweets.source.get('meta'):
