@@ -211,7 +211,7 @@ class Crawler:
         else:
             sort_order = None
 
-        logger.info(f'{busca} / {sort_order}')
+        logger.info(f'{busca} / {sort_order} {self.dt_inicial} {self.dt_final} {self.since_id}')
 
         while self.tot_registros < self.limite and next_token != 'Fim':
             # se a busca não for a acadêmica (Premium), executar search_all
