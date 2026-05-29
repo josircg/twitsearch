@@ -378,7 +378,7 @@ def processa_agenda(agenda, fake_run):
         mensagem = f'Erro {e}\n'
         mensagem += traceback.format_exc()
         erro = True
-    
+
     finally:
         if not fake_run:
             log_message(agenda, mensagem)
@@ -542,6 +542,7 @@ class Command(BaseCommand):
         filename = '%s/data/%s.json' % (settings.BASE_DIR, twit_id)
         with open(filename, 'w') as arquivo:
             json.dump(tweet, arquivo)
+        print(filename)
 
     def handle(self, *args, **options):
 
