@@ -34,11 +34,12 @@ def connect_postgresql(server_alias: str):
 
 class Processo:
 
-    def __init__(self, pg_server, batch_size=500):
+    def __init__(self, pg_server, batch_size=500, queue: bool = True):
         self.pg_client = connect_postgresql(pg_server)
         self.counter_tweets = 0
         self.termos_processados = {}
         self.batch_size = batch_size
+        self.queue = queue
         with self.pg_client.cursor() as cursor:
             cursor.execute("SELECT version();")
             record = cursor.fetchone()
@@ -96,11 +97,12 @@ class Processo:
             if d_record.get('termo'):
                 relevantes.append(record)
 
-        sql_insert = f"""
-        INSERT INTO fila_twitter (processo, source) SELECT %s, unnest_source::jsonb 
-          FROM unnest(%s::text[]) AS t(unnest_source);
-        """
-        cursor.execute(sql_insert, (self.processo_id, relevantes,))
+        if self.queue:
+            sql_insert = f"""
+            INSERT INTO fila_twitter (processo, source) SELECT %s, unnest_source::jsonb 
+              FROM unnest(%s::text[]) AS t(unnest_source);
+            """
+            cursor.execute(sql_insert, (self.processo_id, relevantes,))
 
         self.pg_client.commit()
         self.batch = {}
@@ -119,6 +121,8 @@ class Command(BaseCommand):
                             help='Estima número de registros a procesar')
         parser.add_argument('-d', '--source_dir', type=str, nargs='?',
                             help='which folder to read files')
+        parser.add_argument('-a', '--archive', action='store_true',
+                            help='Records will be archived only and will not be added to Opensearch')
 
     def handle(self, *args, **options):
 
@@ -127,10 +131,13 @@ class Command(BaseCommand):
         tot_fila = 0
         tot_registros = 0
         estimate = options.get('estimate')
+        archive = options.get('archive')
         dest_dir = options.get('source_dir') or 'queue'
         dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
         print(dest_dir)
-        processo = Processo('pg_baoba', 500)
+        if archive:
+            print('Archive mode')
+        processo = Processo('pg_baoba', 500, not archive)
 
         with os.scandir(dest_dir) as it:
             primeiros_arquivos = islice(it, 50000)
