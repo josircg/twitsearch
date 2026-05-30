@@ -90,14 +90,14 @@ class Processo:
         """
         cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
 
-        # Os tweets que não tiverem termo associado não entram na fila de processamento
-        relevantes = []
-        for record in batch_values:
-            d_record = json.loads(record)
-            if d_record.get('termo'):
-                relevantes.append(record)
-
         if self.queue:
+            # Os tweets que não tiverem termo associado não entram na fila de processamento
+            relevantes = []
+            for record in batch_values:
+                d_record = json.loads(record)
+                if d_record.get('termo'):
+                    relevantes.append(record)
+
             sql_insert = f"""
             INSERT INTO fila_twitter (processo, source) SELECT %s, unnest_source::jsonb 
               FROM unnest(%s::text[]) AS t(unnest_source);
