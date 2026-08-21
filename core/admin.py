@@ -3,8 +3,8 @@ from urllib.parse import urlencode
 
 from django.contrib import admin
 from django.conf import settings
-from django.conf.urls import url
-from django.contrib.admin import StackedInline
+from django.urls import path, re_path
+
 from django.shortcuts import render, get_object_or_404
 from django.urls import reverse
 from django.template import RequestContext
@@ -175,7 +175,7 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def get_urls(self):
         return [
-            url(r'^visao/(?P<project_id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
+            re_path(r'^visao/(?P<project_id>.*)/$', self.admin_site.admin_view(self.visao), name='core_projeto_visao'),
             ] + super(ProjetoAdmin, self).get_urls()
 
     def get_buttons(self, request, object_id=None):

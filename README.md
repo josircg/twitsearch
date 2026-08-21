@@ -1,10 +1,13 @@
-# twitsearch - versão 0.6
+# Capitu - versão 1.1
 
-Busca de Tweets a partir da API 
+Captura de Dados de Redes sociais a partir da API do Twitter e do Telegram 
 
 O software permite que usuários finais (que não tem expertise de programação de computadores) possam coletar dados e armazenar do Twitter a partir de critérios de busca por eles definidos. A partir dos dados coletados, o usuário pode exportá-los em formato CSV para que possam ser utilizados em planilhas eletrônicas ou em outros softwares de análise de rede social.
 
-Uma vez que o projeto esteja definido, o programa inicia a busca e registro dos tweets e permite que o usuário possa ver o resultado em tempo real. Ao final gerar arquivos CSV com os tweets de cada projeto.
+Uma vez que o projeto é definido, o programa inicia a busca e registro dos tweets e permite que o usuário possa ver o resultado em tempo real. Ao final gerar arquivos CSV com os tweets de cada projeto.
+
+![Python version](https://img.shields.io/badge/python-3.8%7C3.9%7C3.10-blue%7C3.11-blue%7C3.12-blue)
+![Django version](https://img.shields.io/badge/django-4.2-blue)
 
 # Milestones
 
@@ -26,12 +29,14 @@ Versão 0.9: Backup S3 (Ok)
 
 Versão 0.9: Desidratar bases de tweets (Importação Tweet ID) (Ok) 
 
-Versão 1.0: Construção de visualizações em rede
+Versão 1.0: Integração com o Opensearch
+
+Versão 1.1: Registro de Canais 
 
 # Tarefas a realizar
 
-* Construir a rotina importjson --restore que irá criar o projeto e baixar os tweets no projeto 
 * Importar retweets após a Importação de Tweets
+* Integração com canais do Telegram / Youtube
 
 # Planejamento de como realizar o restore de uma base
 

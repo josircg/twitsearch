@@ -6,8 +6,8 @@
 #   polyglot download embeddings2.en sentiment2.en ner2.en
 #   polyglot download embeddings2.pt sentiment2.pt ner2.pt
 
-Django<4
-git+https://bitbucket.org/josir/poweradmin.git@django32
+Django<5
+git+https://bitbucket.org/josir/poweradmin.git@django42
 django-crispy-forms<2
 django-select2
 mysqlclient

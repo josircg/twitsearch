@@ -12,10 +12,9 @@ And to activate the app index dashboard::
 """
 
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from admin_tools.dashboard import modules, Dashboard, AppIndexDashboard
 from admin_tools.utils import get_admin_site_name
-
 
 
 class CustomIndexDashboard(Dashboard):
@@ -29,15 +28,13 @@ class CustomIndexDashboard(Dashboard):
         request = context.get('request')
 
         self.children += [
-            modules.ModelList(
-                u'Projetos',
+            modules.ModelList('Projetos',
                 models=('core.models.Eixo', 'core.models.Projeto', 'core.models.Termo',
                         'core.models.Tweet', 'core.models.TweetUser', 'core.models.Retweet',
                         'core.models.TweetInput'
                         )
             ),
-            modules.ModelList(
-                u'Adminstração',
+            modules.ModelList('Adminstração',
                 models=('core.models.Rede', 'core.models.Processamento', 'core.models.Agendamento',
                         'django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
             ),
