@@ -18,7 +18,7 @@ tweepy
 searchtweets-v2
 openpyxl
 django-admin-tools
-numpy
+numpy<2.0.0
 wordcloud
 matplotlib
 networkx

@@ -6,10 +6,10 @@ O software permite que usuários finais (que não tem expertise de programação
 
 Uma vez que o projeto é definido, o programa inicia a busca e registro dos tweets e permite que o usuário possa ver o resultado em tempo real. Ao final gerar arquivos CSV com os tweets de cada projeto.
 
-![Python version](https://img.shields.io/badge/python-3.8%7C3.9%7C3.10-blue%7C3.11-blue%7C3.12-blue)
+![Python version](https://img.shields.io/badge/python-3.12-blue)
 ![Django version](https://img.shields.io/badge/django-4.2-blue)
 
-# Milestones
+# Histórico
 
 Versão 0.2: busca pelos retweets (Ok)
 
@@ -29,7 +29,7 @@ Versão 0.9: Backup S3 (Ok)
 
 Versão 0.9: Desidratar bases de tweets (Importação Tweet ID) (Ok) 
 
-Versão 1.0: Integração com o Opensearch
+Versão 1.0: Integração com o Opensearch (Ok)
 
 Versão 1.1: Registro de Canais 
 

@@ -15,7 +15,9 @@ SITE_HOST = 'http://127.0.0.1:8000/'
 
 INSTALLED_APPS = [
     'admin_tools',
+    'admin_tools.theming',
     'admin_tools.dashboard',
+    'admin_tools.menu',
     'poweradmin',
     'django.contrib.admin',
     'django.contrib.auth',

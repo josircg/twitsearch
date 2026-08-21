@@ -12,7 +12,7 @@
 {% block extrastyle %}
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'core/img/favicon.ico' %}">
 {{ block.super }}
-<style type="text/css">
+<style>
     .vForeignKeyRawIdAdminField, .inline-group .tabular td.original p {
         display: none;
     }
@@ -20,6 +20,9 @@
         padding-top: 1em !important;
     }
     .related-widget-wrapper-link {
+        display: none !important;
+    }
+    .theme-toggle {
         display: none !important;
     }
 </style>

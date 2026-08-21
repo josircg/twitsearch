@@ -5,6 +5,7 @@
 *.sqlite3
 *.fuse_hidden*
 .ipynb_checkpoints
+fabfile.py
 twitest.py
 *.ipynb
 data/*
