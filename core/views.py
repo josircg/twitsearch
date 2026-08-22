@@ -405,7 +405,7 @@ def gerar_gephi(request, project_id):
     for termo in Termo.objects.filter(projeto__id=project_id):
         for record in (Retweet.objects.filter(tweet__tweetinput__termo_id=termo).
                 select_related().values_list('tweet__user__username', 'user__username')):
-            csv_file.writerow(record[0], record[1])
+            csv_file.writerow(record[0:1])
 
     return response
 
@@ -433,7 +433,6 @@ def get_source(request, tweet_id):
     response = HttpResponse(file_data, content_type='application/json')
     response['Content-Disposition'] = 'attachment; filename=%s.json' % tweet_id
     return response
-
 
 
 def importacao_arquivo(request):

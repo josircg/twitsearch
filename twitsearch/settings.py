@@ -11,8 +11,6 @@ ALLOWED_HOSTS = []
 SITE_NAME = 'Capitu'
 SITE_HOST = 'http://127.0.0.1:8000/'
 
-# Application definition
-
 INSTALLED_APPS = [
     'admin_tools',
     'admin_tools.theming',
@@ -30,6 +28,7 @@ INSTALLED_APPS = [
     'django_select2',
     'smart_selects',
     'core',
+    'telegram',
 ]
 
 MIDDLEWARE = [

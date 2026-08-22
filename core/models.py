@@ -3,10 +3,10 @@ from collections import Counter
 from django.db import models, connection
 from django.db.models import Sum
 from django.contrib.auth.models import User, Group
-from django.forms import DateField
 from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
+from telegram.models import Lista
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium/Básica (antiga Academic)
@@ -55,14 +55,6 @@ TIPO_PROCESSAMENTO = (
     (PROC_NETWORK,      'Montagem Rede')
 )
 
-# Indica que está pronto para ser processado
-# Em fila, indica que ele está em fila para ser processado (pois retornou muitos registros)
-# Processando indica que o termo está sendo processado neste instante
-# Interrompido indica que o usuário interrompeu o processo manualmente
-# Concluído indica que a busca foi concluída pelo usuário porque atingiu a data final programada
-STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
-                ('I', 'Fila'), ('X', 'Interrompido'), ('C', 'Concluido'))
-
 
 class Rede(models.Model):
     nome = models.CharField(max_length=100)
@@ -82,6 +74,12 @@ class Eixo(models.Model):
 
 
 class Projeto(models.Model):
+
+    class Status(models.TextChoices):
+        ATIVO = 'A', 'Ativo'
+        INTERROMPIDO = 'I', 'Interrompido'
+        CONCLUIDO = 'C', 'Concluido'
+
     nome = models.CharField(max_length=40)
     objetivo = models.TextField('Objetivo')
     eixo = models.ForeignKey(Eixo, on_delete=models.PROTECT, null=True, blank=True)
@@ -91,7 +89,8 @@ class Projeto(models.Model):
     language = models.CharField(max_length=4, null=True, blank=True)  # Idioma default
     tot_twits = models.IntegerField('Total Lido', null=True, blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
-    status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    lista_canais = models.ForeignKey(Lista, null=True, blank=True, on_delete=models.PROTECT)
+    status = models.CharField(max_length=1, choices=Status.choices, default='A')
     prefix = models.CharField('Elastic Prefix', max_length=20, blank=True)
     stopwords = models.TextField(null=True, blank=True)
 
@@ -151,7 +150,6 @@ class Projeto(models.Model):
             soma = cursor.fetchone()[0]
         return '{:,}'.format(soma).replace(',','.')
 
-
     def most_common(self, total=100):
         result = Counter()
         excecoes = stopwords()
@@ -177,6 +175,15 @@ class Projeto(models.Model):
         return Tweet.objects.filter(tweetinput__termo__projeto_id=self.pk).aggregate(soma=Sum('imprints'))['soma']
 
 
+# Indica que está pronto para ser processado
+# Em fila, indica que ele está em fila para ser processado (pois retornou muitos registros)
+# Processando indica que o termo está sendo processado neste instante
+# Interrompido indica que o usuário interrompeu o processo manualmente
+# Concluído indica que a busca foi concluída pelo usuário porque atingiu a data final programada
+STATUS_TERMO = (('A', 'Ativo'), ('P', 'Processando'), ('E', 'Erro'),
+                ('I', 'Fila'), ('X', 'Interrompido'), ('C', 'Concluido'))
+
+
 class Termo(models.Model):
     descritivo = models.CharField(max_length=100, blank=True, null=True)
     busca = models.CharField(max_length=2000)
@@ -187,7 +194,7 @@ class Termo(models.Model):
     language = models.CharField(max_length=2, null=True, blank=True)
     retweets = models.BooleanField('Incluir retweets', default=False)
     tipo_busca = models.CharField('Tipo da Busca', max_length=1, choices=TIPO_BUSCA, default=PROC_FULL)
-    status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    status = models.CharField('Status Twitter', max_length=1, choices=STATUS_TERMO, default='A')
     prim_tweet = models.BigIntegerField(null=True, blank=True)       # Utilizado para a estratégia de correção
     ult_tweet = models.BigIntegerField(null=True, blank=True)        # Utilizado para a estratégia contínua
     ult_processamento = models.DateTimeField(null=True, blank=True)  # Última vez que o crawler foi executado
@@ -258,6 +265,19 @@ class Termo(models.Model):
     class Meta:
         verbose_name = 'Termo de Busca'
         verbose_name_plural = 'Termos de Busca'
+
+
+# Com a entrada de novas redes, será necessário controlar o status de cada carga
+# Por enquanto, só irá registrar o do Telegram, até que todas as rotinas do twitter sejam alteradas
+class TermoStatus(models.Model):
+    termo = models.ForeignKey(Termo, on_delete=models.CASCADE)
+    rede = models.ForeignKey(Rede, on_delete=models.CASCADE)
+    status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
+    ult_processo = models.ForeignKey('Processamento', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Status da Busca'
+        verbose_name_plural = 'Status da Busca'
 
 
 class Processamento(models.Model):

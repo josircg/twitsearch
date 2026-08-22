@@ -1,10 +1,10 @@
 import json
 
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, HttpRequest
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from .models import Eixo, Projeto, Termo, Rede, Processamento
-
+from telegram.models import Canal
 
 def redes(request):
     result = Rede.objects.all().values('id', 'nome', 'ativa')
@@ -94,3 +94,13 @@ def processo(request, processo_id):
               'tipo': objeto.get_tipo_display(),
               'status': objeto.get_status_display() }
     return HttpResponse(json.dumps(record), content_type='application/json')
+
+
+def canais_telegram(request: HttpRequest):
+    lista = []
+    for canal in Canal.objects.filter(status=Canal.Status.ATIVO):
+        record = {'channel': canal.username, 'id': canal.id_numerico, 'access_hash': canal.access_hash}
+        lista.append(record)
+    return HttpResponse(json.dumps(lista), content_type='application/json')
+
+

@@ -1,0 +1,57 @@
+from django.db import models
+from django.contrib.auth.models import User
+
+
+class Categoria(models.Model):
+    nome = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nome
+
+
+class Canal(models.Model):
+
+    class Status(models.TextChoices):
+        ATIVO = 'A', 'Ativo'
+        PROCESSANDO = 'P', 'Em processamento'
+        DESATIVADO = 'D', 'Desativado'
+
+    username = models.CharField(max_length=255, db_index=True, unique=True)
+    id_numerico = models.BigIntegerField(db_index=True, unique=True, null=True, blank=True)
+    titulo = models.TextField(null=True, blank=True)
+    sobre = models.TextField(blank=True, null=True)
+    categorias = models.ManyToManyField(Categoria, blank=True)
+    num_participantes = models.IntegerField('Tot.Participantes',default=0)
+    num_mensagens = models.BigIntegerField('Tot.Mensagens', default=0)
+    megagroup = models.BooleanField(default=False)
+    verificado = models.BooleanField('Verificado pelo Telegram', default=False)
+    dt_ultima_carga = models.DateTimeField('Útlima carga', null=True, blank=True)
+    access_hash = models.CharField(max_length=64, null=True, blank=True)
+    status = models.CharField(max_length=1, choices=Status.choices, default='A')
+
+    def __str__(self):
+        return self.username
+
+
+class APIKeys(models.Model):
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
+    titulo = models.CharField(max_length=100)
+    api_id = models.IntegerField()
+    api_hash = models.CharField(max_length=64)
+
+    def __str__(self):
+        return self.titulo
+
+
+class Lista(models.Model):
+    nome = models.CharField(max_length=100)
+    dono = models.ForeignKey(User, on_delete=models.PROTECT)
+    publica = models.BooleanField('Qualquer usuário pode utilizá-la', default=False)
+    canais = models.ManyToManyField(Canal, blank=True)
+
+    def __str__(self):
+        return self.nome
+
+    @property
+    def tot_canais(self):
+        return self.canais.all().count()

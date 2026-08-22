@@ -308,6 +308,7 @@ class InputInline(PowerTabularInline):
     def has_add_permission(self, request, obj):
         return False
 
+
 @admin.register(Tweet)
 class TweetAdmin(PowerModelAdmin):
     multi_search = (

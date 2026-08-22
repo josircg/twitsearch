@@ -4,7 +4,7 @@ from django.urls import path, re_path
 from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
     nuvem, create_graph, gerar_gephi, solicita_busca, get_source, importacao_arquivo, status_coleta
 
-from core.api import redes, termos, projetos, termos_by_id, processo
+from core.api import redes, termos, projetos, termos_by_id, processo, canais_telegram
 
 urlpatterns = [
     re_path(r'^$', index),
@@ -24,6 +24,7 @@ urlpatterns = [
     path('termo_stat/<int:termo_id>', status_coleta, name='status_coleta'),
     path('api/redes/', redes, name='redes'),
     path('api/eixos/', projetos, name='eixos'),
+    path('api/canais_telegram/', canais_telegram, name='canais_telegram'),
     path('api/projetos/', projetos, name='projeto'),
     path('api/projetos/<str:status>', projetos, name='projeto'),
     path('api/processo/<int:processo_id>', processo, name='processo'),
