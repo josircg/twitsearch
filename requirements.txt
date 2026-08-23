@@ -9,7 +9,6 @@ psycopg2
 django-smart-selects
 pytz
 tweepy
-searchtweets-v2
 openpyxl
 django-admin-tools
 numpy<2.0.0
@@ -23,3 +22,4 @@ gunicorn
 boto3
 opensearch-py
 eldar
+telethon

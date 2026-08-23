@@ -3,6 +3,7 @@
 *.pyc
 *.swp
 *.sqlite3
+*.session
 *.fuse_hidden*
 .ipynb_checkpoints
 fabfile.py

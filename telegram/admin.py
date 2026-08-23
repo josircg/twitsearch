@@ -2,18 +2,36 @@ from typing import Any
 
 from django.contrib import admin
 
-from .models import Canal, Lista, APIKeys
+from .models import Canal, Lista, APIKeys, Categoria
 from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline, PowerInlineModelAdmin
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(PowerModelAdmin):
+    list_display = ('nome', 'tot_canais',)
 
 
 @admin.register(Canal)
 class CanalAdmin(PowerModelAdmin):
     list_display = ('username', 'titulo', 'num_participantes',)
+    search_fields = ('username', )
+
+
+class CanalTabularInline(PowerTabularInline):
+    model = Lista.canais.through
+    autocomplete_fields = ['canal']
+    extra = 1
 
 
 @admin.register(Lista)
 class ListaAdmin(PowerModelAdmin):
     list_display = ('nome', 'publica', 'tot_canais',)
+    fields = ('nome', 'publica',)
+    inlines = (CanalTabularInline,)
+
+    def save_model(self, request, obj, form, change):
+        obj.dono = request.user
+        super(ListaAdmin, self).save_model(request, obj, form, change)
 
 
 @admin.register(APIKeys)

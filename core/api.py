@@ -92,7 +92,7 @@ def processo(request, processo_id):
     objeto = get_object_or_404(Processamento, id=processo_id)
     record = {'dt': str(objeto.dt), 'count': objeto.tot_registros,
               'tipo': objeto.get_tipo_display(),
-              'status': objeto.get_status_display() }
+              'status': objeto.get_status_display()}
     return HttpResponse(json.dumps(record), content_type='application/json')
 
 

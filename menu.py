@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file was generated with the custommenu management command, it contains
+This file was generated with the custommenu management commands, it contains
 the classes for the admin menu, you can customize this class as you want.
 
 To activate your custom menu add the following to your settings.py::

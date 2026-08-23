@@ -6,15 +6,14 @@ import time
 
 from datetime import timedelta, datetime
 
+from asgiref.sync import sync_to_async
 from django.apps import AppConfig
 
 from django.conf import settings
 from django.utils import timezone
 
 from twitsearch.local import get_api_client
-from .opensearch import save_object
 from core import intdef
-
 
 class CoreConfig(AppConfig):
     name = 'core'
@@ -47,6 +46,31 @@ def get_management_logger(name):
         logger.addHandler(ch)
 
     return logger
+
+
+# Versão do log_message para rotinas assincronas
+async def alog_message(instance, message, user=None):
+
+    from django.contrib.auth import get_user_model
+    from django.contrib.admin.models import LogEntry, CHANGE
+    from django.contrib.contenttypes.models import ContentType
+
+    if not user:
+        user_model = get_user_model()
+        user = await user_model.objects.aget(username='sys')
+
+    content_type_id = await sync_to_async(
+        lambda: ContentType.objects.get_for_model(instance).id
+    )()
+
+    await LogEntry.objects.acreate(
+            user_id=user.pk,  # ID de um usuário admin/sistema dedicado
+            content_type_id=content_type_id,
+            object_id=instance.pk,
+            object_repr=str(instance)[:200],
+            action_flag=CHANGE,
+            change_message=message,
+        )
 
 
 def save_result(data, processo,

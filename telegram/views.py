@@ -1,11 +1,14 @@
 import csv
+import traceback
+
 from io import StringIO
 
-import openpyxl
+from openpyxl import load_workbook
 
 from django.contrib import messages
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from .forms import ImportForm
+from .models import Canal, Lista, Categoria
 
 
 def import_csv(arquivo) -> list:
@@ -23,20 +26,58 @@ def import_csv(arquivo) -> list:
     return lista
 
 
-def importacao_arquivo(request):
+def import_xlsx(arquivo) -> list:
+
+    fieldindex = []
+    wb = load_workbook(arquivo)
+    ws = wb.active
+    for cell in ws[1]:
+        fieldindex.append(cell.value)
+
+    lista = []
+    for row_list in ws.iter_rows(min_row=2, values_only=True):
+        row = {}
+        for index, cell in enumerate(row_list):
+            row[fieldindex[index]] = cell
+        if row.get('username'):
+            lista.append({'username': row['username'],
+                          'category': row.get('category'),
+                          'title': row.get('title'),
+                          })
+
+    return lista
+
+
+def importacao_canais(request):
     if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
             arquivo = request.FILES.get('arquivo')
             lista = request.POST.get('lista')
-            categoria = request.POST.get('categoria')
             try:
                 if arquivo:
                     if arquivo.name.lower().endswith('.csv'):
-                        result = import_csv(arquivo)
+                        registros = import_csv(arquivo)
                     else:
-                        result = import_xlsx(arquivo)
-                    messages.info(request, result)
+                        registros = import_xlsx(arquivo)
+                    if len(registros) == 0:
+                        messages.error(request, 'Nenhum registro foi encontrado')
+                    else:
+                        tot_registros = 0
+                        tot_inclusao = 0
+                        for registro in registros:
+                            tot_registros += 1
+                            canal, inclusao = Canal.objects.get_or_create(username=registro['username'])
+                            if inclusao:
+                                tot_inclusao += 1
+                            if registro['category']:
+                                categoria = Categoria.objects.filter(category=registro['category']).first()
+                                canal.categorias.add(categoria)
+                                messages.error(request, f"Categoria não encontrada {registro['category']}")
+                            lista.canais.append(canal)
+
+                        messages.info(request, f'Total de registros lidos: {tot_registros}')
+                        messages.info(request, f'Total de registros incluídos: {tot_inclusao}')
                 else:
                     messages.error(request, 'Nenhum arquivo enviado. Tente utilizar outro navegador.')
 
@@ -46,9 +87,10 @@ def importacao_arquivo(request):
                 # sendmail('Erro Importação Lattes', [settings.REPLY_TO_EMAIL], message=message)
                 messages.error(request, 'Houve um erro durante a importação. Já estamos averiguando o problema')
 
-            return redirect('importacao_arquivo')
+            return redirect('importacao_canais')
     else:
         form = ImportForm()
+        erros = None
 
-    return render(request, 'core/import_tweets.html', {'form': form, })
+    return render(request, 'importacao.html', {'form': form, 'erros': erros})
 

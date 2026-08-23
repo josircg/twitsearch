@@ -24,7 +24,6 @@ class ImportForm(forms.Form):
             AdminFieldset(
                 '',
                 Row(AdminField('lista')),
-                Row(AdminField('categoria')),
                 Row(AdminField('arquivo')),
             ),
             AdminSubmitRow(*post_buttons)

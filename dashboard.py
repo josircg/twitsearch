@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This file was generated with the customdashboard management command, it
+This file was generated with the customdashboard management commands, it
 contains the two classes for the main dashboard and app index dashboard.
 You can customize these classes as you want.
 
@@ -34,6 +34,11 @@ class CustomIndexDashboard(Dashboard):
                         'core.models.TweetInput'
                         )
             ),
+            modules.ModelList('Telegram',
+                models=('telegram.models.Categoria', 'telegram.models.Canal', 'telegram.models.Lista',
+                        'telegram.models.APIKeys'
+                        )
+            ),
             modules.ModelList('Adminstração',
                 models=('core.models.Rede', 'core.models.Processamento', 'core.models.Agendamento',
                         'django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
@@ -41,8 +46,8 @@ class CustomIndexDashboard(Dashboard):
             modules.ModelList(
                 'Rotinas de Importação', [
                     '',
-                ], children=[ {'title': u'Importação de Arquivos',
-                               'change_url': reverse('importacao_arquivo'), },
+                ], children=[ {'title': 'Importação de Tweets', 'change_url': reverse('importacao_arquivo'), },
+                              {'title': 'Importação de Canais', 'change_url': reverse('importacao_canais'), },
                             ]
             ),
 

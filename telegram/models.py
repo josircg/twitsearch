@@ -8,6 +8,11 @@ class Categoria(models.Model):
     def __str__(self):
         return self.nome
 
+    @property
+    def tot_canais(self):
+        return self.canal_set.all().count()
+    tot_canais.fget.short_description = 'Total de Canais'
+
 
 class Canal(models.Model):
 
@@ -25,22 +30,37 @@ class Canal(models.Model):
     num_mensagens = models.BigIntegerField('Tot.Mensagens', default=0)
     megagroup = models.BooleanField(default=False)
     verificado = models.BooleanField('Verificado pelo Telegram', default=False)
+    dtcriacao = models.DateTimeField('Dt.Criação', null=True, blank=True)
+    ultima_mensagem = models.BigIntegerField(null=True, blank=True)
     dt_ultima_carga = models.DateTimeField('Útlima carga', null=True, blank=True)
     access_hash = models.CharField(max_length=64, null=True, blank=True)
     status = models.CharField(max_length=1, choices=Status.choices, default='A')
+
+    class Meta:
+        verbose_name_plural = 'Canais'
 
     def __str__(self):
         return self.username
 
 
 class APIKeys(models.Model):
+
+    class Status(models.TextChoices):
+        ATIVO = 'A', 'Ativo'
+        ERRO = 'E', 'Inválida'
+
     user = models.ForeignKey(User, on_delete=models.PROTECT)
     titulo = models.CharField(max_length=100)
     api_id = models.IntegerField()
     api_hash = models.CharField(max_length=64)
+    status = models.CharField(max_length=1, choices=Status.choices, default='A')
 
     def __str__(self):
         return self.titulo
+
+    class Meta:
+        verbose_name = 'Chave de API'
+        verbose_name_plural = 'Chaves de API'
 
 
 class Lista(models.Model):

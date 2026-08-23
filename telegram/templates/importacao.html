@@ -1,0 +1,28 @@
+{% extends "base_form.html" %}
+{% block title %}Importação de Canais{% endblock %}
+
+{% block content %}
+    {% if total_registros %}
+    <h2>Resumo da Importação:</h2>
+    <p>Total de Registros Lidos: {{ total_registros }}</p>
+
+    {% if erros %}
+      <h3>Erros:</h3>
+      <ul>
+        {% for erro in erros %}
+          <li>{{ erro }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <div class="form-row submit-row">
+        <div class="col"><a href="/admin/" class="buttonlink">Voltar</a></div>
+    </div>
+  {% else %}
+    <h2>Importação de Canais Telegram</h2>
+    <p>Selecione a lista de destino e clique no botão Enviar</p>
+    <br/>
+    <p>A rotina aceita arquivos CSV e XLSX cuja primeira linha contenha o username (Identificador do Canal) e opcionalmente os campos title e category</p>
+    <p>Caso você venha a usar as categorias, elas já devem ter sido incluídas no sistema de antemão</p>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
