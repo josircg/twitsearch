@@ -53,7 +53,7 @@ def importacao_canais(request):
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
             arquivo = request.FILES.get('arquivo')
-            lista = request.POST.get('lista')
+            lista = form.cleaned_data['lista']
             try:
                 if arquivo:
                     if arquivo.name.lower().endswith('.csv'):
@@ -74,7 +74,7 @@ def importacao_canais(request):
                                 categoria = Categoria.objects.filter(category=registro['category']).first()
                                 canal.categorias.add(categoria)
                                 messages.error(request, f"Categoria não encontrada {registro['category']}")
-                            lista.canais.append(canal)
+                            lista.canais.add(canal)
 
                         messages.info(request, f'Total de registros lidos: {tot_registros}')
                         messages.info(request, f'Total de registros incluídos: {tot_inclusao}')
