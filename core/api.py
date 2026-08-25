@@ -47,9 +47,16 @@ def termos(request, rede_id):
     if not settings.AUTH_KEYS.get(auth):
         return HttpResponseForbidden()
 
-    termos = []
+    lista = []
     for termo in Termo.objects.filter(projeto__redes=rede_id).exclude(projeto__status='C').order_by('projeto'):
-        termos.append({
+        # se for telegram, gerar a lista de canais
+        if rede_id == 4:
+            canais = list(termo.projeto.lista_canais.canais.filter(
+                id_numerico__isnull=False, status='A').values_list('id_numerico', flat=True))
+        else:
+            canais = None
+            
+        lista.append({
             'projeto_id': termo.projeto.id,
             'projeto_nome': termo.projeto.nome,
             'projeto_index': termo.projeto.prefix,
@@ -58,10 +65,11 @@ def termos(request, rede_id):
             'busca': termo.busca,
             'busca_complementar': termo.busca_complementar,
             'idioma': termo.language,
+            'canais': canais,
             'status': termo.status if termo.projeto.status == 'A' else termo.projeto.status
         })
 
-    return HttpResponse(json.dumps(termos), content_type='application/json')
+    return HttpResponse(json.dumps(lista), content_type='application/json')
 
 
 def termos_by_id(request, termo_id):
