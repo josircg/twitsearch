@@ -174,8 +174,7 @@ async def processa_canal(client, canal, dest_dir, limite, lote, fake):
 
 async def coleta_mensagens(client, options):
     dest_dir = os.path.join(settings.BASE_DIR, 'data', 'telegram')
-    os.makedirs(dest_dir, exist_ok=True)
-    os.makedirs(os.path.join(dest_dir, 'ruim'), exist_ok=True)
+    os.makedirs(dest_dir, exist_ok=True)    
 
     fake = options['fake']
     limite = options['limite']
