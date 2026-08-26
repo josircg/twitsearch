@@ -1,6 +1,5 @@
-# Exporta os dados da pasta cached para o Datalake no PostgreSQL
-# A rotina de captura do vtrack vai passar a buscar os dados do Datalake e não mais do Opensearch
-# Josir - 05/2026
+# Exporta as mensagens do Telegram da pasta data/telegram para o Datalake no PostgreSQL
+# Espelha core/management/commands/export_datalake.py, adaptado para o Telegram
 #
 
 import json
@@ -14,7 +13,11 @@ from django.core.management.base import BaseCommand
 
 from core.apps import get_management_logger, connect_postgresql
 
-logger = get_management_logger("export_datalake")
+logger = get_management_logger("export_telegram")
+
+TABELA = 'telegram'
+FILA = 'fila_telegram'
+PG_ALIAS = 'pg_baoba'
 
 
 class Processo:
@@ -49,47 +52,51 @@ class Processo:
 
     def commit(self):
         """
-        Caso o tweet já exista, move o antigo para o histórico (mantendo o batch_id antigo)
-        e insere o novo com o batch_id atual. Também inclui os tweets relevantes na fila para processamento pelo Mage
+        Caso a mensagem já exista, move a antiga para o histórico (mantendo o batch_id
+        antigo) e insere a nova com o batch_id atual. Também inclui as mensagens na fila
+        para processamento pelo Mage - no Telegram, toda mensagem vem de um Canal ativo,
+        então não há filtro por termo como no Twitter.
         """
+        relevantes = []
         cursor = self.pg_client.cursor()
         batch_keys = list(self.batch.keys())
         batch_values = list(self.batch.values())
-        # 1. Move o que já existe para o histórico antes de deletar
-        sql = f"""
-        WITH deleted_rows AS (
-            DELETE FROM twitter
-            WHERE id = ANY(%s)
-            RETURNING id, source, processo
-        )
-        INSERT INTO historico (id, source, processo)
-        SELECT id, source, processo FROM deleted_rows;
-        """
-        cursor.execute(sql, (batch_keys,))
-
-        # 2. Insere os novos registros com o ID do lote atual
-        sql_insert = f"""
-        INSERT INTO twitter (id, source, processo)
-        SELECT unnest_id, unnest_source::jsonb, %s
-        FROM unnest(%s::text[], %s::text[]) AS t(unnest_id, unnest_source);
-        """
-        cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
-
-        if self.queue:
-            # Os tweets que não tiverem termo associado não entram na fila de processamento
-            relevantes = []
-            for record in batch_values:
-                d_record = json.loads(record)
-                if d_record.get('termo'):
-                    relevantes.append(record)
-
-            sql_insert = f"""
-            INSERT INTO fila_twitter (processo, source) SELECT %s, unnest_source::jsonb 
-              FROM unnest(%s::text[]) AS t(unnest_source);
+        try:
+            # 1. Move o que já existe para o histórico antes de deletar
+            sql = f"""
+            WITH deleted_rows AS (
+                DELETE FROM {TABELA}
+                WHERE id = ANY(%s)
+                RETURNING id, source, processo
+            )
+            INSERT INTO historico (id, source, processo)
+            SELECT id, source, processo FROM deleted_rows;
             """
-            cursor.execute(sql_insert, (self.processo_id, relevantes,))
+            cursor.execute(sql, (batch_keys,))
 
-        self.pg_client.commit()
+            # 2. Insere os novos registros com o ID do lote atual
+            sql_insert = f"""
+            INSERT INTO {TABELA} (id, source, processo)
+            SELECT unnest_id, unnest_source::jsonb, %s
+            FROM unnest(%s::text[], %s::text[]) AS t(unnest_id, unnest_source);
+            """
+            cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
+
+            if self.queue:
+                # Toda mensagem do Telegram vem de um Canal ativo - o lote inteiro entra na fila
+                relevantes = batch_values
+
+                sql_insert = f"""
+                INSERT INTO {FILA} (processo, source) SELECT %s, unnest_source::jsonb
+                  FROM unnest(%s::text[]) AS t(unnest_source);
+                """
+                cursor.execute(sql_insert, (self.processo_id, relevantes,))
+
+            self.pg_client.commit()
+        except Exception:
+            self.pg_client.rollback()
+            raise
+
         self.batch = {}
         # Exclui os arquivos que foram processados
         for arquivo in self.arquivos:
@@ -99,7 +106,7 @@ class Processo:
 
 
 class Command(BaseCommand):
-    label = 'Importa Tweets'
+    help = 'Exporta mensagens do Telegram para o Datalake'
 
     def add_arguments(self, parser):
         parser.add_argument('-e', '--estimate', action='store_true',
@@ -107,7 +114,7 @@ class Command(BaseCommand):
         parser.add_argument('-d', '--source_dir', type=str, nargs='?',
                             help='which folder to read files')
         parser.add_argument('-a', '--archive', action='store_true',
-                            help='Records will be archived only and will not be added to Opensearch')
+                            help='Records will be archived only and will not be added to the queue')
 
     def handle(self, *args, **options):
 
@@ -117,12 +124,13 @@ class Command(BaseCommand):
         tot_registros = 0
         estimate = options.get('estimate')
         archive = options.get('archive')
-        dest_dir = options.get('source_dir') or 'queue'
+        dest_dir = options.get('source_dir') or 'telegram'
         dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
         print(dest_dir)
         if archive:
             print('Archive mode')
-        processo = Processo('pg_baoba', 500, not archive)
+        os.makedirs(os.path.join(dest_dir, 'ruim'), exist_ok=True)
+        processo = Processo(PG_ALIAS, 500, not archive)
 
         with os.scandir(dest_dir) as it:
             primeiros_arquivos = islice(it, 50000)
@@ -135,11 +143,11 @@ class Command(BaseCommand):
                         if estimate:
                             continue
                         filename = join(dest_dir, arquivo.name)
-                        with open(filename, 'r') as file:
+                        with open(filename, 'r', encoding='utf-8') as file:
                             texto = file.read()
                         if len(texto) > 0:
-                            twitter_data = json.loads(texto)
-                            tot_registros += processo.insere_docs(twitter_data)
+                            telegram_data = json.loads(texto)
+                            tot_registros += processo.insere_docs(telegram_data)
                             processo.arquivos.append(filename)
                         else:
                             tot_erros += 1

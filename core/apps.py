@@ -6,6 +6,8 @@ import time
 
 from datetime import timedelta, datetime
 
+import psycopg2 as psycopg
+
 from asgiref.sync import sync_to_async
 from django.apps import AppConfig
 
@@ -17,6 +19,19 @@ from core import intdef
 
 class CoreConfig(AppConfig):
     name = 'core'
+
+
+def connect_postgresql(server_alias: str):
+    server = settings.PG_SERVERS.get(server_alias)
+    if not server:
+        raise Exception(f'Entrada {server_alias} não encontrada')
+    host = server['host']
+    port = server.get('port', 5432)
+    database = server['database']
+    username = server['username']
+    password = server['password']
+    pg = psycopg.connect(f"dbname={database} user={username} password={password} host={host} port={port}")
+    return pg
 
 
 def get_management_logger(name):
