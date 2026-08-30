@@ -54,7 +54,7 @@ def termos(request, rede_id):
         if rede_id == 4:
             canais = list(termo.projeto.lista_canais.canais.filter(
                 id_numerico__isnull=False, status='A').values_list('id_numerico', flat=True))
-            status_record = TermoStatus.objects.filter(termo=termo, rede__id=4).first()
+            status_record = TermoStatus.objects.filter(termo=termo, rede_id=rede_id).first()
             if status_record:
                 ult_processo = status_record.ult_processo
                 status = status_record.status
@@ -124,23 +124,27 @@ def canais_telegram(request: HttpRequest):
 
 
 def processo_rede_get(request: HttpRequest, termo_id: int, rede_id: int):
-    record = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).first()
+    record = TermoStatus.objects.filter(termo_id=termo_id, rede_id=rede_id).first()
     if record:
-        return record.ult_processo or 0
+        result = record.ult_processo or 0
     else:
-        return None
+        result = 0
+    return HttpResponse(json.dumps(result), content_type='application/json')
 
 
 # atualiza o ult_processo a partir do último registro processado no datalake
-# quando o processo_id for negativo, deve-se registrar que o processamento não foi bem sucedido
-# A API retorna 1 se conseguiu atualizar o registro
-def processo_rede_set(request: HttpRequest, termo_id: int, rede_id: int, processo_id: int):
-    auth = request.headers.get('auth', '')
-    if not settings.AUTH_KEYS.get(auth):
-        return HttpResponseForbidden()
-    if processo_id < 0:
-        result = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).update(status='E')
+# quando o processo_id for zero, deve-se registrar que o processamento não foi bem sucedido
+# A API retorna o status do Termo para a rede indicada.
+def processo_rede_set(request: HttpRequest, termo_id: int, rede_id: int, processo: str):
+    # auth = request.headers.get('auth', '')
+    # if not settings.AUTH_KEYS.get(auth):
+    #     return HttpResponseForbidden()
+    record, _ = TermoStatus.objects.get_or_create(termo_id=termo_id, rede_id=rede_id, defaults={'ult_processo': 0})
+    if processo == 'E':
+        record.status = 'E'
     else:
-        result = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).update(ult_processo=processo_id)
-    return result
+        record.ult_processo = int(processo)
+        record.status = 'A'
+    record.save()
+    return HttpResponse(json.dumps(record.status), content_type='application/json')
 

@@ -34,6 +34,6 @@ urlpatterns = [
     path('api/processo/<int:processo_id>', processo, name='processo'),
     path('api/termos/<int:rede_id>', termos, name='termos'),
     path('api/termos/<int:termo_id>/detail', termos_by_id, name='termos'),
-    path('api/get_processo/<int:termo_id>/<int:rede>', processo_rede_get, name='projeto'),
-    path('api/update_processo/<int:termo_id>/<int:rede>/<int:processo>', processo_rede_set, name='projeto'),
+    path('api/get_processo/<int:termo_id>/<int:rede_id>', processo_rede_get, name='projeto'),
+    path('api/update_processo/<int:termo_id>/<int:rede_id>/<str:processo>', processo_rede_set, name='projeto'),
 ]
