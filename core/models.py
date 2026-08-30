@@ -273,7 +273,8 @@ class TermoStatus(models.Model):
     termo = models.ForeignKey(Termo, on_delete=models.CASCADE)
     rede = models.ForeignKey(Rede, on_delete=models.CASCADE)
     status = models.CharField(max_length=1, choices=STATUS_TERMO, default='A')
-    ult_processo = models.ForeignKey('Processamento', on_delete=models.SET_NULL, null=True, blank=True)
+    # ult_processo contém o ponteiro do último registro processado no datalake correspondente
+    ult_processo = models.BigIntegerField('Processo Externo', null=True, blank=True)
 
     class Meta:
         verbose_name = 'Status da Busca'

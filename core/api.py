@@ -3,8 +3,9 @@ import json
 from django.http import HttpResponse, HttpResponseForbidden, HttpRequest
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from .models import Eixo, Projeto, Termo, Rede, Processamento
+from .models import Eixo, Projeto, Termo, Rede, Processamento, TermoStatus
 from telegram.models import Canal
+
 
 def redes(request):
     result = Rede.objects.all().values('id', 'nome', 'ativa')
@@ -53,8 +54,17 @@ def termos(request, rede_id):
         if rede_id == 4:
             canais = list(termo.projeto.lista_canais.canais.filter(
                 id_numerico__isnull=False, status='A').values_list('id_numerico', flat=True))
+            status_record = TermoStatus.objects.filter(termo=termo, rede__id=4).first()
+            if status_record:
+                ult_processo = status_record.ult_processo
+                status = status_record.status
+            else:
+                ult_processo = None
+                status = 'I'
         else:
             canais = None
+            ult_processo = termo.ult_processamento
+            status = termo.status if termo.projeto.status == 'A' else termo.projeto.status
             
         lista.append({
             'projeto_id': termo.projeto.id,
@@ -66,7 +76,8 @@ def termos(request, rede_id):
             'busca_complementar': termo.busca_complementar,
             'idioma': termo.language,
             'canais': canais,
-            'status': termo.status if termo.projeto.status == 'A' else termo.projeto.status
+            'status': status,
+            'ult_processo': ult_processo
         })
 
     return HttpResponse(json.dumps(lista), content_type='application/json')
@@ -111,4 +122,25 @@ def canais_telegram(request: HttpRequest):
         lista.append(record)
     return HttpResponse(json.dumps(lista), content_type='application/json')
 
+
+def processo_rede_get(request: HttpRequest, termo_id: int, rede_id: int):
+    record = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).first()
+    if record:
+        return record.ult_processo or 0
+    else:
+        return None
+
+
+# atualiza o ult_processo a partir do último registro processado no datalake
+# quando o processo_id for negativo, deve-se registrar que o processamento não foi bem sucedido
+# A API retorna 1 se conseguiu atualizar o registro
+def processo_rede_set(request: HttpRequest, termo_id: int, rede_id: int, processo_id: int):
+    auth = request.headers.get('auth', '')
+    if not settings.AUTH_KEYS.get(auth):
+        return HttpResponseForbidden()
+    if processo_id < 0:
+        result = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).update(status='E')
+    else:
+        result = TermoStatus.objects.filter(id=termo_id, rede_id=rede_id).update(ult_processo=processo_id)
+    return result
 

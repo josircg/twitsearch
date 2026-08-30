@@ -6,7 +6,8 @@ from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_j
 
 from telegram.views import importacao_canais
 
-from core.api import redes, termos, projetos, termos_by_id, processo, canais_telegram
+from core.api import (redes, termos, projetos, termos_by_id, processo, canais_telegram,
+                      processo_rede_get, processo_rede_set)
 
 urlpatterns = [
     re_path(r'^$', index),
@@ -33,5 +34,6 @@ urlpatterns = [
     path('api/processo/<int:processo_id>', processo, name='processo'),
     path('api/termos/<int:rede_id>', termos, name='termos'),
     path('api/termos/<int:termo_id>/detail', termos_by_id, name='termos'),
-
+    path('api/get_processo/<int:termo_id>/<int:rede>', processo_rede_get, name='projeto'),
+    path('api/update_processo/<int:termo_id>/<int:rede>/<int:processo>', processo_rede_set, name='projeto'),
 ]
