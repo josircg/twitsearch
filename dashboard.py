@@ -41,7 +41,8 @@ class CustomIndexDashboard(Dashboard):
             ),
             modules.ModelList('Adminstração',
                 models=('core.models.Rede', 'core.models.Processamento', 'core.models.Agendamento',
-                        'django.contrib.*', 'admin_tools.dashboard.models.DashboardPreferences', ),
+                        'django.contrib.*',
+                        'admin_tools.dashboard.models.DashboardPreferences', ),
             ),
             modules.ModelList(
                 'Rotinas de Importação', [

@@ -13,8 +13,9 @@ class CategoriaAdmin(PowerModelAdmin):
 
 @admin.register(Canal)
 class CanalAdmin(PowerModelAdmin):
-    list_display = ('username', 'titulo', 'num_participantes',)
-    search_fields = ('username', )
+    list_display = ('username', 'titulo', 'status', 'num_participantes',)
+    list_filter = ('status',)
+    search_fields = ('username', 'titulo',)
 
 
 class CanalTabularInline(PowerTabularInline):

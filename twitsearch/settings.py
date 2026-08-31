@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'smart_selects',
     'core',
     'telegram',
+    'utils',
 ]
 
 MIDDLEWARE = [
