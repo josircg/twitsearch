@@ -3,6 +3,7 @@ import json
 from django.http import HttpResponse, HttpResponseForbidden, HttpRequest
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
 from .models import Eixo, Projeto, Termo, Rede, Processamento, TermoStatus
 from telegram.models import Canal
 
@@ -133,8 +134,9 @@ def processo_rede_get(request: HttpRequest, termo_id: int, rede_id: int):
 
 
 # atualiza o ult_processo a partir do último registro processado no datalake
-# quando o processo_id for zero, deve-se registrar que o processamento não foi bem sucedido
+# quando processo for 'E', deve-se registrar que o processamento não foi bem sucedido
 # A API retorna o status do Termo para a rede indicada.
+@csrf_exempt
 def processo_rede_set(request: HttpRequest, termo_id: int, rede_id: int, processo: str):
     # auth = request.headers.get('auth', '')
     # if not settings.AUTH_KEYS.get(auth):
