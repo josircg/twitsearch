@@ -70,10 +70,10 @@ def importacao_canais(request):
                             canal, inclusao = Canal.objects.get_or_create(username=registro['username'])
                             if inclusao:
                                 tot_inclusao += 1
-                            if registro['category']:
+                            if registro.get('category'):
                                 categoria = Categoria.objects.filter(category=registro['category']).first()
-                                canal.categorias.add(categoria)
-                                messages.error(request, f"Categoria não encontrada {registro['category']}")
+                                if categoria:
+                                    canal.categorias.add(categoria)
                             lista.canais.add(canal)
 
                         messages.info(request, f'Total de registros lidos: {tot_registros}')
