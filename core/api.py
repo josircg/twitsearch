@@ -53,33 +53,38 @@ def termos(request, rede_id):
     for termo in Termo.objects.filter(projeto__redes=rede_id).exclude(projeto__status='C').order_by('projeto'):
         # se for telegram, gerar a lista de canais
         if rede_id == 4:
-            canais = list(termo.projeto.lista_canais.canais.filter(
-                id_numerico__isnull=False, status='A').values_list('id_numerico', flat=True))
-            status_record = TermoStatus.objects.filter(termo=termo, rede_id=rede_id).first()
-            if status_record:
-                ult_processo = status_record.ult_processo
-                status = status_record.status
+            if termo.projeto.lista_canais:
+                canais = list(termo.projeto.lista_canais.canais.filter(
+                    id_numerico__isnull=False, status='A').values_list('username', flat=True))
+                status_record = TermoStatus.objects.filter(termo=termo, rede_id=rede_id).first()
+                if status_record:
+                    ult_processo = status_record.ult_processo
+                    status = status_record.status
+                else:
+                    ult_processo = None
+                    status = 'I'
             else:
-                ult_processo = None
-                status = 'I'
+                # se não tem canais, não realiza o procesamento do Telegram
+                status = 'X'
         else:
             canais = None
-            ult_processo = termo.ult_processamento
+            ult_processo = None
             status = termo.status if termo.projeto.status == 'A' else termo.projeto.status
-            
-        lista.append({
-            'projeto_id': termo.projeto.id,
-            'projeto_nome': termo.projeto.nome,
-            'projeto_index': termo.projeto.prefix,
-            'id': termo.id,
-            'nome': termo.descritivo,
-            'busca': termo.busca,
-            'busca_complementar': termo.busca_complementar,
-            'idioma': termo.language,
-            'canais': canais,
-            'status': status,
-            'ult_processo': ult_processo
-        })
+
+        if status != 'X':
+            lista.append({
+                'projeto_id': termo.projeto.id,
+                'projeto_nome': termo.projeto.nome,
+                'projeto_index': termo.projeto.prefix,
+                'id': termo.id,
+                'nome': termo.descritivo,
+                'busca': termo.busca,
+                'busca_complementar': termo.busca_complementar,
+                'idioma': termo.language,
+                'canais': canais,
+                'status': status,
+                'ult_processo': ult_processo
+            })
 
     return HttpResponse(json.dumps(lista), content_type='application/json')
 
