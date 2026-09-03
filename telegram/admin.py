@@ -1,6 +1,6 @@
 from typing import Any
 
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from .models import Canal, Lista, APIKeys, Categoria
 from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline, PowerInlineModelAdmin
@@ -16,6 +16,17 @@ class CanalAdmin(PowerModelAdmin):
     list_display = ('username', 'titulo', 'status', 'num_participantes',)
     list_filter = ('status',)
     search_fields = ('username', 'titulo',)
+    actions = 'disable',
+
+    @admin.action(description='Desabilita Canal')
+    def disable(self, request, queryset):
+        tot_reg = 0
+        for reg in queryset:
+            reg.status = Canal.Status.DESATIVADO
+            reg.save()
+            tot_reg += 1
+        messages.info(request, f'{tot_reg} canais desativados')
+        return
 
 
 class CanalTabularInline(PowerTabularInline):
