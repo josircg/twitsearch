@@ -36,7 +36,7 @@ class CustomIndexDashboard(Dashboard):
             ),
             modules.ModelList('Telegram',
                 models=('telegram.models.Categoria', 'telegram.models.Canal', 'telegram.models.Lista',
-                        'telegram.models.APIKeys'
+                        'telegram.models.APIKeys', 'core.models.TermoStatus'
                         )
             ),
             modules.ModelList('Adminstração',

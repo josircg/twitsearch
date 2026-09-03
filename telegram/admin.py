@@ -2,6 +2,7 @@ from typing import Any
 
 from django.contrib import admin, messages
 
+from core.models import TermoStatus
 from .models import Canal, Lista, APIKeys, Categoria
 from poweradmin.admin import PowerModelAdmin, PowerButton, PowerTabularInline, PowerInlineModelAdmin
 
@@ -13,7 +14,7 @@ class CategoriaAdmin(PowerModelAdmin):
 
 @admin.register(Canal)
 class CanalAdmin(PowerModelAdmin):
-    list_display = ('username', 'titulo', 'status', 'num_participantes',)
+    list_display = ('username', 'titulo', 'status', 'num_mensagens',)
     list_filter = ('status',)
     search_fields = ('username', 'titulo',)
     actions = 'disable',
@@ -32,7 +33,7 @@ class CanalAdmin(PowerModelAdmin):
 class CanalTabularInline(PowerTabularInline):
     model = Lista.canais.through
     autocomplete_fields = ['canal']
-    extra = 1
+    extra = 0
 
 
 @admin.register(Lista)
@@ -64,3 +65,20 @@ class APIKeysAdmin(PowerModelAdmin):
         obj.user = request.user
         super(APIKeysAdmin, self).save_model(request, obj, form, change)
 
+
+@admin.register(TermoStatus)
+class TermoStatusAdmin(PowerModelAdmin):
+    list_display = ('projeto', 'termo', 'status', 'ult_processo')
+    list_filter = ('status',)
+
+    def get_queryset(self, request):
+        """Filtra a listagem para exibir apenas os registros do usuário logado."""
+        qs = super().get_queryset(request)
+
+        # Superusuários (admins) continuam vendo todos os registros
+        return qs.filter(rede_id=4)
+
+    def projeto(self, obj):
+        return obj.termo.projeto
+    projeto.short_description = 'Projeto'
+    projeto.admin_order_field = 'termo__projeto__nome'
