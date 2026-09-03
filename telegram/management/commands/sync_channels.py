@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from django.core.management.base import BaseCommand
 from django.conf import settings
@@ -12,6 +13,8 @@ from telethon.errors import FloodWaitError, RPCError
 from core.apps import alog_message
 from telegram.models import Canal
 
+logger = logging.getLogger(__name__)
+
 
 async def sync_channels(client: TelegramClient):
     """
@@ -20,9 +23,33 @@ async def sync_channels(client: TelegramClient):
     tot_atualizados = 0
     tot_desabilitados = 0
     tot_erros = 0
+    tot_processados = 0
+
+    total_canais = await Canal.objects.filter(
+        id_numerico__isnull=True, status=Canal.Status.ATIVO
+    ).acount()
+    logger.info("Iniciando sincronização de %s canal(is) pendente(s)", total_canais)
+
     async for canal in Canal.objects.filter(id_numerico__isnull=True, status=Canal.Status.ATIVO):
+        tot_processados += 1
+        logger.info(
+            "[%s/%s] Processando canal id=%s titulo=%s",
+            tot_processados, total_canais, canal.pk, canal.titulo,
+        )
+        if not (canal.username or '').strip():
+            canal.status = Canal.Status.DESATIVADO
+            await canal.asave(update_fields=['status'])
+            await alog_message(canal, "Canal sem username - desativado")
+            logger.warning(
+                "[%s/%s] Canal id=%s titulo=%s sem username - desativado",
+                tot_processados, total_canais, canal.pk, canal.titulo,
+            )
+            tot_desabilitados += 1
+            continue
+
         try:
             # Esta chamada faz a requisição de rede e preenche o cache do Telethon
+            # (a busca precisa do username; o título só é preenchido após a sincronização)
             entity = await client.get_entity(canal.username)
 
             if isinstance(entity, Channel):
@@ -37,15 +64,29 @@ async def sync_channels(client: TelegramClient):
                     canal.sobre = full_info.full_chat.about
                 await canal.asave()
                 await alog_message(canal, "Canal sincronizado com sucesso")
+                logger.info(
+                    "[%s/%s] Canal id=%s titulo=%r sincronizado (id_numerico=%s)",
+                    tot_processados, total_canais, canal.pk, canal.titulo,
+                    canal.id_numerico,
+                )
                 tot_atualizados += 1
             else:
                 canal.status = Canal.Status.DESATIVADO
                 await canal.asave(update_fields=['status'])
                 await alog_message(canal, "Canal não encontrado")
+                logger.warning(
+                    "[%s/%s] Canal id=%s titulo=%s não é um Channel (%s) - desativado",
+                    tot_processados, total_canais, canal.pk, canal.titulo,
+                    type(entity).__name__,
+                )
                 tot_desabilitados += 1
 
         except FloodWaitError as e:
             # Tratamento específico para o Rate Limit do Telegram
+            logger.warning(
+                "[%s/%s] FloodWaitError no canal id=%s titulo=%s - aguardando %ss",
+                tot_processados, total_canais, canal.pk, canal.titulo, e.seconds,
+            )
             await asyncio.sleep(e.seconds)
 
         except RPCError as e:
@@ -53,13 +94,25 @@ async def sync_channels(client: TelegramClient):
             canal.status = Canal.Status.DESATIVADO
             await canal.asave(update_fields=["status"])
             await alog_message(canal, f"Erro RPC do Telegram ao obter dados: {e}")
+            logger.error(
+                "[%s/%s] RPCError no canal id=%s titulo=%s - desativado: %s",
+                tot_processados, total_canais, canal.pk, canal.titulo, e,
+            )
             tot_erros += 1
 
         except Exception as e:
             # Captura erros genéricos e formata a f-string corretamente
             await alog_message(canal, f"Erro inesperado ao obter dados do canal: {e}")
+            logger.exception(
+                "[%s/%s] Erro inesperado no canal id=%s titulo=%s: %s",
+                tot_processados, total_canais, canal.pk, canal.titulo, e,
+            )
             tot_erros += 1
 
+    logger.info(
+        "Sincronização finalizada: %s processados, %s atualizados, %s desabilitados, %s erros",
+        tot_processados, tot_atualizados, tot_desabilitados, tot_erros,
+    )
     print(f'Total de Canais atualizados:{tot_atualizados}')
     print(f'Total de Canais desabilitados:{tot_desabilitados}')
     print(f'Total de Erros:{tot_erros}')
@@ -81,7 +134,12 @@ class Command(BaseCommand):
     async def main(self, api_id, api_hash):
         async with TelegramClient('sync_channels', api_id, api_hash) as client:
             if await client.is_user_authorized():
-                await sync_channels(client)
+                try:
+                    await sync_channels(client)
+                except Exception:
+                    # Qualquer falha que "vaze" do loop de sincronização é registrada com stacktrace
+                    logger.exception("Falha não tratada em sync_channels - execução interrompida")
+                    raise
             else:
                 print("Usuário não autorizado. Faça o login primeiro.")
 
