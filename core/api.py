@@ -52,7 +52,7 @@ def termos(request, rede_id):
     lista = []
     for termo in Termo.objects.filter(projeto__redes=rede_id).exclude(projeto__status='C').order_by('projeto'):
         # se for telegram, gerar a lista de canais
-        if rede_id == 4:
+        if rede_id == 4 and termo.projeto.lista_canais:
             canais = list(termo.projeto.lista_canais.canais.filter(
                 id_numerico__isnull=False, status='A').values_list('id_numerico', flat=True))
             status_record = TermoStatus.objects.filter(termo=termo, rede_id=rede_id).first()

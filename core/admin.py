@@ -1,14 +1,13 @@
 from datetime import datetime
 from urllib.parse import urlencode
 
-from django.contrib import admin
-from django.conf import settings
-from django.urls import path, re_path
-
-from django.shortcuts import render, get_object_or_404
-from django.urls import reverse
-from django.template import RequestContext
 from django import forms
+
+from django.contrib import admin, messages
+from django.conf import settings
+from django.shortcuts import render, get_object_or_404
+from django.template import RequestContext
+from django.urls import re_path, reverse
 
 from core.forms import ProjetoAdminForm
 from core.models import *
@@ -172,6 +171,11 @@ class ProjetoAdmin(PowerModelAdmin):
                 obj.grupo = request.user.groups.first()
 
         super(ProjetoAdmin, self).save_model(request, obj, form, change)
+
+        if 4 in list(obj.redes.values_list('id', flat=True)) and not obj.lista_canais:
+            messages.warning(request,
+                             'Sem uma lista de canais definida, a busca pelo Telegram não pode ser realizada')
+
         # if os.path.exists('/var/webapp/twitsearch/twitsearch/crawler.sh'):
         #    OSRun('/var/webapp/twitsearch/twitsearch/crawler.sh')
 
