@@ -100,6 +100,18 @@ async def sync_channels(client: TelegramClient):
             )
             tot_erros += 1
 
+        except ValueError as e:
+            # Telethon levanta ValueError ('No user has "x" as username') quando o
+            # username não existe/não resolve na API do Telegram
+            canal.status = Canal.Status.DESATIVADO
+            await canal.asave(update_fields=["status"])
+            await alog_message(canal, f"Username inexistente no Telegram: {e}")
+            logger.warning(
+                "[%s/%s] Username inexistente no canal id=%s titulo=%s - desativado: %s",
+                tot_processados, total_canais, canal.pk, canal.titulo, e,
+            )
+            tot_desabilitados += 1
+
         except Exception as e:
             # Captura erros genéricos e formata a f-string corretamente
             await alog_message(canal, f"Erro inesperado ao obter dados do canal: {e}")
