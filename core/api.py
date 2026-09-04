@@ -45,9 +45,9 @@ def projetos(request, status=None):
 
 
 def termos(request, rede_id):
-    auth = request.headers.get('auth','')
-    if not settings.AUTH_KEYS.get(auth):
-        return HttpResponseForbidden()
+    #auth = request.headers.get('auth','')
+    #if not settings.AUTH_KEYS.get(auth):
+    #    return HttpResponseForbidden()
 
     lista = []
     for termo in Termo.objects.filter(projeto__redes=rede_id).exclude(projeto__status='C').order_by('projeto'):
@@ -71,6 +71,9 @@ def termos(request, rede_id):
             ult_processo = None
             status = termo.status if termo.projeto.status == 'A' else termo.projeto.status
 
+        dtinicio = termo.dtinicio.strftime('%Y-%m-%d')
+        dtfinal = termo.dtfinal.strftime('%Y-%m-%d') if termo.dtfinal else None
+
         if status != 'X':
             lista.append({
                 'projeto_id': termo.projeto.id,
@@ -81,6 +84,8 @@ def termos(request, rede_id):
                 'busca': termo.busca,
                 'busca_complementar': termo.busca_complementar,
                 'idioma': termo.language,
+                'dtinicio': dtinicio,
+                'dtfinal': dtfinal,
                 'canais': canais,
                 'status': status,
                 'ult_processo': ult_processo

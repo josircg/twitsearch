@@ -19,7 +19,8 @@ class Canal(models.Model):
     class Status(models.TextChoices):
         ATIVO = 'A', 'Ativo'
         PROCESSANDO = 'P', 'Em processamento'
-        DESATIVADO = 'D', 'Desativado'
+        DESATIVADO = 'D', 'Não existe mais'
+        INATIVO = 'I', 'Inativo'  # Sem mensagens
 
     username = models.CharField(max_length=255, db_index=True, unique=True)
     id_numerico = models.BigIntegerField(db_index=True, unique=True, null=True, blank=True)

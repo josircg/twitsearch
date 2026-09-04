@@ -70,6 +70,7 @@ class APIKeysAdmin(PowerModelAdmin):
 class TermoStatusAdmin(PowerModelAdmin):
     list_display = ('projeto', 'termo', 'status', 'ult_processo')
     list_filter = ('status',)
+    readonly_fields = ('projeto', 'termo', 'status', 'ult_processo')
 
     def get_queryset(self, request):
         """Filtra a listagem para exibir apenas os registros do usuário logado."""
