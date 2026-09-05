@@ -117,9 +117,14 @@ class Command(BaseCommand):
         tot_registros = 0
         estimate = options.get('estimate')
         archive = options.get('archive')
-        dest_dir = options.get('source_dir') or 'queue'
-        dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
-        print(dest_dir)
+        dest_dir = options.get('source_dir')
+        if not dest_dir:
+            dest_dir = os.path.join(settings.BASE_DIR, 'data', 'queue')
+        if not os.path.exists(dest_dir):
+            print(f'Path not found {dest_dir}')
+            return
+
+        print('Source Path:', dest_dir)
         if archive:
             print('Archive Mode - Records will not be saved to Opensearch')
         processo = Processo('pg_baoba', 500, not archive)
