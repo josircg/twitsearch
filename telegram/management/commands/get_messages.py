@@ -245,21 +245,26 @@ class Command(BaseCommand):
         parser.add_argument('--limite', type=int, default=1000,
                              help='Máximo de mensagens por canal nesta execução')
         parser.add_argument('--lote', type=int, default=100,
-                             help='Mensagens por arquivo JSON')
-        parser.add_argument('--session', type=str, default='sync_channels',
-                             help='Arquivo de sessão do Telethon')
+                            help='Mensagens por arquivo JSON')
         parser.add_argument('--fake', action='store_true',
                              help='Não grava arquivos nem atualiza os canais')
 
     def handle(self, *args, **options):
         chave = APIKeys.objects.filter(status=APIKeys.Status.ATIVO).first()
-        if not chave:
-            logger.error('Nenhuma chave de API cadastrada (telegram.APIKeys)')
-            return
-        asyncio.run(self.main(chave.api_id, chave.api_hash, options))
+        if chave:
+            options['session'] = f'user_{chave.id}'
+            options['api_id'] = chave.id
+            options['api_hash'] = chave.api_hash
+        else:
+            options['session'] = 'sync_channels'
+            options['api_id'] = settings.AUTH_KEYS['TELEGRAM_ID']
+            options['api_hash'] = settings.AUTH_KEYS['TELEGRAM_HASH']
+        asyncio.run(self.main(options))
 
-    async def main(self, api_id, api_hash, options):
-        async with TelegramClient(options['session'], api_id, api_hash) as client:
+    async def main(self, options):
+        async with TelegramClient(options['session'],
+                                  options['api_id'],
+                                  options['api_hash']) as client:
             if not await client.is_user_authorized():
                 logger.error('Usuário não autorizado. Faça o login primeiro.')
                 return

@@ -45,7 +45,7 @@ def projetos(request, status=None):
 
 
 def termos(request, rede_id):
-    auth = request.headers.get('auth','')
+    auth = request.headers.get('auth', '')
     if not settings.AUTH_KEYS.get(auth):
         return HttpResponseForbidden()
 

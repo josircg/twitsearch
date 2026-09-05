@@ -28,7 +28,7 @@ async def sync_channels(client: TelegramClient):
     total_canais = await Canal.objects.filter(
         id_numerico__isnull=True, status=Canal.Status.ATIVO
     ).acount()
-    logger.info("Iniciando sincronização de %s canal(is) pendente(s)", total_canais)
+    logger.info(f"Iniciando sincronização de {total_canais} canal(is) pendente(s)")
 
     async for canal in Canal.objects.filter(id_numerico__isnull=True, status=Canal.Status.ATIVO):
         tot_processados += 1
@@ -36,17 +36,6 @@ async def sync_channels(client: TelegramClient):
             "[%s/%s] Processando canal id=%s titulo=%s",
             tot_processados, total_canais, canal.pk, canal.titulo,
         )
-        if not (canal.username or '').strip():
-            canal.status = Canal.Status.NAO_EXISTE
-            await canal.asave(update_fields=['status'])
-            await alog_message(canal, "Canal sem username - desativado")
-            logger.warning(
-                "[%s/%s] Canal id=%s titulo=%s sem username - desativado",
-                tot_processados, total_canais, canal.pk, canal.titulo,
-            )
-            tot_desabilitados += 1
-            continue
-
         try:
             # Esta chamada faz a requisição de rede e preenche o cache do Telethon
             # (a busca precisa do username; o título só é preenchido após a sincronização)
@@ -141,6 +130,7 @@ class Command(BaseCommand):
         # Garante que o loop asyncio rode de forma limpa no processo principal
         api_id = settings.AUTH_KEYS.get('TELEGRAM_ID')
         api_hash = settings.AUTH_KEYS.get('TELEGRAM_HASH')
+        # bot_token = settings.AUTH_KEYS.get('BOT_TOKEN')
         if not api_id or not api_hash:
             print('Chaves de API do Telegram não definidas')
         else:

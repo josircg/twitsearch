@@ -49,6 +49,7 @@ class APIKeys(models.Model):
 
     class Status(models.TextChoices):
         ATIVO = 'A', 'Ativo'
+        FLOOD = 'F', 'Lotada'
         ERRO = 'E', 'Inválida'
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)

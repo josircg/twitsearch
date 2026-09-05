@@ -49,7 +49,7 @@ class ListaAdmin(PowerModelAdmin):
 
 @admin.register(APIKeys)
 class APIKeysAdmin(PowerModelAdmin):
-    list_display = ('titulo', )
+    list_display = ('titulo', 'user', 'status')
 
     def get_queryset(self, request):
         """Filtra a listagem para exibir apenas os registros do usuário logado."""
