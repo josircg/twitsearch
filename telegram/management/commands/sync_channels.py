@@ -30,7 +30,7 @@ async def sync_channels(client: TelegramClient):
     ).acount()
     logger.info(f"Iniciando sincronização de {total_canais} canal(is) pendente(s)")
 
-    async for canal in Canal.objects.filter(id_numerico__isnull=True, status=Canal.Status.ATIVO):
+    async for canal in Canal.objects.filter(id_numerico__isnull=True, status=Canal.Status.ATIVO)[:5]:
         tot_processados += 1
         logger.info(
             "[%s/%s] Processando canal id=%s titulo=%s",

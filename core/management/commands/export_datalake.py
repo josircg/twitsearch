@@ -75,9 +75,9 @@ class Processo:
         """
         cursor.execute(sql_insert, (self.processo_id, batch_keys, batch_values))
 
+        relevantes = []
         if self.queue:
             # Os tweets que não tiverem termo associado não entram na fila de processamento
-            relevantes = []
             for record in batch_values:
                 d_record = json.loads(record)
                 if d_record.get('termo'):
@@ -99,7 +99,7 @@ class Processo:
 
 
 class Command(BaseCommand):
-    label = 'Importa Tweets'
+    label = 'Importa Tweets da pasta indicada ou da pasta ./data'
 
     def add_arguments(self, parser):
         parser.add_argument('-e', '--estimate', action='store_true',
@@ -121,7 +121,7 @@ class Command(BaseCommand):
         dest_dir = os.path.join(settings.BASE_DIR, 'data', dest_dir)
         print(dest_dir)
         if archive:
-            print('Archive mode')
+            print('Archive Mode - Records will not be saved to Opensearch')
         processo = Processo('pg_baoba', 500, not archive)
 
         with os.scandir(dest_dir) as it:
