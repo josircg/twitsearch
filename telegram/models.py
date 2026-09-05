@@ -19,7 +19,7 @@ class Canal(models.Model):
     class Status(models.TextChoices):
         ATIVO = 'A', 'Ativo'
         PROCESSANDO = 'P', 'Em processamento'
-        DESATIVADO = 'D', 'Não existe mais'
+        NAO_EXISTE = 'D', 'Não existe mais'
         INATIVO = 'I', 'Inativo'  # Sem mensagens
 
     username = models.CharField(max_length=255, db_index=True, unique=True)
@@ -30,6 +30,7 @@ class Canal(models.Model):
     num_participantes = models.IntegerField('Tot.Participantes',default=0)
     num_mensagens = models.BigIntegerField('Tot.Mensagens', default=0)
     megagroup = models.BooleanField(default=False)
+    localizacao = models.CharField('Localização', max_length=200, null=True, blank=True)
     verificado = models.BooleanField('Verificado pelo Telegram', default=False)
     dtcriacao = models.DateTimeField('Dt.Criação', null=True, blank=True)
     ultima_mensagem = models.BigIntegerField(null=True, blank=True)
@@ -51,7 +52,8 @@ class APIKeys(models.Model):
         ERRO = 'E', 'Inválida'
 
     user = models.ForeignKey(User, on_delete=models.PROTECT)
-    titulo = models.CharField(max_length=100)
+    titulo = models.CharField('Título', max_length=100)
+    telefone = models.CharField('Telefone (+PaisNumero)', max_length=15, null=True, blank=True)
     api_id = models.IntegerField()
     api_hash = models.CharField(max_length=64)
     status = models.CharField(max_length=1, choices=Status.choices, default='A')

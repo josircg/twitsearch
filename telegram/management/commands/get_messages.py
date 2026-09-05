@@ -208,7 +208,7 @@ async def coleta_mensagens(client, options):
             erros_consecutivos += 1
 
         except RPCError as e:
-            canal.status = Canal.Status.DESATIVADO
+            canal.status = Canal.Status.NAO_EXISTE
             if not fake:
                 await canal.asave(update_fields=['status'])
                 await alog_message(canal, f'Erro RPC do Telegram ao capturar mensagens: {e}')

@@ -23,7 +23,7 @@ class CanalAdmin(PowerModelAdmin):
     def disable(self, request, queryset):
         tot_reg = 0
         for reg in queryset:
-            reg.status = Canal.Status.DESATIVADO
+            reg.status = Canal.Status.INATIVO
             reg.save()
             tot_reg += 1
         messages.info(request, f'{tot_reg} canais desativados')

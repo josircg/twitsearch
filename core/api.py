@@ -45,9 +45,9 @@ def projetos(request, status=None):
 
 
 def termos(request, rede_id):
-    #auth = request.headers.get('auth','')
-    #if not settings.AUTH_KEYS.get(auth):
-    #    return HttpResponseForbidden()
+    auth = request.headers.get('auth','')
+    if not settings.AUTH_KEYS.get(auth):
+        return HttpResponseForbidden()
 
     lista = []
     for termo in Termo.objects.filter(projeto__redes=rede_id).exclude(projeto__status='C').order_by('projeto'):
