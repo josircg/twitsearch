@@ -1,5 +1,9 @@
-# Exporta os dados da pasta cached para o Datalake no PostgreSQL
-# A rotina de captura do vtrack vai passar a buscar os dados do Datalake e não mais do Opensearch
+# Exporta os dados da pasta queue para o Datalake no PostgreSQL
+# Se o parâmetro archive for passado, a rotina deixa os tweets apenas no Datalake, ou seja,
+# não envia os tweets para o modelo vtrack no Opensearch.
+
+# Desta forma, os dados brutos não serão mais gravados no Opensearch
+# E a rotina de captura do Mage vai passar a buscar os dados do Datalake na tabela fila_twitter
 # Josir - 05/2026
 #
 
@@ -99,7 +103,7 @@ class Processo:
 
 
 class Command(BaseCommand):
-    label = 'Importa Tweets da pasta indicada ou da pasta ./data'
+    label = 'Import Tweets from data/queue or other indicated folder'
 
     def add_arguments(self, parser):
         parser.add_argument('-e', '--estimate', action='store_true',
@@ -130,7 +134,7 @@ class Command(BaseCommand):
         processo = Processo('pg_baoba', 500, not archive)
 
         with os.scandir(dest_dir) as it:
-            primeiros_arquivos = islice(it, 50000)
+            primeiros_arquivos = islice(it, 100000)
             for arquivo in primeiros_arquivos:
                 if arquivo.name.endswith(".json"):
                     try:

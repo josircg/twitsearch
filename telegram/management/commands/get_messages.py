@@ -1,3 +1,8 @@
+#
+# Obtem as mensagens do Telegram a partir dos canais ativos
+# Bonfim - 09/2026
+#
+
 import asyncio
 import json
 import os

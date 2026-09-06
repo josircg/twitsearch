@@ -1,5 +1,6 @@
 # Exporta as mensagens do Telegram da pasta data/telegram para o Datalake no PostgreSQL
 # Espelha core/management/commands/export_datalake.py, adaptado para o Telegram
+# Bonfim - 09/2026
 #
 
 import json

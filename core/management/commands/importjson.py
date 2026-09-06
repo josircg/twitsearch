@@ -1,3 +1,5 @@
+# Importação dos tweets para a base MySQL que é visualizada na Capitu
+#
 import json
 import os
 from itertools import islice

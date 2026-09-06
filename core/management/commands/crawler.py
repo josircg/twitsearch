@@ -497,7 +497,7 @@ def processa_termo(termo, limite, fake_run):
 
 
 class Command(BaseCommand):
-    label = 'Captura tweets de uma busca programada'
+    label = 'Captura tweets a partir das buscas programadas nos projetos'
 
     def add_arguments(self, parser):
         parser.add_argument('--twit', type=str, help='Twitter ID')

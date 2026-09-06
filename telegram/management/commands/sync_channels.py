@@ -1,3 +1,7 @@
+#
+# Obtem os metadados dos canais ativos
+# Bonfim - 09/2026
+#
 import asyncio
 import logging
 
