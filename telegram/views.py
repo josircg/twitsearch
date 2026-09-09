@@ -7,6 +7,8 @@ from openpyxl import load_workbook
 
 from django.contrib import messages
 from django.shortcuts import render, redirect
+from django.urls import reverse
+
 from .forms import ImportForm
 from .models import Canal, Lista, Categoria
 from core import log_message
@@ -91,6 +93,7 @@ def importacao_canais(request):
 
                         messages.info(request, f'Total de registros lidos: {tot_registros}')
                         messages.info(request, f'Total de registros incluídos: {tot_inclusao}')
+                        return redirect(reverse('admin:index'))
                 else:
                     messages.error(request, 'Nenhum arquivo enviado. Tente utilizar outro navegador.')
 

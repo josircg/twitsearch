@@ -79,3 +79,7 @@ class Lista(models.Model):
     @property
     def tot_canais(self):
         return self.canais.all().count()
+
+    @property
+    def canais_ativos(self):
+        return self.canais.filter(status=Canal.Status.ATIVO).count()

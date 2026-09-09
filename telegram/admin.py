@@ -14,9 +14,9 @@ class CategoriaAdmin(PowerModelAdmin):
 
 @admin.register(Canal)
 class CanalAdmin(PowerModelAdmin):
-    list_display = ('username', 'titulo', 'status', 'num_mensagens',)
+    list_display = ('username', 'titulo', 'status', 'num_mensagens', 'num_participantes')
     list_filter = ('status',)
-    search_fields = ('username', 'titulo',)
+    search_fields = ('username', 'titulo', 'lista__nome')
     actions = 'disable',
 
     @admin.action(description='Desabilita Canal')
@@ -38,7 +38,7 @@ class CanalTabularInline(PowerTabularInline):
 
 @admin.register(Lista)
 class ListaAdmin(PowerModelAdmin):
-    list_display = ('nome', 'publica', 'tot_canais',)
+    list_display = ('nome', 'publica', 'tot_canais', 'canais_ativos')
     fields = ('nome', 'publica',)
     inlines = (CanalTabularInline,)
 
