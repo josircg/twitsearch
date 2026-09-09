@@ -9,6 +9,7 @@ from django.contrib import messages
 from django.shortcuts import render, redirect
 from .forms import ImportForm
 from .models import Canal, Lista, Categoria
+from core import log_message
 
 
 def import_csv(arquivo) -> list:
@@ -67,11 +68,23 @@ def importacao_canais(request):
                         tot_inclusao = 0
                         for registro in registros:
                             tot_registros += 1
-                            canal, inclusao = Canal.objects.get_or_create(username=registro['username'])
+                            username = registro['username']
+                            if username.startswith('https://t.me/'):
+                                username = username.replace('https://t.me/', '')
+                            if username[0] == '@':
+                                username = username[1:]
+                            username = username.lower().replace('@', '')
+                            canal, inclusao = Canal.objects.get_or_create(username=username)
                             if inclusao:
                                 tot_inclusao += 1
+                                log_message(canal, f'Importado via CSV / {lista.nome}')
                             if registro.get('category'):
-                                categoria = Categoria.objects.filter(category=registro['category']).first()
+                                if request.user.is_superuser:
+                                    categoria, inclusao = Categoria.objects.get_or_create(nome=registro['category'])
+                                    if inclusao:
+                                        log_message(categoria, f'Importado via CSV / {lista.nome}')
+                                else:
+                                    categoria = Categoria.objects.filter(nome=registro['category']).first()
                                 if categoria:
                                     canal.categorias.add(categoria)
                             lista.canais.add(canal)
