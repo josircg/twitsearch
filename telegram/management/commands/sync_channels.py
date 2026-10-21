@@ -9,7 +9,7 @@ from django.core.management.base import BaseCommand
 from django.conf import settings
 
 from telethon import TelegramClient
-from telethon.tl.types import Channel
+from telethon.tl.types import Channel, ChannelLocation
 from telethon.tl.functions.channels import GetFullChannelRequest
 
 from telethon.errors import FloodWaitError, RPCError
@@ -56,9 +56,13 @@ async def sync_channels(client: TelegramClient):
                 if full_info and full_info.full_chat:
                     canal.sobre = full_info.full_chat.about
                     canal.num_participantes = full_info.full_chat.participants_count
-                    canal.localizacao = full_info.full_chat.location
-                    if canal.localizacao:
-                        canal.localizacao = canal.localizacao[:100]
+                    # full_chat.location é um ChannelLocation (com .address) ou
+                    # ChannelLocationEmpty quando o canal não tem localização.
+                    # Persistimos apenas o endereço textual, truncado ao tamanho do campo.
+                    location = full_info.full_chat.location
+                    if isinstance(location, ChannelLocation) and location.address:
+                        max_len = Canal._meta.get_field('localizacao').max_length
+                        canal.localizacao = location.address[:max_len]
                 await canal.asave()
                 await alog_message(canal, "Canal sincronizado com sucesso")
                 logger.info(
