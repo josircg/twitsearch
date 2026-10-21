@@ -3,30 +3,33 @@
 
 {% block fluid-content %}
     <section id="telegram-project">
-        <div class="container pt-5 pb-5">
+        <div class="container pt-5 pb-5" style="max-width: 820px;">
             <h4 class="mb-4">Nova coleta Telegram</h4>
             {% for message in messages %}
                 <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
             {% endfor %}
-            <form method="post">
+            <form method="post" class="form-card">
                 {% csrf_token %}
-                {% for field in form %}
-                    <div class="mb-3">
-                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                        {% if field.name == 'lista' %}
-                            <div class="d-flex gap-2">
-                                {{ field }}
-                                <a class="btn btn-outline-secondary text-nowrap" href="{% url 'importacao_canais' %}">Importar minha própria lista</a>
-                            </div>
-                        {% else %}
-                            {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
-                        {% for error in field.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                <div class="mb-3">{% include "_telegram_field.html" with field=form.nome %}</div>
+                <div class="mb-3">{% include "_telegram_field.html" with field=form.objetivo %}</div>
+                <div class="mb-3">
+                    <label class="form-label" for="{{ form.lista.id_for_label }}">{{ form.lista.label }}</label>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="lista-select">{{ form.lista }}</div>
+                        <a class="btn-import" href="{% url 'importacao_canais' %}" title="Importar minha própria lista">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+                            Importar lista
+                        </a>
                     </div>
-                {% endfor %}
-                <button type="submit" class="btn btn-primary">Iniciar a coleta</button>
-                <a class="btn btn-secondary" href="{% url 'painel' %}">Cancelar</a>
+                    {% for error in form.lista.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-6 mb-3 mb-sm-0">{% include "_telegram_field.html" with field=form.dt_inicio %}</div>
+                    <div class="col-12 col-sm-6">{% include "_telegram_field.html" with field=form.dt_final %}</div>
+                </div>
+                <div class="mb-4">{% include "_telegram_field.html" with field=form.termos %}</div>
+                <button type="submit" class="btn-start">Iniciar a coleta</button>
+                <a class="btn-cancel ms-3 text-decoration-none" href="{% url 'painel' %}">Cancelar</a>
             </form>
         </div>
     </section>
