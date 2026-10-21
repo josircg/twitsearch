@@ -4,9 +4,12 @@
 {% block fluid-content %}
     <section id="painel">
         <div class="container pt-5 pb-5">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+            {% endfor %}
             <h4 class="mb-4">Meus projetos</h4>
             <div class="mb-4">
-                <a class="btn btn-primary me-2" href="{% url 'importacao_canais' %}">Nova coleta Telegram</a>
+                <a class="btn btn-primary me-2" href="{% url 'telegram_project' %}">Nova coleta Telegram</a>
                 <a class="btn btn-primary me-2" href="#">Nova coleta Youtube</a>
                 {% if request.user.is_staff %}
                     <a class="btn btn-secondary" href="/admin/">Admin</a>

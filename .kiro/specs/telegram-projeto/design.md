@@ -22,7 +22,7 @@ View baseada em função (`telegram_project`) em `telegram/views.py`, protegida 
 - **Projeto.grupo** é `null=True`; fica nulo. `eixo` fica nulo.
 - **Transação:** `transaction.atomic()` envolve `Projeto`, `redes.add`, `Termo` e `TermoStatus`.
 - **Mensagem:** `messages.success(request, mark_safe(format_html(...)))` com `format_html('Para acompanhar o resultado da coleta, clique no link <a href="{0}">{0}</a>', projeto.url_resumo)`, evitando HTML sem escape.
-- **Botão de importação:** link para `importacao_canais` (ver Questões em aberto, item 2 dos requisitos).
+- **Botão de importação:** link para `importacao_canais` (ver Pendências, item 2 dos requisitos).
 
 ## Modelo de dados
 Usa `core.models.Projeto`, `Termo`, `TermoStatus`, `Rede` e `telegram.models.Lista`. Sem migrações (`url_resumo` é propriedade).
