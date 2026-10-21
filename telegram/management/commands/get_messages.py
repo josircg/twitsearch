@@ -258,7 +258,7 @@ class Command(BaseCommand):
         chave = APIKeys.objects.filter(status=APIKeys.Status.ATIVO).first()
         if chave:
             options['session'] = f'user_{chave.id}'
-            options['api_id'] = chave.id
+            options['api_id'] = chave.api_id
             options['api_hash'] = chave.api_hash
         else:
             options['session'] = 'sync_channels'

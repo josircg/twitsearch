@@ -52,6 +52,7 @@ def import_xlsx(arquivo) -> list:
 
 
 def importacao_canais(request):
+    erros = None
     if request.method == 'POST':
         form = ImportForm(request.POST, request.FILES)
         if form.is_valid():
@@ -106,7 +107,6 @@ def importacao_canais(request):
             return redirect('importacao_canais')
     else:
         form = ImportForm()
-        erros = None
 
     return render(request, 'importacao.html', {'form': form, 'erros': erros})
 

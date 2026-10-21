@@ -130,7 +130,7 @@ def finalizar_projeto_action(description=u"Finaliza Projeto"):
             for termo in projeto.termo_set.all():
                 termo.status = 'C'
                 termo.save()
-                tot_registros += termo.tot_twits()
+                tot_registros += termo.tot_twits
                 alterados += 1
             projeto.status = 'C'
             projeto.tot_twits = tot_registros

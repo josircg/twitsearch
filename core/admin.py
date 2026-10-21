@@ -6,7 +6,6 @@ from django import forms
 from django.contrib import admin, messages
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
-from django.template import RequestContext
 from django.urls import re_path, reverse
 
 from core.forms import ProjetoAdminForm
@@ -246,10 +245,10 @@ class ProjetoAdmin(PowerModelAdmin):
 
     def visao(self, request, project_id):
         projeto = get_object_or_404(Projeto, pk=project_id)
-        return render('core/visao.html', {
+        return render(request, 'core/visao.html', {
             'title': u'Envio de Dados para o Visão',
             'projeto': projeto,
-        }, RequestContext(request, ))
+        })
 
 
 class HistoryInline(admin.TabularInline):

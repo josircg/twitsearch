@@ -1,7 +1,7 @@
 from django.urls import path
 from django.urls import path, re_path
 
-from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
+from core.views import stats, index, solicitar_csv, backup_json, exclui_json,\
     nuvem, create_graph, gerar_gephi, solicita_busca, get_source, importacao_arquivo, status_coleta
 
 from telegram.views import importacao_canais
@@ -11,7 +11,6 @@ from core.api import (redes, termos, projetos, termos_by_id, processo, canais_te
 
 urlpatterns = [
     re_path(r'^$', index),
-    re_path(r'^visao/$', visao),
     re_path(r'^solicita_busca/(?P<termo_id>\d+)/$', solicita_busca, name='solicita_busca'),
     re_path(r'^estatistica/(?P<project_id>\d+)/$', stats, name='core_projeto_stats'),
     re_path(r'^estatistica/(?P<project_id>\d+)/(?P<termo_id>\d+)/$', stats, name='core_projeto_stats'),

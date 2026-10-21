@@ -36,10 +36,6 @@ def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
 
 
-def visao(request):
-    return
-
-
 def stats(request, project_id, termo_id=None):
     agora = timezone.now()
     projeto = get_object_or_404(Projeto, pk=project_id)
