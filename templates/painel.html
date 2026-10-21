@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Painel{% endblock %}
+
+{% block fluid-content %}
+    <section id="painel">
+        <div class="container pt-5 pb-5">
+            <h4 class="mb-4">Meus projetos</h4>
+            <div class="mb-4">
+                <a class="btn btn-primary me-2" href="{% url 'importacao_canais' %}">Nova coleta Telegram</a>
+                <a class="btn btn-primary me-2" href="#">Nova coleta Youtube</a>
+                {% if request.user.is_staff %}
+                    <a class="btn btn-secondary" href="/admin/">Admin</a>
+                {% else %}
+                    <a class="btn btn-secondary disabled" aria-disabled="true">Admin</a>
+                {% endif %}
+            </div>
+            {% if projetos %}
+                <table class="table">
+                    <thead>
+                        <tr><th>Nome</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for projeto in projetos %}
+                            <tr>
+                                <td>{{ projeto.nome }}</td>
+                                <td>{{ projeto.get_status_display }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p>Nenhum projeto registrado</p>
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
