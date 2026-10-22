@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Importar lista de canais{% endblock %}
+
+{% block fluid-content %}
+    <section id="telegram-project">
+        <div class="container pt-5 pb-5" style="max-width: 820px;">
+            <h4 class="mb-4">Importar lista de canais</h4>
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+            {% endfor %}
+            <form method="post" enctype="multipart/form-data" class="form-card">
+                {% csrf_token %}
+                <div class="mb-3">{% include "_telegram_field.html" with field=form.nome %}</div>
+                <div class="mb-3">
+                    <label class="form-label">{{ form.publica.label }}</label>
+                    {% for radio in form.publica %}
+                        <div class="form-check">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
+                    {% endfor %}
+                    {% for error in form.publica.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="mb-4">{% include "_telegram_field.html" with field=form.arquivo %}</div>
+                <button type="submit" class="btn-start">Importar lista</button>
+                <a class="btn-cancel ms-3 text-decoration-none" href="{% url 'telegram_project' %}">Voltar</a>
+            </form>
+        </div>
+    </section>
+{% endblock %}

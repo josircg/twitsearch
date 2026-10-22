@@ -19,3 +19,8 @@ Untitled.ipynb
 venv*
 media/*
 teste*
+deploy-restart.log
+deploy.log
+.deploy.lock
+.env
+static/

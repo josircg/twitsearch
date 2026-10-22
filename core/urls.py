@@ -1,16 +1,18 @@
 from django.urls import path
 from django.urls import path, re_path
 
-from core.views import stats, index, solicitar_csv, backup_json, exclui_json,\
-    nuvem, create_graph, gerar_gephi, solicita_busca, get_source, importacao_arquivo, status_coleta
+from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
+    nuvem, create_graph, gerar_gephi, solicita_busca, painel, get_source, importacao_arquivo, status_coleta
 
-from telegram.views import importacao_canais
+from telegram.views import importacao_canais, importar_lista, telegram_project
 
 from core.api import (redes, termos, projetos, termos_by_id, processo, canais_telegram,
                       processo_rede_get, processo_rede_set)
 
 urlpatterns = [
     re_path(r'^$', index),
+    re_path(r'^visao/$', visao),
+    path('painel/', painel, name='painel'),
     re_path(r'^solicita_busca/(?P<termo_id>\d+)/$', solicita_busca, name='solicita_busca'),
     re_path(r'^estatistica/(?P<project_id>\d+)/$', stats, name='core_projeto_stats'),
     re_path(r'^estatistica/(?P<project_id>\d+)/(?P<termo_id>\d+)/$', stats, name='core_projeto_stats'),
@@ -24,6 +26,8 @@ urlpatterns = [
     re_path(r'^source/(?P<tweet_id>\d+)/$', get_source, name='get_source'),
     re_path(r'^importacao_arquivo/', importacao_arquivo, name='importacao_arquivo'),
     path(r'telegram/importacao_canais/', importacao_canais, name='importacao_canais'),
+    path('telegram_project/', telegram_project, name='telegram_project'),
+    path('telegram_project/importar_lista/', importar_lista, name='importar_lista'),
     path('termo_stat/<int:termo_id>', status_coleta, name='status_coleta'),
     path('api/redes/', redes, name='redes'),
     path('api/eixos/', projetos, name='eixos'),
