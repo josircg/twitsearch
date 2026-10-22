@@ -53,6 +53,37 @@ class TelegramProjectForm(forms.Form):
         return cleaned
 
 
+class ImportListaForm(forms.Form):
+    nome = forms.CharField(label='Nome da lista', max_length=100)
+    publica = forms.TypedChoiceField(
+        label='Visibilidade', coerce=lambda valor: valor == 'True', initial='False',
+        choices=(('False', 'Privada (somente eu posso usar)'), ('True', 'Pública (qualquer usuário pode usar)')),
+        widget=forms.RadioSelect)
+    arquivo = forms.FileField(
+        label='Arquivo (CSV ou Excel)',
+        widget=forms.ClearableFileInput(attrs={'accept': '.csv,.xlsx'}),
+        help_text='O arquivo deve conter apenas uma coluna, com a URL (https://t.me/canal) '
+                  'ou o identificador (@canal) de cada canal.')
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        for nome, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-check-input' if nome == 'publica' else 'form-control'
+
+    def clean_nome(self):
+        nome = self.cleaned_data['nome'].strip()
+        if Lista.objects.filter(dono=self.user, nome__iexact=nome).exists():
+            raise forms.ValidationError('Você já possui uma lista com este nome.')
+        return nome
+
+    def clean_arquivo(self):
+        arquivo = self.cleaned_data['arquivo']
+        if not arquivo.name.lower().endswith(('.csv', '.xlsx')):
+            raise forms.ValidationError('Envie um arquivo .csv ou .xlsx.')
+        return arquivo
+
+
 class ImportForm(forms.Form):
     lista = forms.ModelChoiceField(queryset=Lista.objects.all())
     categoria = forms.ModelChoiceField(queryset=Categoria.objects.all(), required=False)

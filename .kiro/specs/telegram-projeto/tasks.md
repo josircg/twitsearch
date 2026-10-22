@@ -8,9 +8,12 @@
 - [x] 6. Atualizar `templates/painel.html`: link do botão Telegram e exibição de `messages` (req. 5)
 - [x] 7. Escrever testes em `telegram/tests.py` conforme o design
 - [x] 8. Verificação manual no navegador
+- [x] 9. Importar lista (req. 6): módulo `telegram/importacao.py`, `ImportListaForm`, view, rota, template e botão
+- [x] 10. Testes da importação de lista
 
 ## Pendências (fora desta entrega — ver "Pendências" em requirements.md)
 - [ ] P1. Aplicar termos (AND/OR) e período na coleta e no export do Telegram
-- [ ] P2. Importação da própria lista integrada ao formulário (cria lista privada e retorna ao formulário)
+- [x] P2. Importação da própria lista integrada ao formulário (tarefa 9)
+- [ ] P5. Unificar `importacao_canais` (admin) com `telegram/importacao.py`
 - [ ] P3. Remover o id `4` hardcoded da rede Telegram no admin de `TermoStatus`
 - [ ] P4. Padronizar prefixo das rotas do app telegram

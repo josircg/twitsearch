@@ -15,7 +15,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .forms import ImportForm, TelegramProjectForm
+from .forms import ImportForm, ImportListaForm, TelegramProjectForm
+from .importacao import MAX_LINHAS, importa_lista, le_primeira_coluna
 from .models import Canal, Lista, Categoria
 from core import log_message
 from core.models import Projeto, Termo, TermoStatus, Rede
@@ -83,9 +84,36 @@ def telegram_project(request):
                 projeto.url_resumo))
             return redirect('painel')
     else:
-        form = TelegramProjectForm(user=request.user)
+        form = TelegramProjectForm(user=request.user, initial={'lista': request.GET.get('lista')})
 
     return render(request, 'telegram_project.html', {'form': form})
+
+
+@login_required(login_url='/admin/login/')
+def importar_lista(request):
+    if request.method == 'POST':
+        form = ImportListaForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            try:
+                valores = le_primeira_coluna(form.cleaned_data['arquivo'])
+                if len(valores) > MAX_LINHAS:
+                    raise ValueError(f'O arquivo deve ter no máximo {MAX_LINHAS} linhas.')
+                resultado = importa_lista(request.user, form.cleaned_data['nome'],
+                                          form.cleaned_data['publica'], valores)
+            except ValueError as e:
+                form.add_error('arquivo', str(e))
+            except Exception:
+                print(traceback.format_exc())
+                form.add_error('arquivo', 'Não foi possível ler o arquivo. Verifique se é um CSV (UTF-8) ou XLSX válido.')
+            else:
+                messages.success(request, f'Lista "{resultado["lista"].nome}" criada: '
+                                          f'{resultado["lidos"]} linhas lidas, {resultado["novos"]} canais novos, '
+                                          f'{resultado["ignorados"]} ignoradas (inválidas).')
+                return redirect(f'{reverse("telegram_project")}?lista={resultado["lista"].pk}')
+    else:
+        form = ImportListaForm(user=request.user)
+
+    return render(request, 'importar_lista.html', {'form': form})
 
 
 def importacao_canais(request):

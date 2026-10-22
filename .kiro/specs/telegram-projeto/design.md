@@ -24,6 +24,22 @@ View baseada em função (`telegram_project`) em `telegram/views.py`, protegida 
 - **Mensagem:** `messages.success(request, mark_safe(format_html(...)))` com `format_html('Para acompanhar o resultado da coleta, clique no link <a href="{0}">{0}</a>', projeto.url_resumo)`, evitando HTML sem escape.
 - **Botão de importação:** link para `importacao_canais` (ver Pendências, item 2 dos requisitos).
 
+## Importação de lista (req. 6)
+| Arquivo | Alteração |
+|---|---|
+| `telegram/importacao.py` | `normaliza_username(valor)`, `le_primeira_coluna(arquivo)` e `importa_lista(usuario, nome, publica, valores)` (atômica; retorna totais) |
+| `telegram/forms.py` | `ImportListaForm` (`nome`, `publica` radio, `arquivo`) com validação de extensão e nome duplicado por dono |
+| `telegram/views.py` | View `importar_lista`; `telegram_project` passa a aceitar `?lista=<id>` como valor inicial |
+| `core/urls.py` | `path('telegram_project/importar_lista/', importar_lista, name='importar_lista')` |
+| `templates/importar_lista.html` | Mesmo cartão do formulário de projeto, com hint do formato |
+| `templates/telegram_project.html` | Botão "Importar lista" aponta para `importar_lista` |
+
+Decisões:
+- Não há rotina de importação no management; a lógica existente está inline em `importacao_canais`. As mesmas regras (`get_or_create` por username, `log_message` para novos) foram extraídas para o módulo novo, sem alterar a view antiga.
+- "id do canal" é o identificador (`@canal`); ids numéricos não criam `Canal` (o `username` é obrigatório e único) e são contados como ignorados.
+- Nenhuma chamada à API do Telegram na importação: os metadados são preenchidos depois por `sync_channels`.
+- Listas públicas ficam visíveis a todos os usuários (decisão do requisito); não há moderação.
+
 ## Modelo de dados
 Usa `core.models.Projeto`, `Termo`, `TermoStatus`, `Rede` e `telegram.models.Lista`. Sem migrações (`url_resumo` é propriedade).
 
@@ -36,4 +52,5 @@ Usa `core.models.Projeto`, `Termo`, `TermoStatus`, `Rede` e `telegram.models.Lis
 - Nome com mais de 40 caracteres rejeitado.
 - Lista privada de outro usuário rejeitada.
 - Falha na criação de `Termo` desfaz o `Projeto` (atomicidade).
+- Importação: anônimo → login; arquivo CSV/XLSX de uma coluna cria lista, canais novos e redireciona com `?lista=`; cabeçalho ignorado; URL/@/id normalizados; inválidos contados; duplicados reaproveitados; nome duplicado, extensão errada, arquivo vazio ou com mais de 5000 linhas rejeitados sem gravar.
 - Painel: botão "Nova coleta Telegram" aponta para `/telegram_project/`.

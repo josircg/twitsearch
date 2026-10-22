@@ -49,6 +49,20 @@ Critérios de aceite:
 1. O botão "Nova coleta Telegram" de `/painel/` SHALL apontar para `/telegram_project/`.
 2. A mensagem de sucesso SHALL aparecer no painel (o template do painel SHALL renderizar `messages`).
 
+### 6. Importar lista de canais
+**User story:** Como pesquisador, quero subir um arquivo com meus canais para criar uma lista própria e usá-la no projeto.
+
+Critérios de aceite:
+1. O botão "Importar lista" do formulário SHALL levar à view `/telegram_project/importar_lista/`, disponível apenas para usuários autenticados (anônimo → login `/admin/login/`).
+2. A view SHALL exibir um formulário com: **Nome da lista** (obrigatório, máx. 100 caracteres), **Visibilidade** (Privada, padrão, ou Pública) e **Arquivo** (.csv ou .xlsx).
+3. O formulário SHALL exibir o hint: "O arquivo deve conter apenas uma coluna, com a URL (https://t.me/canal) ou o identificador (@canal) de cada canal."
+4. O sistema SHALL ler a primeira coluna do arquivo (CSV: UTF-8, com ou sem BOM; XLSX: primeira planilha), ignorando linhas vazias e uma linha de cabeçalho opcional (`username`, `canal`, `channel`, `url`, `link`, `id`).
+5. Cada valor SHALL ser normalizado para o username em minúsculas, aceitando `https://t.me/x`, `t.me/x`, `@x` e `x`; links de mensagem (`t.me/x/123`) SHALL usar apenas `x`. Valores inválidos (convites `t.me/+...`, ids numéricos, caracteres que não comecem com letra, com caracteres fora de `a-z 0-9 _` ou fora de 4 a 32 caracteres) SHALL ser ignorados e contados.
+6. Canais que já existem (`Canal.username`) SHALL ser reaproveitados; os novos SHALL ser criados com registro no log. Todos os canais válidos SHALL ser adicionados à lista.
+7. A lista SHALL ser criada com `dono` = usuário logado e `publica` conforme a escolha. WHEN o usuário já possui lista com o mesmo nome THEN o formulário SHALL ser rejeitado.
+8. O sistema SHALL rejeitar arquivo com mais de 5000 linhas (não há limite de tamanho em bytes) ou sem nenhum canal válido, sem criar a lista; a criação da lista e dos canais SHALL ser atômica.
+9. WHEN a importação conclui THEN o sistema SHALL informar totais (lidos, canais novos, ignorados) e redirecionar para `/telegram_project/?lista=<id>`, com a nova lista pré-selecionada.
+
 ## Fora de escopo
 - Iniciar efetivamente a coleta de forma síncrona (a coleta continua sendo feita pelos comandos agendados `sync_channels` e `get_messages`).
 - Edição ou exclusão de projetos criados.
@@ -58,6 +72,6 @@ Critérios de aceite:
 Esta entrega cobre **apenas o cadastro** (projeto, termos e período). O que falta:
 
 1. **Aplicar termos e período na coleta.** Hoje `get_messages` varre todos os canais ativos sem filtrar por termo ou data (spec `telegram`, req. 4 e 5.3), e `export_telegram` enfileira tudo em `fila_telegram`. Falta: (a) selecionar, na coleta, os canais da `lista_canais` dos projetos ativos; (b) respeitar `Termo.dtinicio`/`dtfinal` ao buscar mensagens; (c) casar as mensagens com a expressão `AND`/`OR` de cada `Termo` e atualizar `TermoStatus`, `last_count` e o status do termo/projeto. Até lá, o link `url_resumo` pode mostrar um resumo vazio.
-2. **Importar a própria lista de forma integrada.** O botão atual apenas leva a `importacao_canais`, que exige uma `Lista` já existente, exibe o formulário no layout do admin e termina em `admin:index`. Falta: criar a lista privada do usuário (`dono` = usuário, `publica=False`) durante a importação, e voltar ao formulário do projeto com a nova lista selecionada e os dados já digitados preservados.
+2. ~~**Importar a própria lista de forma integrada.**~~ **(Resolvido — req. 6.)** Permanece: a tela antiga `importacao_canais` (admin, exige cabeçalho `username` e lista existente) segue como está, com normalização própria duplicada; unificar depois.
 3. **Localizar a rede Telegram sem id fixo.** Esta entrega busca `Rede` por nome (`Telegram`, sem diferenciar maiúsculas); o id `4` hardcoded do admin de `TermoStatus` permanece e deve migrar para a mesma estratégia.
 4. **Rota.** Adotada `telegram_project/` na raiz, conforme a issue; as demais rotas do app usam o prefixo `telegram/`. Padronizar quando conveniente.
