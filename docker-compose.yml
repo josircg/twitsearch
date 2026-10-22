@@ -33,6 +33,22 @@ services:
       timeout: 5s
       retries: 5
 
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    environment:
+      HOME: /home/webapp
+      # credenciais do git pull: defina no shell ou em um .env
+      GIT_USER: ${GIT_USER:-}
+      GIT_TOKEN: ${GIT_TOKEN:-}
+    volumes:
+      - .:/app
+      - ./docker/local_docker.py:/app/twitsearch/local.py:ro
+
 volumes:
   pg_baoba_data:
   mysql_data:
