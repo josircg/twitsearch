@@ -25,6 +25,7 @@ RUN rm -f /etc/nginx/sites-enabled/default /etc/nginx/conf.d/default.conf
 # Git: aceita o diretório montado e ignora diferença de modo de arquivo (Windows).
 RUN git config --system --add safe.directory '*' \
     && git config --system core.fileMode false \
+    && git config --system url."https://github.com/".insteadOf "git@github.com:" \
     && git config --system credential.helper '!f() { echo username=$GIT_USER; echo password=$GIT_TOKEN; }; f'
 
 WORKDIR /app

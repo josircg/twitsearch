@@ -1,0 +1,57 @@
+{% extends "base_site.html" %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  .deploy-actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+  .deploy-actions button {
+    font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
+    padding: 11px 22px; border-radius: 6px; cursor: pointer;
+    transition: background .15s, box-shadow .15s, transform .05s;
+  }
+  .deploy-actions .btn-primary {
+    background: #204b5b; color: #fff; border: 1px solid #204b5b;
+  }
+  .deploy-actions .btn-primary:hover { background: #2c6378; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+  .deploy-actions .btn-primary:active { transform: translateY(1px); }
+  .deploy-actions .btn-primary:focus-visible { outline: 3px solid #79aec8; outline-offset: 2px; }
+  .deploy-actions .btn-secondary {
+    background: transparent; color: #204b5b; border: 1px solid #79aec8;
+  }
+  .deploy-actions .btn-secondary:hover { background: #e8f1f6; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <form method="post">
+    {% csrf_token %}
+    {% if messages %}
+      <ul class="messagelist">
+        {% for message in messages %}<li class="{{ message.tags }}">{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% if result %}
+      <pre>{{ result|safe }}</pre>
+    {% else %}
+      {% if ask_git %}
+      <fieldset class="module aligned">
+        <p>Informe a credencial do git. Ela vale só para esta execução e não é gravada.</p>
+        <div class="form-row">
+          <label for="git_user">Usuário git:</label>
+          <input type="text" name="git_user" id="git_user" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <label for="git_token">Token git:</label>
+          <input type="password" name="git_token" id="git_token" autocomplete="new-password">
+        </div>
+      </fieldset>
+      {% endif %}
+      <div class="deploy-actions">
+        <button type="submit" name="action" value="deploy" class="btn-primary">Atualizar sistema</button>
+        <button type="submit" name="action" value="check" class="btn-secondary">Diagnóstico</button>
+      </div>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
