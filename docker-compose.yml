@@ -1,0 +1,38 @@
+services:
+  pg_baoba:
+    image: postgres:16
+    container_name: twitsearch_pg_baoba
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: datalake
+      POSTGRES_USER: datalake
+      POSTGRES_PASSWORD: datalake_local_pw
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_baoba_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+
+  mysql:
+    image: mysql:8.0
+    container_name: twitsearch_mysql
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: twitprod
+      MYSQL_USER: twitsearch
+      MYSQL_PASSWORD: teste123
+      MYSQL_ROOT_PASSWORD: root_local_pw
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_baoba_data:
+  mysql_data:

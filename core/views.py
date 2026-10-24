@@ -10,6 +10,7 @@ from PIL import Image
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.http import HttpResponse, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render, redirect
@@ -34,6 +35,16 @@ from plotly import graph_objs
 
 def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
+
+
+@login_required(login_url='/admin/login/')
+def painel(request):
+    projetos = Projeto.objects.filter(usuario=request.user).order_by('nome')
+    return render(request, 'painel.html', context={'projetos': projetos})
+
+
+def visao(request):
+    return
 
 
 def stats(request, project_id, termo_id=None):
