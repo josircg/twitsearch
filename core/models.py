@@ -3,6 +3,7 @@ from collections import Counter
 from django.db import models, connection
 from django.db.models import Sum
 from django.contrib.auth.models import User, Group
+from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
@@ -100,6 +101,10 @@ class Projeto(models.Model):
 
     def __str__(self):
         return self.nome
+
+    @property
+    def url_resumo(self):
+        return reverse('core_projeto_stats', args=[self.pk])
 
     @property
     def tot_calculado(self):
