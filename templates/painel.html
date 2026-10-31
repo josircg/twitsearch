@@ -10,6 +10,10 @@
             <h4 class="mb-4">Meus projetos</h4>
             <div class="mb-4">
                 <a class="btn btn-primary me-2" href="{% url 'telegram_project' %}">Nova coleta Telegram</a>
+                <a class="btn btn-outline-primary me-2" href="{% url 'lista_canais' %}">
+                    <svg class="me-1 align-text-bottom" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+                    Listas de Canais
+                </a>
                 <a class="btn btn-primary me-2" href="#">Nova coleta Youtube</a>
                 {% if request.user.is_staff %}
                     <a class="btn btn-secondary" href="/admin/">Admin</a>

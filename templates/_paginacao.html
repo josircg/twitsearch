@@ -1,0 +1,70 @@
+{% load telegram_tags %}{% comment %}
+Paginação reutilizável.
+Uso: {% include "_paginacao.html" with page=page_obj paginas=paginas qs=query_sem_page variante="completa" %}
+variante="compacta": barra resumida (anterior / "Página X de Y" / próxima), usada no topo da lista.
+variante="completa": "Mostrando A–B de N", números de página e "Ir para a página".
+Aceita django.core.paginator.Page e PaginaMensagens (que também expõe .paginator).
+A compacta e o "Ir para a página" só aparecem quando há mais de uma página.
+{% endcomment %}{% with n_paginas=page.paginator.num_pages total=page.paginator.count %}{% if variante == "compacta" %}{% if n_paginas > 1 %}
+<nav class="tc-mini" aria-label="Navegação rápida entre páginas">
+    {% if page.has_previous %}
+        <a class="tc-circulo" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}" rel="prev" aria-label="Página anterior" title="Página anterior">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+        </a>
+    {% else %}
+        <span class="tc-circulo desabilitado" aria-disabled="true" aria-label="Página anterior (indisponível)">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+        </span>
+    {% endif %}
+    <span class="tc-mini-status">Página <strong>{{ page.number|milhar }}</strong> de {{ n_paginas|milhar }}</span>
+    {% if page.has_next %}
+        <a class="tc-circulo" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}" rel="next" aria-label="Próxima página" title="Próxima página">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+    {% else %}
+        <span class="tc-circulo desabilitado" aria-disabled="true" aria-label="Próxima página (indisponível)">
+            <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+        </span>
+    {% endif %}
+</nav>
+{% endif %}{% else %}
+<nav class="tc-card tc-rodape" aria-label="Paginação">
+    <span class="tc-faixa">Mostrando <strong>{{ page.start_index|milhar }}–{{ page.end_index|milhar }}</strong> de {{ total|milhar }}</span>
+    <div class="tc-botoes">
+        {% if page.has_previous %}
+            <a class="tc-pbtn anterior" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.previous_page_number }}" rel="prev" aria-label="Página anterior">
+                <svg class="ico" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                Anterior
+            </a>
+        {% else %}
+            <span class="tc-pbtn anterior desabilitado" aria-disabled="true">
+                <svg class="ico" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                Anterior
+            </span>
+        {% endif %}
+        <span class="tc-status-mobile">Página <strong>{{ page.number|milhar }}</strong> de {{ n_paginas|milhar }}</span>
+        <span class="tc-numeros">
+            {% for p in paginas %}{% if p is None %}<span class="tc-reticencias" aria-hidden="true">…</span>{% elif p == page.number %}<span class="tc-num atual" aria-current="page"><span class="visually-hidden">Página </span>{{ p|milhar }}</span>{% else %}<a class="tc-num" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ p }}" aria-label="Página {{ p }}">{{ p|milhar }}</a>{% endif %}{% endfor %}
+        </span>
+        {% if page.has_next %}
+            <a class="tc-pbtn proxima" href="?{% if qs %}{{ qs }}&amp;{% endif %}page={{ page.next_page_number }}" rel="next" aria-label="Próxima página">
+                Próxima
+                <svg class="ico" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+            </a>
+        {% else %}
+            <span class="tc-pbtn proxima desabilitado" aria-disabled="true">
+                Próxima
+                <svg class="ico" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+            </span>
+        {% endif %}
+    </div>
+    {% if n_paginas > 1 %}
+    <form class="tc-ir" method="get">
+        {% for k, vs in request.GET.lists %}{% if k != 'page' %}{% for v in vs %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}{% endfor %}
+        <label for="ir-pagina"><span class="tc-ir-completo">Ir para a página</span><span class="tc-mobile">Ir para</span></label>
+        <input id="ir-pagina" type="number" name="page" min="1" max="{{ n_paginas }}" placeholder="{{ page.number }}" inputmode="numeric" required>
+        <button type="submit" class="tc-btn-ir">Ir</button>
+    </form>
+    {% endif %}
+</nav>
+{% endif %}{% endwith %}

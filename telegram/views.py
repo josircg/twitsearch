@@ -1,4 +1,5 @@
 import csv
+import logging
 import traceback
 
 from io import StringIO
@@ -6,20 +7,26 @@ from io import StringIO
 from openpyxl import load_workbook
 
 from datetime import datetime, time
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import transaction
-from django.shortcuts import render, redirect
+from django.db.models import Count
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .forms import ImportForm, ImportListaForm, TelegramProjectForm
+from .datalake import PaginaMensagens, busca_mensagens, paginas_visiveis, periodo_canal
+from .forms import FiltroMensagensForm, ImportForm, ImportListaForm, TelegramProjectForm, listas_visiveis
 from .importacao import MAX_LINHAS, importa_lista, le_primeira_coluna
 from .models import Canal, Lista, Categoria
 from core import log_message
 from core.models import Projeto, Termo, TermoStatus, Rede
+
+logger = logging.getLogger(__name__)
 
 
 def import_csv(arquivo) -> list:
@@ -175,3 +182,98 @@ def importacao_canais(request):
 
     return render(request, 'importacao.html', {'form': form, 'erros': erros})
 
+
+def query_sem_page(request):
+    params = request.GET.copy()
+    params.pop('page', None)
+    return params.urlencode()
+
+
+@login_required(login_url='/admin/login/')
+def lista_canais(request):
+    visiveis = listas_visiveis(request.user).annotate(total=Count('canais'))
+    # ids inválidos ou de listas privadas alheias são descartados silenciosamente
+    ids = []
+    for valor in request.GET.getlist('lista'):
+        if valor.isdigit() and int(valor) not in ids:
+            ids.append(int(valor))
+    listas = list(visiveis)
+    validos = {lista.pk for lista in listas}
+    ids = [i for i in ids if i in validos]
+
+    def url_toggle(pk):
+        novos = [i for i in ids if i != pk] if pk in ids else ids + [pk]
+        if not novos:
+            return reverse('lista_canais')
+        return f'{reverse("lista_canais")}?{urlencode([("lista", i) for i in novos])}'
+
+    itens = [{'id': lista.pk, 'nome': lista.nome, 'publica': lista.publica, 'total': lista.total,
+              'selecionada': lista.pk in ids, 'url': url_toggle(lista.pk)} for lista in listas]
+    selecionadas = [lista for lista in listas if lista.pk in ids]
+
+    page_obj, total_canais, paginas, voltar_qs = None, 0, [], ''
+    if selecionadas:
+        canais = Canal.objects.filter(lista__in=selecionadas).distinct().order_by('-num_participantes', 'username')
+        page_obj = Paginator(canais, 50).get_page(request.GET.get('page'))
+        total_canais = page_obj.paginator.count
+        paginas = paginas_visiveis(page_obj.number, page_obj.paginator.num_pages)
+        voltar_qs = urlencode({'voltar': urlencode([('lista', i) for i in ids])})
+
+    return render(request, 'lista_canais.html', {
+        'listas': itens, 'tem_listas': bool(listas), 'selecionadas': selecionadas,
+        'limpar_url': reverse('lista_canais'), 'importar_url': reverse('importar_lista'),
+        'page_obj': page_obj, 'total_canais': total_canais, 'paginas': paginas,
+        'query_sem_page': query_sem_page(request), 'voltar_qs': voltar_qs,
+    })
+
+
+@login_required(login_url='/admin/login/')
+def canal_mensagens(request, pk):
+    canal = get_object_or_404(Canal.objects.filter(lista__in=listas_visiveis(request.user)).distinct(), pk=pk)
+
+    # só aceita voltar começando com "lista=" (evita open redirect)
+    voltar = request.GET.get('voltar', '')
+    if not voltar.startswith('lista='):
+        voltar = ''
+    voltar_url = reverse('lista_canais') + (f'?{voltar}' if voltar else '')
+
+    form = FiltroMensagensForm(request.GET or None)
+    estado, mensagens, pagina, paginas, termo, periodo = 'ok', [], None, [], '', None
+
+    if canal.id_numerico is None:
+        estado = 'nao_sincronizado'
+    elif form.is_bound and not form.is_valid():
+        estado = 'form_invalido'
+    else:
+        dados = form.cleaned_data if form.is_bound else {'por_pagina': 25}
+        por_pagina = dados.get('por_pagina') or 25
+        termo = dados.get('termo') or ''
+        tz = timezone.get_current_timezone()
+        inicio, final = dados.get('dt_inicio'), dados.get('dt_final')
+        dt_inicio = timezone.make_aware(datetime.combine(inicio, time.min), tz) if inicio else None
+        dt_final = timezone.make_aware(datetime.combine(final, time.max), tz) if final else None
+        try:
+            try:
+                solicitada = max(int(request.GET.get('page', 1)), 1)
+            except ValueError:
+                solicitada = 1
+            filtros = dict(dt_inicio=dt_inicio, dt_final=dt_final, termo=termo or None, limit=por_pagina)
+            total, mensagens = busca_mensagens(canal.id_numerico, offset=(solicitada - 1) * por_pagina, **filtros)
+            pagina = PaginaMensagens(solicitada, por_pagina, total)
+            if pagina.number != solicitada:
+                # página além da última (filtro mudou ou URL antiga): refaz na última
+                total, mensagens = busca_mensagens(canal.id_numerico, offset=(pagina.number - 1) * por_pagina,
+                                                   **filtros)
+            paginas = pagina.paginas_visiveis
+            if total == 0 and (inicio or final):
+                # filtro de datas sem resultado: mostra o período que existe coletado
+                periodo = periodo_canal(canal.id_numerico)
+        except Exception:
+            logger.exception('Erro ao consultar mensagens do canal %s no datalake', canal.pk)
+            estado, mensagens, pagina, paginas = 'erro_datalake', [], None, []
+
+    return render(request, 'canal_mensagens.html', {
+        'canal': canal, 'form': form, 'estado': estado, 'mensagens': mensagens, 'pagina': pagina,
+        'paginas': paginas, 'termo': termo, 'query_sem_page': query_sem_page(request),
+        'voltar_url': voltar_url, 'voltar': voltar, 'periodo': periodo,
+    })

@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% load telegram_tags %}
+{% block title %}Mensagens de {% if canal.titulo %}{{ canal.titulo }}{% else %}@{{ canal.username }}{% endif %}{% endblock %}
+
+{% block fluid-content %}
+    <section id="telegram-canais">
+        <div class="tc-wrap tc-wrap-canal">
+            <a class="tc-back tc-back-canal" href="{{ voltar_url }}">
+                <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                Voltar às listas
+            </a>
+
+            <div class="tc-card tc-canal">
+                <div class="tc-canal-info">
+                    <div class="tc-canal-nome">
+                        <h1>{% if canal.titulo %}{{ canal.titulo }}{% else %}@{{ canal.username }}{% endif %}</h1>
+                        <a class="tc-canal-link" href="https://t.me/{{ canal.username }}" target="_blank" rel="noopener" aria-label="@{{ canal.username }} (abre no Telegram, em nova aba)">@{{ canal.username }}
+                            <svg class="ico" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                        </a>
+                        {% if canal.status != "A" %}<span class="tc-status tc-status-inline">{{ canal.get_status_display }}</span>{% endif %}
+                    </div>
+                    {% if canal.sobre %}<p>{{ canal.sobre }}</p>{% endif %}
+                </div>
+                <dl class="tc-resumo">
+                    <div>
+                        <dt>Participantes</dt>
+                        <dd>{{ canal.num_participantes|milhar }}</dd>
+                    </div>
+                    <div>
+                        <dt><span class="tc-desktop">Mensagens coletadas</span><span class="tc-mobile">Coletadas</span></dt>
+                        <dd>{{ canal.num_mensagens|milhar }}</dd>
+                    </div>
+                    <div>
+                        <dt>Última coleta</dt>
+                        <dd class="data">{% if canal.dt_ultima_carga %}<span class="tc-desktop">{{ canal.dt_ultima_carga|date:"d/m/Y H:i" }}</span><span class="tc-mobile">{{ canal.dt_ultima_carga|date:"d/m H:i" }}</span>{% else %}—{% endif %}</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <form method="get" id="filtro-mensagens" class="tc-card tc-filtros" aria-label="Filtrar mensagens">
+                {% if voltar %}<input type="hidden" name="voltar" value="{{ voltar }}">{% endif %}
+                <div class="tc-campo tc-campo-data{% if form.dt_inicio.errors %} tem-erro{% endif %}">
+                    <label for="{{ form.dt_inicio.id_for_label }}">Data inicial</label>
+                    {{ form.dt_inicio }}
+                    {% for error in form.dt_inicio.errors %}<div class="tc-erro-campo" role="alert">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="tc-campo tc-campo-data{% if form.dt_final.errors or form.non_field_errors %} tem-erro{% endif %}">
+                    <label for="{{ form.dt_final.id_for_label }}">Data final</label>
+                    {{ form.dt_final }}
+                    {% for error in form.dt_final.errors %}<div class="tc-erro-campo" role="alert">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="tc-campo tc-campo-termo{% if form.termo.errors %} tem-erro{% endif %}">
+                    <label for="{{ form.termo.id_for_label }}">Termo</label>
+                    <div class="tc-busca">
+                        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                        {{ form.termo }}
+                    </div>
+                    {% for error in form.termo.errors %}<div class="tc-erro-campo" role="alert">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="tc-acoes">
+                    <button type="submit" class="tc-btn">Filtrar</button>
+                    <a class="tc-limpar" href="{% url 'canal_mensagens' canal.pk %}{% if voltar %}?voltar={{ voltar|urlencode }}{% endif %}">Limpar</a>
+                </div>
+                {% for error in form.non_field_errors %}<p class="tc-erro" role="alert">{{ error }}</p>{% endfor %}
+                {% for error in form.por_pagina.errors %}<p class="tc-erro" role="alert">{{ error }}</p>{% endfor %}
+            </form>
+
+            {% if estado == "nao_sincronizado" %}
+                <div class="tc-vazio tc-vazio-solido">
+                    <svg class="ico" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+                    <p class="tc-vazio-titulo">Canal ainda não sincronizado</p>
+                    <p>As mensagens aparecerão após a próxima coleta.</p>
+                </div>
+            {% elif estado == "erro_datalake" %}
+                <div class="tc-alerta" role="alert">
+                    <svg class="ico" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+                    <div>
+                        <p class="tc-alerta-titulo">Não foi possível consultar as mensagens agora</p>
+                        <p>A base de mensagens está indisponível. Tente novamente em alguns minutos.</p>
+                    </div>
+                </div>
+            {% elif estado == "ok" %}
+                {% if pagina.count == 0 %}
+                    <div class="tc-vazio">
+                        <svg class="ico" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                        <p class="tc-vazio-titulo">Nenhuma mensagem encontrada</p>
+                        <p>Tente outro termo ou amplie o período.</p>
+                        {% if periodo %}
+                            <p>As mensagens coletadas deste canal vão de <strong>{{ periodo.0|date:"d/m/Y" }}</strong> a <strong>{{ periodo.1|date:"d/m/Y" }}</strong>.</p>
+                        {% elif periodo is not None %}
+                            <p>Ainda não há mensagens coletadas deste canal.</p>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="tc-lista-topo">
+                        <p class="tc-resumo-busca" aria-live="polite"><strong>{{ pagina.count|milhar }} mensage{{ pagina.count|pluralize:"m,ns" }}</strong> <span>{% if termo %}com “{{ termo }}”{% else %}coletadas{% endif %} · mais recentes primeiro</span></p>
+                        <span class="tc-faixa-mobile">{{ pagina.start_index|milhar }}–{{ pagina.end_index|milhar }}</span>
+                        <div class="tc-controles">
+                            <label class="tc-porpagina">Por página
+                                {% with pp=form.por_pagina.value|default:"25"|stringformat:"s" %}
+                                <select name="por_pagina" form="filtro-mensagens" class="form-select" onchange="this.form.submit()">
+                                    <option value="25"{% if pp == "25" %} selected{% endif %}>25</option>
+                                    <option value="50"{% if pp == "50" %} selected{% endif %}>50</option>
+                                    <option value="100"{% if pp == "100" %} selected{% endif %}>100</option>
+                                </select>
+                                {% endwith %}
+                            </label>
+                            {% include "_paginacao.html" with page=pagina paginas=paginas qs=query_sem_page variante="compacta" %}
+                        </div>
+                    </div>
+
+                    <ol class="tc-msgs">
+                        {% for m in mensagens %}
+                            <li class="tc-msg">
+                                <div class="tc-msg-meta">
+                                    <time datetime="{{ m.data|date:'c' }}">{{ m.data|date:"d/m/Y H:i" }}</time>
+                                    <div class="tc-msg-metricas">
+                                        <span class="tc-m" title="Visualizações">
+                                            <svg class="ico tc-m-ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Visualizações" focusable="false"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>{{ m.views|milhar }}<span class="tc-m-txt">vis.</span>
+                                        </span>
+                                        <span class="tc-m" title="Encaminhamentos">
+                                            <svg class="ico tc-m-ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Encaminhamentos" focusable="false"><path d="M15 5l6 6-6 6"/><path d="M21 11H9a6 6 0 0 0-6 6v2"/></svg>{{ m.forwards|milhar }}<span class="tc-m-txt">enc.</span>
+                                        </span>
+                                        {% if m.url %}
+                                            <a class="tc-m tc-m-link" href="{{ m.url }}" target="_blank" rel="noopener" aria-label="Abrir no Telegram" title="Abrir no Telegram">
+                                                <svg class="ico tc-m-ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="tc-m-txt" aria-hidden="true">Telegram ↗</span>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="tc-msg-corpo">
+                                    {% if m.midia %}<span class="tc-midia">{{ m.midia }}</span>{% endif %}
+                                    {% if m.texto %}<span class="tc-texto">{{ m.texto|destaca:termo }}</span>{% else %}<span class="tc-texto sem-texto">[mídia sem texto]</span>{% endif %}
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ol>
+
+                    {% include "_paginacao.html" with page=pagina paginas=paginas qs=query_sem_page variante="completa" %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}
