@@ -8,7 +8,7 @@ View baseada em função (`telegram_project`) em `telegram/views.py`, protegida 
 |---|---|
 | `telegram/forms.py` | `TelegramProjectForm`: `nome`, `objetivo` (Textarea), `lista` (ModelChoiceField), `dt_inicio`, `dt_final` (DateField), `termos` (Textarea, um por linha); `clean_termos` e `clean` (datas) |
 | `telegram/views.py` | View `telegram_project(request)` |
-| `core/urls.py` | `path('telegram_project/', telegram_project, name='telegram_project')` (import junto de `importacao_canais`) |
+| `core/urls.py` | `path('telegram/projetos/novo/', telegram_project, name='telegram_project')` (import junto de `importacao_canais`) |
 | `core/models.py` | Propriedade `Projeto.url_resumo` → `reverse('core_projeto_stats', args=[self.pk])` (sem migração) |
 | `templates/telegram_project.html` | Formulário (crispy, no padrão de `importacao.html`) + botão "Importar minha própria lista" |
 | `templates/painel.html` | Botão Telegram aponta para `{% url 'telegram_project' %}`; renderiza `messages` |
@@ -30,7 +30,7 @@ View baseada em função (`telegram_project`) em `telegram/views.py`, protegida 
 | `telegram/importacao.py` | `normaliza_username(valor)`, `le_primeira_coluna(arquivo)` e `importa_lista(usuario, nome, publica, valores)` (atômica; retorna totais) |
 | `telegram/forms.py` | `ImportListaForm` (`nome`, `publica` radio, `arquivo`) com validação de extensão e nome duplicado por dono |
 | `telegram/views.py` | View `importar_lista`; `telegram_project` passa a aceitar `?lista=<id>` como valor inicial |
-| `core/urls.py` | `path('telegram_project/importar_lista/', importar_lista, name='importar_lista')` |
+| `core/urls.py` | `path('telegram/listas/importar/', importar_lista, name='importar_lista')` |
 | `templates/importar_lista.html` | Mesmo cartão do formulário de projeto, com hint do formato |
 | `templates/telegram_project.html` | Botão "Importar lista" aponta para `importar_lista` |
 
@@ -53,4 +53,4 @@ Usa `core.models.Projeto`, `Termo`, `TermoStatus`, `Rede` e `telegram.models.Lis
 - Lista privada de outro usuário rejeitada.
 - Falha na criação de `Termo` desfaz o `Projeto` (atomicidade).
 - Importação: anônimo → login; arquivo CSV/XLSX de uma coluna cria lista, canais novos e redireciona com `?lista=`; cabeçalho ignorado; URL/@/id normalizados; inválidos contados; duplicados reaproveitados; nome duplicado, extensão errada, arquivo vazio ou com mais de 5000 linhas rejeitados sem gravar.
-- Painel: botão "Nova coleta Telegram" aponta para `/telegram_project/`.
+- Painel: botão "Nova coleta Telegram" aponta para `/telegram/projetos/novo/`.

@@ -1,6 +1,6 @@
 import zoneinfo
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from io import BytesIO
 from unittest import mock
 from urllib.parse import parse_qs, urlencode
@@ -45,19 +45,19 @@ class TelegramProjectTests(TestCase):
 
     def test_anonimo_redireciona_para_login(self):
         self.client.logout()
-        for resposta in (self.client.get('/telegram_project/'), self.client.post('/telegram_project/', self.dados())):
+        for resposta in (self.client.get(reverse('telegram_project')), self.client.post(reverse('telegram_project'), self.dados())):
             self.assertEqual(resposta.status_code, 302)
             self.assertTrue(resposta.url.startswith('/admin/login/'))
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_get_lista_publicas_e_proprias(self):
-        resposta = self.client.get('/telegram_project/')
+        resposta = self.client.get(reverse('telegram_project'))
         self.assertEqual(resposta.status_code, 200)
         listas = set(resposta.context['form'].fields['lista'].queryset)
         self.assertEqual(listas, {self.publica, self.propria})
 
     def test_post_valido_cria_projeto_termos_e_redireciona(self):
-        resposta = self.client.post('/telegram_project/', self.dados())
+        resposta = self.client.post(reverse('telegram_project'), self.dados())
         self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
         projeto = Projeto.objects.get()
         self.assertEqual(projeto.usuario, self.user)
@@ -70,55 +70,421 @@ class TelegramProjectTests(TestCase):
         self.assertIn(projeto.url_resumo, mensagens[0])
 
     def test_data_final_anterior_rejeitada(self):
-        resposta = self.client.post('/telegram_project/', self.dados(dt_final='2024-12-31'))
+        resposta = self.client.post(reverse('telegram_project'), self.dados(dt_final='2024-12-31'))
         self.assertEqual(resposta.status_code, 200)
         self.assertIn('dt_final', resposta.context['form'].errors)
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_termos_invalidos(self):
         for termo in ('ecologia AND', 'OR x', 'a AND OR b', '\n  \n'):
-            resposta = self.client.post('/telegram_project/', self.dados(termos=termo))
+            resposta = self.client.post(reverse('telegram_project'), self.dados(termos=termo))
             self.assertEqual(resposta.status_code, 200, termo)
             self.assertIn('termos', resposta.context['form'].errors, termo)
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_conectivo_minusculo_aceito(self):
-        resposta = self.client.post('/telegram_project/', self.dados(termos='ecologia and x'))
+        resposta = self.client.post(reverse('telegram_project'), self.dados(termos='ecologia and x'))
         self.assertEqual(resposta.status_code, 302)
 
     def test_nome_longo_rejeitado(self):
-        resposta = self.client.post('/telegram_project/', self.dados(nome='x' * 41))
+        resposta = self.client.post(reverse('telegram_project'), self.dados(nome='x' * 41))
         self.assertIn('nome', resposta.context['form'].errors)
 
     def test_lista_privada_de_outro_rejeitada(self):
-        resposta = self.client.post('/telegram_project/', self.dados(lista=self.alheia.pk))
+        resposta = self.client.post(reverse('telegram_project'), self.dados(lista=self.alheia.pk))
         self.assertIn('lista', resposta.context['form'].errors)
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_falha_em_termo_desfaz_projeto(self):
         with mock.patch('telegram.views.Termo.objects.create', side_effect=RuntimeError):
             with self.assertRaises(RuntimeError):
-                self.client.post('/telegram_project/', self.dados())
+                self.client.post(reverse('telegram_project'), self.dados())
         self.assertEqual(Projeto.objects.count(), 0)
         self.assertEqual(Termo.objects.count(), 0)
 
     def test_sem_rede_telegram_nao_grava(self):
         Rede.objects.all().delete()
-        resposta = self.client.post('/telegram_project/', self.dados())
+        resposta = self.client.post(reverse('telegram_project'), self.dados())
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_painel_aponta_para_a_view(self):
-        self.assertContains(self.client.get('/painel/'), 'href="/telegram_project/"')
+        self.assertContains(self.client.get('/painel/'), f'href="{reverse("telegram_project")}"')
+
+
+class EditarProjetoTests(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.rede = Rede.objects.create(nome='Telegram')
+        cls.twitter = Rede.objects.create(nome='Twitter')
+        cls.user = User.objects.create_user('ana', password='x')
+        cls.outro = User.objects.create_user('bia', password='x')
+        cls.publica = Lista.objects.create(nome='Publica', dono=cls.outro, publica=True)
+        cls.alheia = Lista.objects.create(nome='Alheia', dono=cls.outro)
+        cls.alheia2 = Lista.objects.create(nome='Alheia 2', dono=cls.outro)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        self.tz = zoneinfo.ZoneInfo('America/Sao_Paulo')
+        self.inicio = datetime(2025, 1, 1, 0, 0, 0, tzinfo=self.tz)
+        self.final = datetime(2025, 2, 1, 23, 59, 59, tzinfo=self.tz)
+        self.projeto = self.cria_projeto()
+        self.url = reverse('editar_projeto', args=[self.projeto.pk])
+
+    def cria_projeto(self, usuario=None, rede=None, lista=None, nome='Proj'):
+        projeto = Projeto.objects.create(nome=nome, objetivo='Estudo', usuario=usuario or self.user,
+                                         lista_canais=lista or self.publica)
+        projeto.redes.add(rede or self.rede)
+        return projeto
+
+    def cria_termo(self, busca, projeto=None, status='A', inicio=None, final='padrao', **extra):
+        termo = Termo.objects.create(projeto=projeto or self.projeto, busca=busca, status=status,
+                                     dtinicio=inicio or self.inicio,
+                                     dtfinal=self.final if final == 'padrao' else final, **extra)
+        TermoStatus.objects.create(termo=termo, rede=self.rede, status=status)
+        return termo
+
+    def dados(self, **extra):
+        dados = {'nome': 'Proj editado', 'objetivo': 'Novo estudo', 'lista': self.publica.pk,
+                 'dt_inicio': '2025-03-01', 'dt_final': '2025-04-01', 'termos': 'a\nb'}
+        dados.update(extra)
+        return dados
+
+    def status_termo(self, termo):
+        termo.refresh_from_db()
+        return termo.status, set(TermoStatus.objects.filter(termo=termo, rede=self.rede)
+                                 .values_list('status', flat=True))
+
+    # acesso
+
+    def test_anonimo_redireciona_para_login(self):
+        self.client.logout()
+        for resposta in (self.client.get(self.url), self.client.post(self.url, self.dados())):
+            self.assertEqual(resposta.status_code, 302)
+            self.assertTrue(resposta.url.startswith('/admin/login/'))
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.nome, 'Proj')
+
+    def test_rota(self):
+        self.assertEqual(self.url, f'/telegram/projetos/{self.projeto.pk}/editar/')
+
+    def test_projeto_de_outro_usuario_da_404(self):
+        projeto = self.cria_projeto(usuario=self.outro)
+        url = reverse('editar_projeto', args=[projeto.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, self.dados()).status_code, 404)
+        projeto.refresh_from_db()
+        self.assertEqual(projeto.nome, 'Proj')
+
+    def test_projeto_sem_telegram_da_404(self):
+        projeto = self.cria_projeto(rede=self.twitter)
+        url = reverse('editar_projeto', args=[projeto.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.client.post(url, self.dados()).status_code, 404)
+
+    def test_projeto_inexistente_da_404(self):
+        self.assertEqual(self.client.get(reverse('editar_projeto', args=[999999])).status_code, 404)
+
+    def test_projeto_com_duas_redes_nao_duplica(self):
+        self.projeto.redes.add(self.twitter)
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    def test_rede_com_nome_em_outra_caixa(self):
+        self.rede.nome = 'telegram'
+        self.rede.save()
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+
+    # GET
+
+    def test_get_vem_preenchido(self):
+        self.cria_termo('b OR c')
+        # termo mais antigo/novo e um interrompido que não deve entrar nas datas nem na lista
+        self.cria_termo('a', inicio=datetime(2024, 12, 15, 10, 0, tzinfo=self.tz),
+                        final=datetime(2025, 3, 10, 12, 0, tzinfo=self.tz))
+        self.cria_termo('velho', status='X', inicio=datetime(2020, 1, 1, tzinfo=self.tz),
+                        final=datetime(2030, 1, 1, tzinfo=self.tz))
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, 200)
+        self.assertEqual(resposta.context['projeto'], self.projeto)
+        initial = resposta.context['form'].initial
+        self.assertEqual(initial['nome'], 'Proj')
+        self.assertEqual(initial['objetivo'], 'Estudo')
+        self.assertEqual(initial['lista'], self.publica.pk)
+        self.assertEqual(initial['dt_inicio'], date(2024, 12, 15))
+        self.assertEqual(initial['dt_final'], date(2025, 3, 10))
+        self.assertEqual(initial['termos'], 'b OR c\na')
+
+    def test_get_datas_no_fuso_local(self):
+        # 02/02 01:00 UTC é 01/02 22:00 em São Paulo
+        self.cria_termo('a', inicio=datetime(2025, 1, 1, 2, 0, tzinfo=timezone.utc),
+                        final=datetime(2025, 2, 2, 1, 0, tzinfo=timezone.utc))
+        initial = self.client.get(self.url).context['form'].initial
+        self.assertEqual(initial['dt_inicio'], date(2024, 12, 31))
+        self.assertEqual(initial['dt_final'], date(2025, 2, 1))
+
+    def test_get_dtfinal_nula_fica_vazia(self):
+        self.cria_termo('a', final=None)
+        initial = self.client.get(self.url).context['form'].initial
+        self.assertEqual(initial['dt_inicio'], date(2025, 1, 1))
+        self.assertIsNone(initial['dt_final'])
+        resposta = self.client.post(self.url, self.dados(dt_final=''))
+        self.assertIn('dt_final', resposta.context['form'].errors)
+
+    def test_get_sem_termos_ativos(self):
+        self.cria_termo('a', status='X')
+        initial = self.client.get(self.url).context['form'].initial
+        self.assertIsNone(initial['dt_inicio'])
+        self.assertEqual(initial['termos'], '')
+
+    def test_get_renderiza_valores_nos_campos(self):
+        self.cria_termo('a')
+        self.assertContains(self.client.get(self.url), 'value="2025-01-01"')
+
+    def test_importar_lista_leva_o_projeto_e_pede_confirmacao(self):
+        resposta = self.client.get(self.url)
+        self.assertContains(resposta, f'href="{reverse("importar_lista")}?projeto={self.projeto.pk}"')
+        self.assertContains(resposta, 'data-confirma-saida')
+
+    def test_criacao_importar_lista_sem_projeto(self):
+        resposta = self.client.get(reverse('telegram_project'))
+        self.assertContains(resposta, f'href="{reverse("importar_lista")}"')
+        self.assertNotContains(resposta, 'data-confirma-saida')
+        self.assertContains(resposta, 'js/telegram_project.js')
+
+    def test_get_listas_visiveis_mais_a_atual(self):
+        projeto = self.cria_projeto(lista=self.alheia)
+        resposta = self.client.get(reverse('editar_projeto', args=[projeto.pk]))
+        queryset = resposta.context['form'].fields['lista'].queryset
+        self.assertEqual(list(queryset), [self.alheia, self.publica])
+
+    def test_lista_na_query_substitui_a_atual(self):
+        propria = Lista.objects.create(nome='Propria', dono=self.user)
+        resposta = self.client.get(f'{self.url}?lista={propria.pk}')
+        self.assertEqual(str(resposta.context['form']['lista'].value()), str(propria.pk))
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.lista_canais, self.publica)  # só grava ao salvar
+
+    def test_lista_invalida_na_query_mantem_a_atual(self):
+        for valor in (self.alheia.pk, 'abc', 999999, ''):
+            with self.subTest(valor=valor):
+                resposta = self.client.get(f'{self.url}?lista={valor}')
+                self.assertEqual(str(resposta.context['form']['lista'].value()), str(self.publica.pk))
+
+    def test_lista_atual_invisivel_continua_valida_na_query(self):
+        projeto = self.cria_projeto(lista=self.alheia)
+        resposta = self.client.get(f"{reverse('editar_projeto', args=[projeto.pk])}?lista={self.alheia.pk}")
+        self.assertEqual(str(resposta.context['form']['lista'].value()), str(self.alheia.pk))
+
+    def test_criacao_nao_tem_projeto_no_contexto(self):
+        resposta = self.client.get(reverse('telegram_project'))
+        self.assertNotIn('projeto', resposta.context)
+
+    # POST
+
+    def test_post_atualiza_projeto_e_redireciona(self):
+        self.cria_termo('a')
+        resposta = self.client.post(self.url, self.dados())
+        self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
+        self.projeto.refresh_from_db()
+        self.assertEqual((self.projeto.nome, self.projeto.objetivo), ('Proj editado', 'Novo estudo'))
+        self.assertEqual(self.projeto.status, 'A')
+        self.assertEqual([str(m) for m in get_messages(resposta.wsgi_request)], ['Projeto atualizado.'])
+
+    def test_post_muda_a_lista(self):
+        propria = Lista.objects.create(nome='Propria', dono=self.user)
+        self.cria_termo('a')
+        self.client.post(self.url, self.dados(lista=propria.pk))
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.lista_canais, propria)
+
+    def test_post_mantem_termo_identico(self):
+        termo = self.cria_termo('a', last_count=42, ult_tweet=7)
+        status = TermoStatus.objects.get(termo=termo)
+        status.ult_processo = 99
+        status.save()
+        self.client.post(self.url, self.dados(termos='  a  \nb'))
+        termo2 = Termo.objects.get(pk=termo.pk)
+        self.assertEqual((termo2.last_count, termo2.ult_tweet, termo2.status), (42, 7, 'A'))
+        status2 = TermoStatus.objects.get(termo=termo)
+        self.assertEqual((status2.pk, status2.ult_processo), (status.pk, 99))
+        self.assertEqual(self.projeto.termo_set.filter(busca='a').count(), 1)
+
+    def test_post_reordenar_nao_troca_historico(self):
+        a = self.cria_termo('a', last_count=1)
+        b = self.cria_termo('b', last_count=2)
+        self.client.post(self.url, self.dados(termos='b\na'))
+        self.assertEqual(Termo.objects.get(busca='a').pk, a.pk)
+        self.assertEqual(Termo.objects.get(busca='b').last_count, 2)
+        self.assertEqual(Termo.objects.count(), 2)
+
+    def test_post_cria_termo_novo_com_termostatus(self):
+        self.cria_termo('a')
+        self.client.post(self.url, self.dados(termos='a\nnovo OR x'))
+        novo = Termo.objects.get(busca='novo OR x')
+        self.assertEqual(novo.projeto, self.projeto)
+        self.assertEqual(novo.status, 'A')
+        self.assertEqual(list(TermoStatus.objects.filter(termo=novo).values_list('rede', 'status')),
+                         [(self.rede.pk, 'A')])
+        self.assertEqual(novo.dtinicio, datetime(2025, 3, 1, 0, 0, 0, tzinfo=self.tz))
+        self.assertEqual(novo.dtfinal, datetime(2025, 4, 1, 23, 59, 59, tzinfo=self.tz))
+
+    def test_post_linhas_repetidas_criam_um_termo(self):
+        self.client.post(self.url, self.dados(termos='x\nx\n  x '))
+        self.assertEqual(Termo.objects.filter(busca='x').count(), 1)
+
+    def test_post_interrompe_removidos_sem_excluir(self):
+        a = self.cria_termo('a', last_count=5)
+        b = self.cria_termo('b')
+        self.client.post(self.url, self.dados(termos='a'))
+        self.assertEqual(self.status_termo(b), ('X', {'X'}))
+        self.assertEqual(self.status_termo(a), ('A', {'A'}))
+        self.assertEqual(Termo.objects.count(), 2)
+        self.assertEqual(TermoStatus.objects.count(), 2)
+
+    def test_post_interrupcao_so_na_rede_telegram(self):
+        b = self.cria_termo('b')
+        TermoStatus.objects.create(termo=b, rede=self.twitter)
+        self.client.post(self.url, self.dados(termos='a'))
+        self.assertEqual(TermoStatus.objects.get(termo=b, rede=self.twitter).status, 'A')
+        self.assertEqual(TermoStatus.objects.get(termo=b, rede=self.rede).status, 'X')
+
+    def test_post_reativa_termo_interrompido(self):
+        b = self.cria_termo('b', status='X', last_count=9, inicio=datetime(2020, 1, 1, tzinfo=self.tz))
+        self.client.post(self.url, self.dados(termos='b'))
+        self.assertEqual(self.status_termo(b), ('A', {'A'}))
+        b.refresh_from_db()
+        self.assertEqual(b.last_count, 9)
+        self.assertEqual(b.dtinicio, datetime(2025, 3, 1, 0, 0, 0, tzinfo=self.tz))
+        self.assertEqual(Termo.objects.count(), 1)
+
+    def test_post_reativa_sem_termostatus_cria_um(self):
+        b = self.cria_termo('b', status='X')
+        TermoStatus.objects.all().delete()
+        self.client.post(self.url, self.dados(termos='b'))
+        self.assertEqual(self.status_termo(b), ('A', {'A'}))
+        self.assertEqual(TermoStatus.objects.filter(termo=b).count(), 1)
+
+    def test_post_datas_so_nos_termos_ativos(self):
+        a = self.cria_termo('a')
+        removido = self.cria_termo('removido')
+        velho = self.cria_termo('velho', status='X')
+        self.client.post(self.url, self.dados(termos='a\nnovo'))
+        novo_inicio = datetime(2025, 3, 1, 0, 0, 0, tzinfo=self.tz)
+        novo_final = datetime(2025, 4, 1, 23, 59, 59, tzinfo=self.tz)
+        for termo in (a, Termo.objects.get(busca='novo')):
+            termo.refresh_from_db()
+            self.assertEqual((termo.dtinicio, termo.dtfinal), (novo_inicio, novo_final))
+        # interrompidos (antes ou agora) mantêm o período que tinham
+        for termo in (removido, velho):
+            termo.refresh_from_db()
+            self.assertEqual((termo.dtinicio, termo.dtfinal), (self.inicio, self.final))
+
+    def test_post_nao_mexe_em_termos_de_outro_projeto(self):
+        outro = self.cria_projeto(nome='Outro')
+        alheio = self.cria_termo('a', projeto=outro)
+        self.cria_termo('a')
+        self.client.post(self.url, self.dados(termos='z'))
+        self.assertEqual(self.status_termo(alheio), ('A', {'A'}))
+        alheio.refresh_from_db()
+        self.assertEqual(alheio.dtinicio, self.inicio)
+
+    def test_post_termo_ativo_com_outro_status_e_mantido(self):
+        a = self.cria_termo('a', status='P')
+        self.client.post(self.url, self.dados(termos='a'))
+        self.assertEqual(self.status_termo(a)[0], 'P')
+
+    def test_post_aspas_normalizadas_como_no_termo_save(self):
+        a = self.cria_termo("'x y'")
+        self.assertEqual(a.busca, '"x y"')
+        self.client.post(self.url, self.dados(termos="'x y'"))
+        self.assertEqual(Termo.objects.count(), 1)
+
+    # validação
+
+    def test_post_invalido_nao_grava_nada(self):
+        a = self.cria_termo('a')
+        casos = (dict(dt_final='2024-12-31'), dict(termos='a AND'), dict(termos='\n \n'),
+                 dict(nome='x' * 41), dict(lista=self.alheia.pk), dict(nome=''))
+        for extra in casos:
+            resposta = self.client.post(self.url, self.dados(**extra))
+            self.assertEqual(resposta.status_code, 200, extra)
+            self.assertTrue(resposta.context['form'].errors, extra)
+            self.assertEqual(resposta.context['projeto'], self.projeto)
+        self.projeto.refresh_from_db()
+        self.assertEqual((self.projeto.nome, self.projeto.lista_canais), ('Proj', self.publica))
+        self.assertEqual(Termo.objects.count(), 1)
+        self.assertEqual(self.status_termo(a), ('A', {'A'}))
+        a.refresh_from_db()
+        self.assertEqual((a.dtinicio, a.dtfinal), (self.inicio, self.final))
+
+    def test_post_invalido_reexibe_valores_digitados(self):
+        resposta = self.client.post(self.url, self.dados(nome='Digitado', dt_final='2024-12-31'))
+        self.assertContains(resposta, 'Digitado')
+
+    def test_lista_atual_nao_visivel_continua_valida(self):
+        projeto = self.cria_projeto(lista=self.alheia)
+        url = reverse('editar_projeto', args=[projeto.pk])
+        resposta = self.client.post(url, self.dados(lista=self.alheia.pk))
+        self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
+        projeto.refresh_from_db()
+        self.assertEqual((projeto.nome, projeto.lista_canais), ('Proj editado', self.alheia))
+        # outra lista privada de terceiro continua recusada
+        resposta = self.client.post(url, self.dados(lista=self.alheia2.pk))
+        self.assertIn('lista', resposta.context['form'].errors)
+
+    def test_falha_ao_sincronizar_desfaz_tudo(self):
+        self.cria_termo('a')
+        with mock.patch('telegram.views.Termo.objects.create', side_effect=RuntimeError):
+            with self.assertRaises(RuntimeError):
+                self.client.post(self.url, self.dados(termos='a\nnovo'))
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.nome, 'Proj')
+
+    # painel
+
+    def test_painel_marca_projetos_editaveis(self):
+        twitter = self.cria_projeto(rede=self.twitter, nome='Twitter')
+        sem_rede = Projeto.objects.create(nome='Sem rede', objetivo='x', usuario=self.user)
+        outro = self.cria_projeto(usuario=self.outro, nome='Do outro')
+        resposta = self.client.get('/painel/')
+        projetos = {p.nome: p.editavel for p in resposta.context['projetos']}
+        self.assertEqual(projetos, {'Proj': True, 'Twitter': False, 'Sem rede': False})
+        self.assertNotIn(outro, resposta.context['projetos'])
+        self.assertEqual([p.nome for p in resposta.context['projetos']], ['Proj', 'Sem rede', 'Twitter'])
+
+    def test_painel_sem_n_mais_um(self):
+        for i in range(5):
+            self.cria_projeto(nome=f'P{i}')
+        with self.assertNumQueries(4):  # sessão, usuário, projetos, redes
+            self.client.get('/painel/')
+
+    def test_painel_link_so_para_projetos_telegram(self):
+        twitter = self.cria_projeto(rede=self.twitter, nome='Twitter')
+        html = self.client.get('/painel/').content.decode()
+        self.assertIn(reverse('editar_projeto', args=[self.projeto.pk]), html)
+        self.assertNotIn(reverse('editar_projeto', args=[twitter.pk]), html)
 
 
 class ImportarListaTests(TestCase):
 
-    URL = '/telegram_project/importar_lista/'
+    @property
+    def URL(self):
+        return reverse('importar_lista')
 
     @classmethod
     def setUpTestData(cls):
         cls.user = User.objects.create_user('ana', password='x')
+        cls.outro = User.objects.create_user('bia', password='x')
+        cls.rede = Rede.objects.create(nome='Telegram')
+        cls.twitter = Rede.objects.create(nome='Twitter')
+        cls.projeto = cls.cria_projeto(cls.user, cls.rede)
+
+    @staticmethod
+    def cria_projeto(usuario, rede):
+        projeto = Projeto.objects.create(nome='Proj', objetivo='Estudo', usuario=usuario)
+        projeto.redes.add(rede)
+        return projeto
 
     def setUp(self):
         self.client.force_login(self.user)
@@ -153,7 +519,7 @@ class ImportarListaTests(TestCase):
         conteudo = 'username\nhttps://t.me/Canal_Um\n@canal_dois\ncanal_tres\n\nt.me/canal_um/123\n'
         resposta = self.envia(self.csv(conteudo))
         lista = Lista.objects.get()
-        self.assertRedirects(resposta, f'/telegram_project/?lista={lista.pk}', fetch_redirect_response=False)
+        self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={lista.pk}', fetch_redirect_response=False)
         self.assertEqual(lista.dono, self.user)
         self.assertFalse(lista.publica)
         self.assertEqual(sorted(c.username for c in lista.canais.all()), ['canal_dois', 'canal_tres', 'canal_um'])
@@ -203,8 +569,7 @@ class ImportarListaTests(TestCase):
         self.assertEqual(Lista.objects.count(), 1)
 
     def test_nome_igual_de_outro_dono_aceito(self):
-        outro = User.objects.create_user('bia', password='x')
-        Lista.objects.create(nome='Minha lista', dono=outro)
+        Lista.objects.create(nome='Minha lista', dono=self.outro)
         self.envia(self.csv('@canal_um'))
         self.assertEqual(Lista.objects.filter(dono=self.user).count(), 1)
 
@@ -222,11 +587,79 @@ class ImportarListaTests(TestCase):
 
     def test_projeto_preseleciona_lista_importada(self):
         lista = Lista.objects.create(nome='Nova', dono=self.user)
-        resposta = self.client.get(f'/telegram_project/?lista={lista.pk}')
+        resposta = self.client.get(f'{reverse("telegram_project")}?lista={lista.pk}')
         self.assertEqual(resposta.context['form']['lista'].value(), str(lista.pk))
 
+    def test_sem_projeto_voltar_leva_a_criacao(self):
+        resposta = self.client.get(self.URL)
+        self.assertEqual(resposta.context['voltar_url'], reverse('telegram_project'))
+        self.assertContains(resposta, f'href="{reverse("telegram_project")}">Voltar')
+
+    def test_com_projeto_voltar_leva_a_edicao(self):
+        editar = reverse('editar_projeto', args=[self.projeto.pk])
+        resposta = self.client.get(f'{self.URL}?projeto={self.projeto.pk}')
+        self.assertEqual(resposta.context['voltar_url'], editar)
+        self.assertContains(resposta, f'href="{editar}">Voltar')
+
+    def test_com_projeto_redireciona_para_edicao_com_a_lista_nova(self):
+        resposta = self.client.post(f'{self.URL}?projeto={self.projeto.pk}',
+                                    {'nome': 'Minha lista', 'publica': 'False', 'arquivo': self.csv('@canal_um')})
+        lista = Lista.objects.get()
+        self.assertRedirects(resposta, f'{reverse("editar_projeto", args=[self.projeto.pk])}?lista={lista.pk}',
+                             fetch_redirect_response=False)
+        self.assertIn('Lista "Minha lista" criada', str(list(get_messages(resposta.wsgi_request))[0]))
+        self.projeto.refresh_from_db()
+        self.assertIsNone(self.projeto.lista_canais)  # só grava ao salvar a edição
+
+    def test_projeto_invalido_e_ignorado(self):
+        alheio = self.cria_projeto(self.outro, self.rede)
+        outra_rede = self.cria_projeto(self.user, self.twitter)
+        for valor in (alheio.pk, outra_rede.pk, 'abc', 999999, ''):
+            with self.subTest(projeto=valor):
+                Lista.objects.all().delete()
+                url = f'{self.URL}?projeto={valor}'
+                self.assertEqual(self.client.get(url).context['voltar_url'], reverse('telegram_project'))
+                resposta = self.client.post(url, {'nome': 'Minha lista', 'publica': 'False',
+                                                  'arquivo': self.csv('@canal_um')})
+                self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={Lista.objects.get().pk}',
+                                     fetch_redirect_response=False)
+
     def test_botao_do_projeto_aponta_para_importar_lista(self):
-        self.assertContains(self.client.get('/telegram_project/'), f'href="{self.URL}"')
+        self.assertContains(self.client.get(reverse('telegram_project')), f'href="{self.URL}"')
+
+
+class TituloTipografiaTests(TestCase):
+    """Criação, edição e importação têm um único h1.tp-titulo e nenhum h4 (req. 11.2)."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('ana', password='x')
+        cls.rede = Rede.objects.create(nome='Telegram')
+        cls.projeto = Projeto.objects.create(nome='Proj', objetivo='Estudo', usuario=cls.user)
+        cls.projeto.redes.add(cls.rede)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def test_um_unico_h1_tp_titulo_e_nenhum_h4(self):
+        telas = {
+            'criação': (reverse('telegram_project'), 'Nova coleta Telegram'),
+            'edição': (reverse('editar_projeto', args=[self.projeto.pk]), 'Editar projeto'),
+            'importação': (reverse('importar_lista'), 'Importar lista de canais'),
+        }
+        for nome, (url, titulo) in telas.items():
+            with self.subTest(tela=nome):
+                html = self.client.get(url).content.decode()
+                self.assertEqual(html.count('<h1'), 1)
+                self.assertContains(self.client.get(url), f'<h1 class="tp-titulo">{titulo}</h1>', html=True)
+                self.assertNotIn('<h4', html)
+
+    def test_erro_de_publica_usa_tp_erro(self):
+        arquivo = SimpleUploadedFile('canais.csv', b'@canal_um', content_type='text/csv')
+        resposta = self.client.post(reverse('importar_lista'), {'nome': 'Minha lista', 'arquivo': arquivo})
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTrue(resposta.context['form'].errors['publica'])
+        self.assertContains(resposta, '<div class="text-danger tp-erro">')
 
 
 
@@ -245,6 +678,57 @@ def conexao_falsa(total=0, linhas=()):
     cur.fetchone.return_value = (total,)
     cur.fetchall.return_value = list(linhas)
     return conn, cur
+
+
+class RotasAntigasTests(TestCase):
+    """Caminhos antigos redirecionam (301) para os novos, preservando parâmetros e query string."""
+
+    ROTAS = [
+        ('/telegram_project/', 'telegram_project', [], '/telegram/projetos/novo/'),
+        ('/telegram_project/5/', 'editar_projeto', [5], '/telegram/projetos/5/editar/'),
+        ('/telegram_project/importar_lista/', 'importar_lista', [], '/telegram/listas/importar/'),
+        ('/telegram/lista_canais/', 'lista_canais', [], '/telegram/listas/'),
+        ('/telegram/canal/37/', 'canal_mensagens', [37], '/telegram/canais/37/'),
+        ('/telegram/importacao_canais/', 'importacao_canais', [], '/telegram/canais/importar/'),
+        ('/importacao_arquivo/', 'importacao_arquivo', [], '/tweets/importar/'),
+        ('/termo_stat/9', 'status_coleta', [9], '/termos/9/status/'),
+    ]
+
+    def test_nomes_resolvem_para_os_caminhos_novos(self):
+        for antigo, nome, args, novo in self.ROTAS:
+            with self.subTest(nome=nome):
+                self.assertEqual(reverse(nome, args=args), novo)
+
+    def test_antigas_redirecionam_permanentemente(self):
+        for antigo, nome, args, novo in self.ROTAS:
+            with self.subTest(antigo=antigo):
+                resposta = self.client.get(antigo)
+                self.assertEqual(resposta.status_code, 301)
+                self.assertEqual(resposta.url, novo)
+
+    def test_antigas_preservam_query_string(self):
+        for antigo, nome, args, novo in self.ROTAS:
+            with self.subTest(antigo=antigo):
+                resposta = self.client.get(f'{antigo}?voltar=lista%3D2&projeto=3')
+                self.assertEqual(resposta.status_code, 301)
+                self.assertEqual(resposta.url, f'{novo}?voltar=lista%3D2&projeto=3')
+
+    def test_exemplo_do_canal(self):
+        resposta = self.client.get('/telegram/canal/37/?voltar=lista%3D2')
+        self.assertRedirects(resposta, '/telegram/canais/37/?voltar=lista%3D2', status_code=301,
+                             fetch_redirect_response=False)
+
+    def test_importar_nao_e_confundida_com_pk(self):
+        # /telegram/listas/importar/ e /telegram/canais/importar/ têm rota própria (login, não 404)
+        for nome in ('importacao_canais', 'importar_lista'):
+            self.assertIn(self.client.get(reverse(nome)).status_code, (200, 302))
+
+    def test_status_do_termo_mantem_o_kwarg(self):
+        self.assertEqual(reverse('status_coleta', kwargs={'termo_id': 9}), '/termos/9/status/')
+
+    def test_api_nao_muda(self):
+        self.assertEqual(reverse('redes'), '/api/redes/')
+        self.assertEqual(reverse('termos', args=[1]), '/api/termos/1/detail')
 
 
 class ListasVisiveisTests(TestCase):
@@ -279,28 +763,28 @@ class ListaCanaisViewTests(TestCase):
 
     def test_anonimo_redireciona_para_login(self):
         self.client.logout()
-        for url in ('/telegram/lista_canais/', '/telegram/canal/1/'):
+        for url in (reverse('lista_canais'), reverse('canal_mensagens', args=[1])):
             resposta = self.client.get(url)
             self.assertEqual(resposta.status_code, 302)
             self.assertTrue(resposta.url.startswith('/admin/login/'))
 
     def test_rotas(self):
-        self.assertEqual(reverse('lista_canais'), '/telegram/lista_canais/')
-        self.assertEqual(reverse('canal_mensagens', args=[7]), '/telegram/canal/7/')
+        self.assertEqual(reverse('lista_canais'), '/telegram/listas/')
+        self.assertEqual(reverse('canal_mensagens', args=[7]), '/telegram/canais/7/')
 
     def test_tags_publicas_e_proprias_com_total(self):
-        resposta = self.client.get('/telegram/lista_canais/')
+        resposta = self.client.get(reverse('lista_canais'))
         self.assertEqual(resposta.status_code, 200)
         listas = {item['nome']: item for item in resposta.context['listas']}
         self.assertEqual(set(listas), {'Publica', 'Propria'})
         self.assertEqual(listas['Publica']['total'], 2)
         self.assertTrue(listas['Publica']['publica'])
         self.assertTrue(resposta.context['tem_listas'])
-        self.assertEqual(resposta.context['importar_url'], '/telegram_project/importar_lista/')
-        self.assertEqual(resposta.context['limpar_url'], '/telegram/lista_canais/')
+        self.assertEqual(resposta.context['importar_url'], reverse('importar_lista'))
+        self.assertEqual(resposta.context['limpar_url'], reverse('lista_canais'))
 
     def test_sem_selecao_nao_ha_grid(self):
-        resposta = self.client.get('/telegram/lista_canais/')
+        resposta = self.client.get(reverse('lista_canais'))
         self.assertIsNone(resposta.context['page_obj'])
         self.assertEqual(resposta.context['total_canais'], 0)
         self.assertEqual(resposta.context['paginas'], [])
@@ -310,42 +794,42 @@ class ListaCanaisViewTests(TestCase):
     def test_sem_listas_visiveis(self):
         self.client.force_login(User.objects.create_user('nova', password='x'))
         Lista.objects.filter(publica=True).update(publica=False)
-        resposta = self.client.get('/telegram/lista_canais/')
+        resposta = self.client.get(reverse('lista_canais'))
         self.assertEqual(resposta.status_code, 200)
         self.assertFalse(resposta.context['tem_listas'])
 
     def test_lista_privada_alheia_e_ignorada(self):
-        resposta = self.client.get(f'/telegram/lista_canais/?lista={self.alheia.pk}&lista=abc&lista=99999')
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.alheia.pk}&lista=abc&lista=99999')
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta.context['selecionadas'], [])
         self.assertIsNone(resposta.context['page_obj'])
         self.assertEqual(resposta.context['total_canais'], 0)
 
     def test_canal_em_duas_listas_aparece_uma_vez(self):
-        resposta = self.client.get(f'/telegram/lista_canais/?lista={self.publica.pk}&lista={self.propria.pk}')
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}&lista={self.propria.pk}')
         usernames = [c.username for c in resposta.context['page_obj']]
         self.assertEqual(usernames, ['c2', 'c3', 'c1'])  # participantes desc, depois username
         self.assertEqual(resposta.context['total_canais'], 3)
         self.assertEqual(len(resposta.context['selecionadas']), 2)
 
     def test_toggle_urls(self):
-        resposta = self.client.get(f'/telegram/lista_canais/?lista={self.publica.pk}')
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}')
         itens = {i['id']: i for i in resposta.context['listas']}
         self.assertTrue(itens[self.publica.pk]['selecionada'])
         self.assertFalse(itens[self.propria.pk]['selecionada'])
-        self.assertEqual(itens[self.publica.pk]['url'], '/telegram/lista_canais/')
+        self.assertEqual(itens[self.publica.pk]['url'], reverse('lista_canais'))
         self.assertEqual(itens[self.propria.pk]['url'],
-                         f'/telegram/lista_canais/?lista={self.publica.pk}&lista={self.propria.pk}')
+                         f'{reverse("lista_canais")}?lista={self.publica.pk}&lista={self.propria.pk}')
 
     def test_voltar_qs(self):
-        resposta = self.client.get(f'/telegram/lista_canais/?lista={self.publica.pk}&lista={self.propria.pk}')
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}&lista={self.propria.pk}')
         voltar = parse_qs(resposta.context['voltar_qs'])['voltar'][0]
         self.assertEqual(voltar, f'lista={self.publica.pk}&lista={self.propria.pk}')
 
     def test_paginacao_de_50_preserva_selecao(self):
         Canal.objects.bulk_create([Canal(username=f'x{i:03d}') for i in range(60)])
         self.publica.canais.add(*Canal.objects.filter(username__startswith='x'))
-        base = f'/telegram/lista_canais/?lista={self.publica.pk}'
+        base = f'{reverse("lista_canais")}?lista={self.publica.pk}'
         resposta = self.client.get(base + '&page=2')
         self.assertEqual(resposta.context['total_canais'], 62)
         self.assertEqual(resposta.context['page_obj'].number, 2)
@@ -361,7 +845,7 @@ class ListaCanaisViewTests(TestCase):
         self.assertContains(resposta, 'Ir para a página')
 
     def test_pagina_unica_mostra_rodape_sem_ir_para(self):
-        resposta = self.client.get(f'/telegram/lista_canais/?lista={self.publica.pk}')
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}')
         self.assertContains(resposta, 'Mostrando <strong>1–2</strong> de 2', html=False)
         self.assertNotContains(resposta, 'Ir para a página')
 
@@ -462,7 +946,7 @@ class CanalMensagensViewTests(TestCase):
         self.assertEqual(resposta.context['mensagens'], self.amostra())
         self.assertEqual(resposta.context['pagina'].count, 1)
         self.assertEqual(resposta.context['termo'], '')
-        self.assertEqual(resposta.context['voltar_url'], '/telegram/lista_canais/')
+        self.assertEqual(resposta.context['voltar_url'], reverse('lista_canais'))
 
     def test_filtros_repassados_no_fuso_local(self, busca):
         busca.return_value = (0, [])
@@ -523,10 +1007,10 @@ class CanalMensagensViewTests(TestCase):
     def test_voltar_so_aceita_lista(self, busca):
         busca.return_value = (0, [])
         resposta = self.client.get(self.url(voltar='lista=1&lista=3'))
-        self.assertEqual(resposta.context['voltar_url'], '/telegram/lista_canais/?lista=1&lista=3')
+        self.assertEqual(resposta.context['voltar_url'], f'{reverse("lista_canais")}?lista=1&lista=3')
         self.assertEqual(resposta.context['voltar'], 'lista=1&lista=3')
         resposta = self.client.get(self.url(voltar='https://evil.example/'))
-        self.assertEqual(resposta.context['voltar_url'], '/telegram/lista_canais/')
+        self.assertEqual(resposta.context['voltar_url'], reverse('lista_canais'))
         self.assertEqual(resposta.context['voltar'], '')
 
     def test_mensagem_sem_texto_chega_ao_contexto(self, busca):

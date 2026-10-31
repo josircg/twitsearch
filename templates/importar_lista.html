@@ -4,7 +4,7 @@
 {% block fluid-content %}
     <section id="telegram-project">
         <div class="container pt-5 pb-5" style="max-width: 820px;">
-            <h4 class="mb-4">Importar lista de canais</h4>
+            <h1 class="tp-titulo">Importar lista de canais</h1>
             {% for message in messages %}
                 <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
             {% endfor %}
@@ -19,11 +19,11 @@
                             <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
                         </div>
                     {% endfor %}
-                    {% for error in form.publica.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+                    {% for error in form.publica.errors %}<div class="text-danger tp-erro">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="mb-4">{% include "_telegram_field.html" with field=form.arquivo %}</div>
                 <button type="submit" class="btn-start">Importar lista</button>
-                <a class="btn-cancel ms-3 text-decoration-none" href="{% url 'telegram_project' %}">Voltar</a>
+                <a class="btn-cancel ms-3 text-decoration-none" href="{{ voltar_url }}">Voltar</a>
             </form>
         </div>
     </section>

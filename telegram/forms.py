@@ -32,9 +32,13 @@ class TelegramProjectForm(forms.Form):
         help_text='Um termo por linha. Use os conectivos AND e OR em maiúsculas. '
                   'Exemplos: ecologia OR ecológico, ecologia AND ecológico.')
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, projeto=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['lista'].queryset = listas_visiveis(user)
+        listas = listas_visiveis(user)
+        if projeto is not None and projeto.lista_canais_id:
+            # na edição, a lista atual continua selecionável mesmo que deixe de ser visível
+            listas = (listas | Lista.objects.filter(pk=projeto.lista_canais_id)).distinct()
+        self.fields['lista'].queryset = listas
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-select' if isinstance(field, forms.ModelChoiceField) else 'form-control'
 

@@ -421,7 +421,7 @@ class TermoAdmin(PowerModelAdmin):
                             label="Tweets", attrs={'target': '_blank'})
             )
             buttons.append(
-                PowerButton(url='/termo_stat/%d' % object_id,
+                PowerButton(url=reverse('status_coleta', args=[object_id]),
                             label="Status Coleta")
             )
             buttons.append(

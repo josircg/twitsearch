@@ -429,6 +429,7 @@ header {
 #telegram-project {
   --field-border: #B4C0D0;
   --field-icon: #5B7BA6;
+  color: var(--dark-gray);
 }
 #telegram-project .form-card {
   background: #FFF;
@@ -438,6 +439,7 @@ header {
   padding: 2rem;
 }
 #telegram-project .form-label {
+  font-size: 14px;
   font-weight: 600;
   color: var(--dark-gray);
 }
@@ -446,8 +448,19 @@ header {
   border: 1.5px solid var(--field-border);
   border-radius: 10px;
   color: var(--dark-gray);
+  font-size: 15px;
+  min-height: 46px;
   padding: 0.6rem 0.9rem;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+#telegram-project input[type="date"] {
+  height: 46px;
+}
+#telegram-project textarea[name="termos"] {
+  line-height: 1.6;
+}
+#telegram-project .form-check-label {
+  font-size: 15px;
 }
 #telegram-project .form-control:hover,
 #telegram-project .form-select:hover {
@@ -460,6 +473,10 @@ header {
 }
 #telegram-project .form-text {
   color: var(--medium-gray);
+  font-size: 13px;
+}
+#telegram-project .alert {
+  font-size: 14px;
 }
 #telegram-project input[type="date"]::-webkit-calendar-picker-indicator {
   width: 1.3rem;
@@ -480,7 +497,7 @@ header {
   border: 1.5px solid var(--field-border);
   border-radius: 30px;
   color: var(--dark-gray);
-  font-size: 0.9rem;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.5;
   text-decoration: none;
@@ -498,7 +515,9 @@ header {
   border: 1.5px solid var(--blue);
   border-radius: 30px;
   color: #FFF;
+  font-size: 15px;
   font-weight: 600;
+  min-height: 46px;
   padding: 0.6rem 2rem;
   transition: 0.2s;
 }
@@ -508,6 +527,7 @@ header {
 }
 #telegram-project .btn-cancel {
   color: var(--medium-gray);
+  font-size: 15px;
   font-weight: 500;
 }
 #telegram-project .btn-cancel:hover {
@@ -516,6 +536,92 @@ header {
 #telegram-project .lista-select {
   flex: 1 1 14rem;
   min-width: 0;
+}
+/* Edição do projeto */
+#telegram-project .tp-voltar {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+#telegram-project .tp-voltar a {
+  align-items: center;
+  color: var(--blue);
+  display: inline-flex;
+  font-weight: 500;
+  gap: 6px;
+  min-height: 32px;
+  text-decoration: none;
+}
+#telegram-project .tp-voltar a:hover {
+  color: #0052CC;
+}
+#telegram-project .tp-titulo {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+#telegram-project .tp-alerta {
+  background: #FEF3F2;
+  border: 1px solid #FDA29B;
+  border-radius: 12px;
+  color: #B42318;
+  font-size: 14px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+}
+#telegram-project .tp-aviso {
+  align-items: flex-start;
+  background: #F4F8FF;
+  border: 1px solid #D6E4FF;
+  border-radius: 10px;
+  color: var(--dark-gray);
+  display: flex;
+  font-size: 13px;
+  gap: 8px;
+  margin-top: 0.75rem;
+  padding: 10px 14px;
+}
+#telegram-project .tp-aviso svg {
+  color: var(--blue);
+  flex: none;
+  margin-top: 2px;
+}
+/* Estados de erro (criação e edição): classe aplicada pelo JS; :has() só de reserva quando não há JS */
+#telegram-project .tp-alerta[hidden] {
+  display: none;
+}
+#telegram-project .tp-erro {
+  color: #B42318 !important;
+  font-size: 13px;
+  margin-top: 6px;
+}
+#telegram-project .tp-erro[hidden] {
+  display: none;
+}
+#telegram-project .form-control.is-invalido,
+#telegram-project .form-select.is-invalido,
+#telegram-project .form-control.is-invalido:hover,
+#telegram-project .form-select.is-invalido:hover,
+#telegram-project :has(> .tp-erro:not([hidden])) .form-control,
+#telegram-project :has(> .tp-erro:not([hidden])) .form-select {
+  border-color: #D92D20;
+}
+#telegram-project .form-control.is-invalido:focus,
+#telegram-project .form-select.is-invalido:focus {
+  border-color: #D92D20;
+  box-shadow: 0 0 0 0.2rem rgba(217, 45, 32, 0.15);
+}
+#telegram-project .btn-start.is-bloqueado,
+#telegram-project .btn-start.is-bloqueado:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+#telegram-project.tp-edicao .btn-cancel {
+  align-items: center;
+  display: inline-flex;
+  min-height: 44px;
 }
 
 
@@ -568,14 +674,15 @@ header {
 /* Navegação e cabeçalho */
 #telegram-canais .tc-back {
   align-items: center;
-  color: var(--medium-gray);
+  color: var(--blue);
   display: inline-flex;
   font-size: 14px;
+  font-weight: 500;
   gap: 6px;
   margin-bottom: 12px;
 }
 #telegram-canais .tc-back:hover {
-  color: var(--dark-gray);
+  color: #0052CC;
 }
 #telegram-canais .tc-head {
   align-items: flex-end;
@@ -588,6 +695,7 @@ header {
 #telegram-canais .tc-head h1 {
   font-size: 26px;
   font-weight: 600;
+  line-height: 1.5;
   margin: 0 0 4px;
 }
 #telegram-canais .tc-head p {
@@ -762,6 +870,10 @@ header {
 #telegram-canais .tc-total span {
   color: var(--medium-gray);
 }
+#telegram-canais .tc-total strong,
+#telegram-canais .tc-resumo-busca strong {
+  font-weight: 600;
+}
 #telegram-canais .tc-tabela {
   overflow: hidden;
 }
@@ -904,6 +1016,7 @@ header {
 #telegram-canais .tc-canal-nome h1 {
   font-size: 26px;
   font-weight: 600;
+  line-height: 1.5;
   margin: 0;
 }
 #telegram-canais .tc-canal-nome .tc-canal-link {
@@ -1547,6 +1660,10 @@ header {
     gap: 8px;
     justify-content: space-between;
   }
+  #telegram-canais .tc-msg-meta time {
+    color: var(--medium-gray);
+    font-weight: 400;
+  }
   #telegram-canais .tc-msg-metricas {
     gap: 0;
   }
@@ -1566,6 +1683,9 @@ header {
   #telegram-canais .tc-msg-corpo {
     font-size: 13px;
     margin-top: 3px;
+  }
+  #telegram-canais .tc-status {
+    font-size: 11px;
   }
   #telegram-canais .tc-midia {
     font-size: 10px;
@@ -1608,6 +1728,9 @@ header {
   #telegram-canais .tc-ir {
     font-size: 13px;
     justify-content: center;
+  }
+  #telegram-canais .tc-btn-ir {
+    font-size: 13px;
   }
   #telegram-canais .tc-ir-completo {
     display: none;
@@ -1669,7 +1792,7 @@ header {
   color: var(--dark-gray);
   font-size: 24px;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.5;
   margin: 0 0 24px;
 }
 #painel .pn-alert {
@@ -1717,7 +1840,7 @@ header {
   font-weight: 500;
   gap: 8px;
   justify-content: center;
-  line-height: 1.4;
+  line-height: 1.5;
   min-height: 44px;
   padding: 0 20px;
   text-align: center;
@@ -1805,6 +1928,34 @@ header {
 }
 #painel .pn-nome {
   overflow-wrap: anywhere;
+}
+#painel .pn-tabela td.pn-nome:not(.pn-nome-link) {
+  color: #4D4D4D;
+}
+#painel .pn-tabela td.pn-nome-link {
+  padding-bottom: 6px;
+  padding-top: 6px;
+}
+#painel .pn-editar {
+  align-items: center;
+  color: var(--blue);
+  display: inline-flex;
+  font-weight: 500;
+  gap: 8px;
+  min-height: 36px;
+  text-decoration: none;
+}
+#painel .pn-editar svg {
+  flex: none;
+}
+#painel .pn-editar:hover {
+  color: #0052CC;
+  text-decoration: underline;
+}
+#painel .pn-editar:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
 }
 #painel .pn-status {
   background: #EEF2F7;

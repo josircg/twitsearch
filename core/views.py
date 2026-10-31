@@ -39,7 +39,10 @@ def index(request):
 
 @login_required(login_url='/admin/login/')
 def painel(request):
-    projetos = Projeto.objects.filter(usuario=request.user).order_by('nome')
+    projetos = list(Projeto.objects.filter(usuario=request.user).order_by('nome').prefetch_related('redes'))
+    for projeto in projetos:
+        # só projetos Telegram têm tela de edição (redes já carregadas, sem N+1)
+        projeto.editavel = any(rede.nome.lower() == 'telegram' for rede in projeto.redes.all())
     return render(request, 'painel.html', context={'projetos': projetos})
 
 

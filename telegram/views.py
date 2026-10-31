@@ -14,6 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
+from django.http import Http404
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -66,6 +67,58 @@ def import_xlsx(arquivo) -> list:
     return lista
 
 
+def periodo_coleta(dt_inicio, dt_final):
+    # início do primeiro dia e fim do último, no fuso local
+    tz = timezone.get_current_timezone()
+    return (timezone.make_aware(datetime.combine(dt_inicio, time.min), tz),
+            timezone.make_aware(datetime.combine(dt_final, time.max.replace(microsecond=0)), tz))
+
+
+def normaliza_busca(busca):
+    # mesma normalização de aspas feita por Termo.save, para comparar com o que está gravado
+    return busca.strip().replace('“', '"').replace('”', '"').replace("'", '"')
+
+
+def sincroniza_termos(projeto, termos, dtinicio, dtfinal, rede):
+    """Ajusta os termos do projeto às linhas informadas; a identidade do termo é o texto da busca.
+
+    Nunca exclui: termos que saíram são interrompidos ('X') e os que voltam são reativados.
+    """
+    linhas = list(dict.fromkeys(normaliza_busca(t) for t in termos if t.strip()))
+    existentes = {}
+    for termo in projeto.termo_set.order_by('pk'):
+        existentes.setdefault(termo.busca.strip(), []).append(termo)
+
+    ativos, reativados, novos = [], [], []
+    for busca in linhas:
+        grupo = existentes.get(busca, [])
+        vigentes = [t for t in grupo if t.status != 'X']
+        if vigentes:
+            ativos.extend(vigentes)
+        elif grupo:
+            reativados.append(grupo[-1])
+        else:
+            novos.append(busca)
+
+    removidos = [t.pk for busca, grupo in existentes.items() if busca not in linhas
+                 for t in grupo if t.status != 'X']
+    if removidos:
+        Termo.objects.filter(pk__in=removidos).update(status='X')
+        TermoStatus.objects.filter(termo_id__in=removidos, rede=rede).update(status='X')
+
+    for termo in reativados:
+        Termo.objects.filter(pk=termo.pk).update(status='A')
+        if not TermoStatus.objects.filter(termo=termo, rede=rede).update(status='A'):
+            TermoStatus.objects.create(termo=termo, rede=rede)
+
+    pks = [t.pk for t in ativos + reativados]
+    if pks:
+        Termo.objects.filter(pk__in=pks).update(dtinicio=dtinicio, dtfinal=dtfinal)
+    for busca in novos:
+        termo = Termo.objects.create(projeto=projeto, busca=busca, dtinicio=dtinicio, dtfinal=dtfinal)
+        TermoStatus.objects.create(termo=termo, rede=rede)
+
+
 @login_required(login_url='/admin/login/')
 def telegram_project(request):
     rede = Rede.objects.filter(nome__iexact='Telegram').first()
@@ -75,9 +128,7 @@ def telegram_project(request):
             messages.error(request, 'Rede Telegram não cadastrada. Contate o administrador.')
         elif form.is_valid():
             dados = form.cleaned_data
-            tz = timezone.get_current_timezone()
-            dtinicio = timezone.make_aware(datetime.combine(dados['dt_inicio'], time.min), tz)
-            dtfinal = timezone.make_aware(datetime.combine(dados['dt_final'], time.max.replace(microsecond=0)), tz)
+            dtinicio, dtfinal = periodo_coleta(dados['dt_inicio'], dados['dt_final'])
             with transaction.atomic():
                 projeto = Projeto.objects.create(nome=dados['nome'], objetivo=dados['objetivo'],
                                                  usuario=request.user, lista_canais=dados['lista'],
@@ -96,8 +147,57 @@ def telegram_project(request):
     return render(request, 'telegram_project.html', {'form': form})
 
 
+def projeto_editavel(user, pk):
+    # projeto Telegram do próprio usuário; None se não existir, for de outro ou o pk não for numérico
+    try:
+        pk = int(pk)
+    except (TypeError, ValueError):
+        return None
+    return Projeto.objects.filter(usuario=user, redes__nome__iexact='Telegram', pk=pk).distinct().first()
+
+
+@login_required(login_url='/admin/login/')
+def editar_projeto(request, pk):
+    projeto = projeto_editavel(request.user, pk)
+    if projeto is None:
+        raise Http404
+    rede = Rede.objects.filter(nome__iexact='Telegram').first()
+    if request.method == 'POST':
+        form = TelegramProjectForm(request.POST, user=request.user, projeto=projeto)
+        if form.is_valid():
+            dados = form.cleaned_data
+            dtinicio, dtfinal = periodo_coleta(dados['dt_inicio'], dados['dt_final'])
+            with transaction.atomic():
+                projeto.nome = dados['nome']
+                projeto.objetivo = dados['objetivo']
+                projeto.lista_canais = dados['lista']
+                projeto.save(update_fields=['nome', 'objetivo', 'lista_canais'])
+                sincroniza_termos(projeto, dados['termos'], dtinicio, dtfinal, rede)
+            messages.success(request, 'Projeto atualizado.')
+            return redirect('painel')
+    else:
+        ativos = list(projeto.termo_set.exclude(status='X').order_by('pk'))
+        inicios = [t.dtinicio for t in ativos]
+        finais = [t.dtfinal for t in ativos if t.dtfinal]
+        form = TelegramProjectForm(user=request.user, projeto=projeto, initial={
+            'nome': projeto.nome, 'objetivo': projeto.objetivo, 'lista': projeto.lista_canais_id,
+            'dt_inicio': timezone.localtime(min(inicios)).date() if inicios else None,
+            'dt_final': timezone.localtime(max(finais)).date() if finais else None,
+            'termos': '\n'.join(t.busca for t in ativos),
+        })
+        # ?lista=<id> (vindo da importação) substitui a lista atual se for uma opção válida do campo
+        lista = request.GET.get('lista', '')
+        if lista.isdigit() and form.fields['lista'].queryset.filter(pk=int(lista)).exists():
+            form.initial['lista'] = int(lista)
+
+    return render(request, 'telegram_project.html', {'form': form, 'projeto': projeto})
+
+
 @login_required(login_url='/admin/login/')
 def importar_lista(request):
+    # ?projeto=<pk> (vindo da edição) é ignorado se não for um projeto editável pelo usuário
+    projeto = projeto_editavel(request.user, request.GET.get('projeto'))
+    voltar_url = reverse('editar_projeto', args=[projeto.pk]) if projeto else reverse('telegram_project')
     if request.method == 'POST':
         form = ImportListaForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
@@ -116,11 +216,11 @@ def importar_lista(request):
                 messages.success(request, f'Lista "{resultado["lista"].nome}" criada: '
                                           f'{resultado["lidos"]} linhas lidas, {resultado["novos"]} canais novos, '
                                           f'{resultado["ignorados"]} ignoradas (inválidas).')
-                return redirect(f'{reverse("telegram_project")}?lista={resultado["lista"].pk}')
+                return redirect(f'{voltar_url}?lista={resultado["lista"].pk}')
     else:
         form = ImportListaForm(user=request.user)
 
-    return render(request, 'importar_lista.html', {'form': form})
+    return render(request, 'importar_lista.html', {'form': form, 'voltar_url': voltar_url})
 
 
 def importacao_canais(request):
