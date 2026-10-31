@@ -8,6 +8,13 @@ from core.crispy_admin_layout import AdminFieldset, AdminSubmitRow, AdminField
 
 
 CONECTIVOS = ('AND', 'OR')
+POR_PAGINA_PADRAO = 25
+POR_PAGINA_OPCOES = (25, 50, 100)
+
+
+def listas_visiveis(user):
+    # listas públicas e as privadas do próprio usuário
+    return Lista.objects.filter(Q(publica=True) | Q(dono=user)).order_by('nome')
 
 
 class TelegramProjectForm(forms.Form):
@@ -27,8 +34,7 @@ class TelegramProjectForm(forms.Form):
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['lista'].queryset = Lista.objects.filter(
-            Q(publica=True) | Q(dono=user)).order_by('nome')
+        self.fields['lista'].queryset = listas_visiveis(user)
         for field in self.fields.values():
             field.widget.attrs['class'] = 'form-select' if isinstance(field, forms.ModelChoiceField) else 'form-control'
 
@@ -50,6 +56,37 @@ class TelegramProjectForm(forms.Form):
         inicio, final = cleaned.get('dt_inicio'), cleaned.get('dt_final')
         if inicio and final and final < inicio:
             self.add_error('dt_final', 'A data final não pode ser anterior à data inicial.')
+        return cleaned
+
+
+class FiltroMensagensForm(forms.Form):
+    dt_inicio = forms.DateField(label='Data inicial', required=False, input_formats=['%Y-%m-%d'],
+                                widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}))
+    dt_final = forms.DateField(label='Data final', required=False, input_formats=['%Y-%m-%d'],
+                               widget=forms.DateInput(format='%Y-%m-%d', attrs={'type': 'date'}))
+    termo = forms.CharField(label='Termo', required=False, max_length=200, strip=True,
+                            widget=forms.TextInput(attrs={'type': 'search', 'placeholder': 'ex.: vacina'}))
+    # CharField para que um valor fora da lista não invalide o formulário (clean_por_pagina normaliza)
+    por_pagina = forms.CharField(label='Por página', required=False,
+                                 widget=forms.Select(choices=[(n, str(n)) for n in POR_PAGINA_OPCOES]))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field in self.fields.values():
+            field.widget.attrs['class'] = 'form-select' if isinstance(field.widget, forms.Select) else 'form-control'
+
+    def clean_por_pagina(self):
+        try:
+            valor = int(self.cleaned_data.get('por_pagina') or POR_PAGINA_PADRAO)
+        except (TypeError, ValueError):
+            return POR_PAGINA_PADRAO
+        return valor if valor in POR_PAGINA_OPCOES else POR_PAGINA_PADRAO
+
+    def clean(self):
+        cleaned = super().clean()
+        inicio, final = cleaned.get('dt_inicio'), cleaned.get('dt_final')
+        if inicio and final and final < inicio:
+            self.add_error('dt_final', 'A data final deve ser igual ou posterior à data inicial.')
         return cleaned
 
 

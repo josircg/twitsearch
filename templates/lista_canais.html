@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load telegram_tags %}
+{% block title %}Listas de Canais{% endblock %}
+
+{% block fluid-content %}
+    <section id="telegram-canais">
+        <div class="tc-wrap">
+            {% for message in messages %}
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+            {% endfor %}
+
+            <a class="tc-back" href="{% url 'painel' %}">
+                <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                Meus projetos
+            </a>
+
+            <div class="tc-head">
+                <div>
+                    <h1>Listas de Canais</h1>
+                    <p>Selecione uma ou mais listas para ver os canais monitorados.</p>
+                </div>
+                <a class="tc-btn-outline" href="{{ importar_url }}">
+                    <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
+                    Importar lista
+                </a>
+            </div>
+
+            <div class="tc-card tc-listas">
+                {% if tem_listas %}
+                    <div class="tc-listas-topo">
+                        <span class="tc-rotulo">Listas</span>
+                        {% if selecionadas %}
+                            <a class="tc-link" href="{{ limpar_url }}">Limpar seleção</a>
+                        {% endif %}
+                    </div>
+                    <div class="tc-tags" role="group" aria-label="Listas de canais">
+                        {% for l in listas %}
+                            <a href="{{ l.url }}" class="tc-tag{% if l.selecionada %} selecionada{% endif %}" aria-pressed="{% if l.selecionada %}true{% else %}false{% endif %}">
+                                {% if l.selecionada %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg>{% endif %}
+                                {{ l.nome }}
+                                <span class="tc-badge">
+                                    {% if l.publica %}
+                                        <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Pública" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                                    {% else %}
+                                        <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Privada" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                    {% endif %}
+                                    {{ l.total|milhar }}
+                                </span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                    <div class="tc-legenda" aria-hidden="true">
+                        <span><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Pública</span>
+                        <span><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privada (só você vê)</span>
+                    </div>
+                {% else %}
+                    <p class="tc-sem-listas">Você ainda não tem listas de canais. <a href="{{ importar_url }}">Importar uma lista</a></p>
+                {% endif %}
+            </div>
+
+            {% if tem_listas %}
+                {% if page_obj is None %}
+                    <div class="tc-vazio">
+                        <svg class="ico" width="40" height="40" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+                        <p class="tc-vazio-titulo">Selecione uma ou mais listas para ver os canais</p>
+                        <p>Os canais das listas escolhidas aparecem aqui, sem repetição.</p>
+                    </div>
+                {% elif total_canais == 0 %}
+                    <div class="tc-vazio tc-vazio-solido">
+                        <p class="tc-vazio-titulo">Nenhum canal nas listas selecionadas</p>
+                        <p>Adicione canais à lista pelo admin ou <a href="{{ importar_url }}">importe um arquivo</a>.</p>
+                    </div>
+                {% else %}
+                    <p class="tc-total" aria-live="polite"><strong>{{ total_canais|milhar }} cana{{ total_canais|pluralize:"l,is" }}</strong> <span>em {{ selecionadas|length }} lista{{ selecionadas|length|pluralize }} · ordenados por participantes</span></p>
+
+                    <div class="tc-card tc-tabela">
+                        <div class="tc-scroll">
+                            <table class="tc-grid">
+                                <caption class="visually-hidden">Canais das listas selecionadas, ordenados por participantes</caption>
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="col-canal">Canal</th>
+                                        <th scope="col">Descrição</th>
+                                        <th scope="col" class="num">Participantes</th>
+                                        <th scope="col" class="num">Mensagens coletadas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for c in page_obj %}
+                                        <tr>
+                                            <td class="col-canal">
+                                                <a class="tc-canal-link" href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" aria-label="@{{ c.username }} (abre no Telegram, em nova aba)">@{{ c.username }}
+                                                    <svg class="ico" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                                                </a>
+                                                {% if c.titulo %}<div class="tc-canal-titulo">{{ c.titulo }}</div>{% endif %}
+                                                {% if c.status != "A" %}<span class="tc-status">{{ c.get_status_display }}</span>{% endif %}
+                                            </td>
+                                            <td class="col-desc">{% if c.sobre %}<span title="{{ c.sobre }}">{{ c.sobre }}</span>{% else %}<span title="Sem descrição">—</span>{% endif %}</td>
+                                            <td class="num" data-label="Participantes">{{ c.num_participantes|milhar }}</td>
+                                            <td class="num" data-label="Mensagens coletadas">
+                                                <a class="tc-msgs-link" href="{% url 'canal_mensagens' c.pk %}{% if voltar_qs %}?{{ voltar_qs }}{% endif %}" title="Ver mensagens coletadas" aria-label="Ver {{ c.num_mensagens|milhar }} mensagens coletadas de @{{ c.username }}">{{ c.num_mensagens|milhar }}
+                                                    <svg class="ico" width="14" height="14" viewBox="0 0 24 24" stroke-width="2.2" aria-hidden="true" focusable="false"><path d="M9 18l6-6-6-6"/></svg>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {% include "_paginacao.html" with page=page_obj paginas=paginas qs=query_sem_page variante="completa" %}
+                {% endif %}
+            {% endif %}
+        </div>
+    </section>
+{% endblock %}

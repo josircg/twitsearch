@@ -3,37 +3,43 @@
 
 {% block fluid-content %}
     <section id="painel">
-        <div class="container pt-5 pb-5">
+        <div class="pn-wrap">
             {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
+                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} pn-alert" role="alert">{{ message }}</div>
             {% endfor %}
-            <h4 class="mb-4">Meus projetos</h4>
-            <div class="mb-4">
-                <a class="btn btn-primary me-2" href="{% url 'telegram_project' %}">Nova coleta Telegram</a>
-                <a class="btn btn-primary me-2" href="#">Nova coleta Youtube</a>
+            <h1 class="pn-titulo">Meus projetos</h1>
+            <div class="pn-acoes">
+                <a class="pn-btn pn-btn-primario" href="{% url 'telegram_project' %}">Nova coleta Telegram</a>
+                <a class="pn-btn pn-btn-outline" href="{% url 'lista_canais' %}">
+                    <svg class="ico" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>
+                    Listas de Canais
+                </a>
+                <a class="pn-btn pn-btn-primario" href="#">Nova coleta Youtube</a>
                 {% if request.user.is_staff %}
-                    <a class="btn btn-secondary" href="/admin/">Admin</a>
+                    <a class="pn-btn pn-btn-cinza" href="/admin/">Admin</a>
                 {% else %}
-                    <a class="btn btn-secondary disabled" aria-disabled="true">Admin</a>
+                    <a class="pn-btn pn-btn-cinza disabled" aria-disabled="true" role="link">Admin</a>
                 {% endif %}
             </div>
-            {% if projetos %}
-                <table class="table">
-                    <thead>
-                        <tr><th>Nome</th><th>Status</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for projeto in projetos %}
-                            <tr>
-                                <td>{{ projeto.nome }}</td>
-                                <td>{{ projeto.get_status_display }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else %}
-                <p>Nenhum projeto registrado</p>
-            {% endif %}
+            <div class="pn-card">
+                {% if projetos %}
+                    <table class="pn-tabela">
+                        <thead>
+                            <tr><th scope="col">Nome</th><th scope="col">Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for projeto in projetos %}
+                                <tr>
+                                    <td class="pn-nome">{{ projeto.nome }}</td>
+                                    <td><span class="pn-status pn-status-{{ projeto.status }}">{{ projeto.get_status_display }}</span></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="pn-vazio">Nenhum projeto registrado</p>
+                {% endif %}
+            </div>
         </div>
     </section>
 {% endblock %}
