@@ -23,7 +23,7 @@ from django.utils.html import format_html
 from .datalake import PaginaMensagens, busca_mensagens, paginas_visiveis, periodo_canal
 from .forms import FiltroMensagensForm, ImportForm, ImportListaForm, TelegramProjectForm, listas_visiveis
 from .importacao import MAX_LINHAS, importa_lista, le_primeira_coluna
-from .models import Canal, Lista, Categoria
+from .models import Canal, Lista, Categoria, PREFIXO_TELEGRAM
 from core import log_message
 from core.models import Projeto, Termo, TermoStatus, Rede
 
@@ -132,7 +132,7 @@ def telegram_project(request):
             with transaction.atomic():
                 projeto = Projeto.objects.create(nome=dados['nome'], objetivo=dados['objetivo'],
                                                  usuario=request.user, lista_canais=dados['lista'],
-                                                 status=Projeto.Status.ATIVO)
+                                                 status=Projeto.Status.ATIVO, prefix=PREFIXO_TELEGRAM)
                 projeto.redes.add(rede)
                 for busca in dados['termos']:
                     termo = Termo.objects.create(projeto=projeto, busca=busca, dtinicio=dtinicio, dtfinal=dtfinal)

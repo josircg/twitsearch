@@ -1957,6 +1957,21 @@ header {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
 }
+#painel .pn-resultado {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+#painel .pn-resultado:hover {
+  color: #0052CC;
+  text-decoration: underline;
+}
+#painel .pn-resultado:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
 #painel .pn-status {
   background: #EEF2F7;
   border-radius: 20px;

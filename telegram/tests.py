@@ -11,15 +11,19 @@ from django.contrib.auth.models import User
 from django.contrib.messages import get_messages
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.template import Context, Template
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone as dj_timezone
+from django.utils.html import escape
 
 from core.models import Projeto, Rede, Termo, TermoStatus
 from telegram.datalake import PaginaMensagens, busca_mensagens, formata_mensagem, paginas_visiveis, periodo_canal
 from telegram.forms import FiltroMensagensForm, listas_visiveis
-from telegram.models import Canal, Lista
+from telegram.models import Canal, Lista, PREFIXO_TELEGRAM
 from telegram.templatetags.telegram_tags import destaca, milhar
+
+
+RESULTADO = dict(GESTAO_URL='https://gestao.exemplo.br/', PROJETO_HASH_KEY='chave-de-teste')
 
 
 class TelegramProjectTests(TestCase):
@@ -68,6 +72,20 @@ class TelegramProjectTests(TestCase):
         self.assertEqual(TermoStatus.objects.filter(rede=self.rede).count(), 2)
         mensagens = [str(m) for m in self.client.get('/painel/').context['messages']]
         self.assertIn(projeto.url_resumo, mensagens[0])
+
+    def test_post_valido_grava_prefixo_telegram(self):
+        self.client.post(reverse('telegram_project'), self.dados())
+        self.assertEqual(Projeto.objects.get().prefix, PREFIXO_TELEGRAM)
+        self.assertEqual(PREFIXO_TELEGRAM, 'vtrack-telegram')
+
+    @override_settings(**RESULTADO)
+    def test_painel_link_resultado_do_projeto_criado_pelo_formulario(self):
+        self.client.post(reverse('telegram_project'), self.dados())
+        projeto = Projeto.objects.get()
+        html = self.client.get('/painel/').content.decode()
+        self.assertIn('<th scope="col">Resultado</th>', html)
+        self.assertIn(f'href="{escape(projeto.url_resultado)}" target="_blank" rel="noopener">Ver resultado</a>', html)
+        self.assertIn('ds=vtrack-telegram', projeto.url_resultado)
 
     def test_data_final_anterior_rejeitada(self):
         resposta = self.client.post(reverse('telegram_project'), self.dados(dt_final='2024-12-31'))
@@ -440,6 +458,62 @@ class EditarProjetoTests(TestCase):
                 self.client.post(self.url, self.dados(termos='a\nnovo'))
         self.projeto.refresh_from_db()
         self.assertEqual(self.projeto.nome, 'Proj')
+
+    # prefixo
+
+    def test_edicao_nao_altera_prefixo_ajustado_no_admin(self):
+        self.projeto.prefix = 'outro-ds'
+        self.projeto.save(update_fields=['prefix'])
+        resposta = self.client.post(self.url, self.dados())
+        self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
+        self.projeto.refresh_from_db()
+        self.assertEqual((self.projeto.nome, self.projeto.prefix), ('Proj editado', 'outro-ds'))
+
+    def test_edicao_nao_preenche_prefixo_vazio(self):
+        self.client.post(self.url, self.dados())
+        self.projeto.refresh_from_db()
+        self.assertEqual(self.projeto.prefix, '')
+
+    # coluna Resultado do painel
+
+    def test_painel_sem_configuracao_nao_mostra_coluna(self):
+        self.projeto.prefix = PREFIXO_TELEGRAM
+        self.projeto.save(update_fields=['prefix'])
+        for config in ({}, {'GESTAO_URL': 'https://gestao.exemplo.br'}, {'PROJETO_HASH_KEY': 'chave'}):
+            with self.subTest(config=config), override_settings(**{'GESTAO_URL': '', 'PROJETO_HASH_KEY': '', **config}):
+                resposta = self.client.get('/painel/')
+                self.assertFalse(resposta.context['mostrar_resultado'])
+                self.assertNotContains(resposta, 'Resultado')
+                self.assertNotContains(resposta, 'Ver resultado')
+
+    @override_settings(**RESULTADO)
+    def test_painel_coluna_com_link_e_traco(self):
+        self.projeto.prefix = PREFIXO_TELEGRAM
+        self.projeto.save(update_fields=['prefix'])
+        twitter_sem = self.cria_projeto(rede=self.twitter, nome='Twitter sem')
+        twitter_com = self.cria_projeto(rede=self.twitter, nome='Twitter com')
+        twitter_com.prefix = 'twitter'
+        twitter_com.save(update_fields=['prefix'])
+        resposta = self.client.get('/painel/')
+        html = resposta.content.decode()
+        self.assertTrue(resposta.context['mostrar_resultado'])
+        self.assertLess(html.index('>Nome<'), html.index('>Resultado<'))
+        self.assertLess(html.index('>Resultado<'), html.index('>Status<'))
+        for projeto, ds in ((self.projeto, 'vtrack-telegram'), (twitter_com, 'twitter')):
+            link = (f'<a class="pn-resultado" href="{escape(projeto.url_resultado)}" '
+                    f'target="_blank" rel="noopener">Ver resultado</a>')
+            self.assertIn(link, html)
+            self.assertIn(f'ds={ds}', projeto.url_resultado)
+        self.assertIsNone(twitter_sem.url_resultado)
+        self.assertEqual(html.count('Ver resultado'), 2)
+        self.assertEqual(html.count('<td>—</td>'), 1)
+
+    @override_settings(**RESULTADO)
+    def test_painel_com_resultado_sem_n_mais_um(self):
+        for i in range(5):
+            self.cria_projeto(nome=f'P{i}')
+        with self.assertNumQueries(4):  # sessão, usuário, projetos, redes
+            self.client.get('/painel/')
 
     # painel
 

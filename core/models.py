@@ -1,5 +1,7 @@
 from collections import Counter
+from urllib.parse import urlencode
 
+from django.conf import settings
 from django.db import models, connection
 from django.db.models import Sum
 from django.contrib.auth.models import User, Group
@@ -7,6 +9,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
+from core.hash_projeto import token_projeto
 from telegram.models import Lista
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
@@ -105,6 +108,14 @@ class Projeto(models.Model):
     @property
     def url_resumo(self):
         return reverse('core_projeto_stats', args=[self.pk])
+
+    @property
+    def url_resultado(self):
+        gestao_url = getattr(settings, 'GESTAO_URL', '')
+        if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '') and self.prefix):
+            return None
+        params = urlencode({'hash': token_projeto(self.pk, self.prefix), 'ds': self.prefix})
+        return f'{gestao_url.rstrip("/")}/dashboard?{params}'
 
     @property
     def tot_calculado(self):

@@ -43,7 +43,8 @@ def painel(request):
     for projeto in projetos:
         # só projetos Telegram têm tela de edição (redes já carregadas, sem N+1)
         projeto.editavel = any(rede.nome.lower() == 'telegram' for rede in projeto.redes.all())
-    return render(request, 'painel.html', context={'projetos': projetos})
+    mostrar_resultado = bool(getattr(settings, 'GESTAO_URL', '') and getattr(settings, 'PROJETO_HASH_KEY', ''))
+    return render(request, 'painel.html', context={'projetos': projetos, 'mostrar_resultado': mostrar_resultado})
 
 
 def visao(request):

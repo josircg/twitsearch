@@ -7,6 +7,7 @@ from django.contrib import admin, messages
 from django.conf import settings
 from django.shortcuts import render, get_object_or_404
 from django.urls import re_path, reverse
+from django.utils.html import format_html
 
 from core.forms import ProjetoAdminForm
 from core.models import *
@@ -90,7 +91,7 @@ class EixoAdmin(PowerModelAdmin):
 
 @admin.register(Projeto)
 class ProjetoAdmin(PowerModelAdmin):
-    list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits')
+    list_display = ('nome', 'usuario', 'status', 'tot_estimado', 'tot_twits', 'link_resultado')
     search_fields = ('nome', )
     list_filter = ('status', 'grupo')
     fields = ('nome', 'objetivo', 'eixo', 'status', 'redes', 'prefix', 'lista_canais',
@@ -98,6 +99,13 @@ class ProjetoAdmin(PowerModelAdmin):
     list_per_page = 25
     inlines = [TermoInline]
     form = ProjetoAdminForm
+
+    def link_resultado(self, obj):
+        url = obj.url_resultado
+        if not url:
+            return '—'
+        return format_html('<a href="{}" target="_blank" rel="noopener">Ver resultado</a>', url)
+    link_resultado.short_description = 'Resultado'
 
     def get_form(self, request, obj=None, **kwargs):
         form = super(ProjetoAdmin, self).get_form(request, obj, **kwargs)
