@@ -19,7 +19,7 @@ from django.utils.html import escape
 from core.models import Projeto, Rede, Termo, TermoStatus
 from telegram.datalake import PaginaMensagens, busca_mensagens, formata_mensagem, paginas_visiveis, periodo_canal
 from telegram.forms import FiltroMensagensForm, listas_visiveis
-from telegram.models import Canal, Lista, PREFIXO_TELEGRAM
+from telegram.models import Canal, Lista, DS_TELEGRAM
 from telegram.templatetags.telegram_tags import destaca, milhar
 
 
@@ -73,10 +73,9 @@ class TelegramProjectTests(TestCase):
         mensagens = [str(m) for m in self.client.get('/painel/').context['messages']]
         self.assertIn(projeto.url_resumo, mensagens[0])
 
-    def test_post_valido_grava_prefixo_telegram(self):
+    def test_post_valido_nao_grava_prefixo(self):
         self.client.post(reverse('telegram_project'), self.dados())
-        self.assertEqual(Projeto.objects.get().prefix, PREFIXO_TELEGRAM)
-        self.assertEqual(PREFIXO_TELEGRAM, 'vtrack-telegram')
+        self.assertEqual(Projeto.objects.get().prefix, '')
 
     @override_settings(**RESULTADO)
     def test_painel_link_resultado_do_projeto_criado_pelo_formulario(self):
@@ -85,7 +84,7 @@ class TelegramProjectTests(TestCase):
         html = self.client.get('/painel/').content.decode()
         self.assertIn('<th scope="col">Resultado</th>', html)
         self.assertIn(f'href="{escape(projeto.url_resultado)}" target="_blank" rel="noopener">Ver resultado</a>', html)
-        self.assertIn('ds=vtrack-telegram', projeto.url_resultado)
+        self.assertTrue(projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
 
     def test_data_final_anterior_rejeitada(self):
         resposta = self.client.post(reverse('telegram_project'), self.dados(dt_final='2024-12-31'))
@@ -477,8 +476,6 @@ class EditarProjetoTests(TestCase):
     # coluna Resultado do painel
 
     def test_painel_sem_configuracao_nao_mostra_coluna(self):
-        self.projeto.prefix = PREFIXO_TELEGRAM
-        self.projeto.save(update_fields=['prefix'])
         for config in ({}, {'GESTAO_URL': 'https://gestao.exemplo.br'}, {'PROJETO_HASH_KEY': 'chave'}):
             with self.subTest(config=config), override_settings(**{'GESTAO_URL': '', 'PROJETO_HASH_KEY': '', **config}):
                 resposta = self.client.get('/painel/')
@@ -488,7 +485,8 @@ class EditarProjetoTests(TestCase):
 
     @override_settings(**RESULTADO)
     def test_painel_coluna_com_link_e_traco(self):
-        self.projeto.prefix = PREFIXO_TELEGRAM
+        # o link depende só da rede Telegram; o prefixo não interfere
+        self.projeto.prefix = 'vtrack-telegram-test'
         self.projeto.save(update_fields=['prefix'])
         twitter_sem = self.cria_projeto(rede=self.twitter, nome='Twitter sem')
         twitter_com = self.cria_projeto(rede=self.twitter, nome='Twitter com')
@@ -499,14 +497,14 @@ class EditarProjetoTests(TestCase):
         self.assertTrue(resposta.context['mostrar_resultado'])
         self.assertLess(html.index('>Nome<'), html.index('>Resultado<'))
         self.assertLess(html.index('>Resultado<'), html.index('>Status<'))
-        for projeto, ds in ((self.projeto, 'vtrack-telegram'), (twitter_com, 'twitter')):
-            link = (f'<a class="pn-resultado" href="{escape(projeto.url_resultado)}" '
-                    f'target="_blank" rel="noopener">Ver resultado</a>')
-            self.assertIn(link, html)
-            self.assertIn(f'ds={ds}', projeto.url_resultado)
+        link = (f'<a class="pn-resultado" href="{escape(self.projeto.url_resultado)}" '
+                f'target="_blank" rel="noopener">Ver resultado</a>')
+        self.assertIn(link, html)
+        self.assertTrue(self.projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
         self.assertIsNone(twitter_sem.url_resultado)
-        self.assertEqual(html.count('Ver resultado'), 2)
-        self.assertEqual(html.count('<td>—</td>'), 1)
+        self.assertIsNone(twitter_com.url_resultado)
+        self.assertEqual(html.count('Ver resultado'), 1)
+        self.assertEqual(html.count('<td>—</td>'), 2)
 
     @override_settings(**RESULTADO)
     def test_painel_com_resultado_sem_n_mais_um(self):
