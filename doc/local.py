@@ -37,3 +37,8 @@ EMAIL_HOST_PASSWORD = ''
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = ''
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Link "Resultado" do painel (abre o dashboard do projeto no Gestão Minerva).
+# PROJETO_HASH_KEY deve ser igual à do Gestão; para gerar: python -c "import secrets; print(secrets.token_urlsafe())"
+# GESTAO_URL = 'https://gestao.exemplo.br'
+# PROJETO_HASH_KEY = 'xxxxx'

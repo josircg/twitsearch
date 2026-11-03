@@ -68,3 +68,14 @@ CREATE UNLOGGED TABLE IF NOT EXISTS telegram (
 
 CREATE INDEX IF NOT EXISTS idx_telegram_id ON telegram(id);
 CREATE INDEX IF NOT EXISTS idx_telegram_processo ON telegram(processo);
+
+-- Índice para a consulta de mensagens por canal e período (telegram/datalake.py).
+-- O timestamp é sempre ISO 8601 com offset explícito (isoformat() de datetime aware),
+-- então o resultado não depende de DateStyle/TimeZone e a função pode ser IMMUTABLE.
+-- O cast direto ::timestamptz não é IMMUTABLE e seria recusado no índice.
+CREATE OR REPLACE FUNCTION telegram_ts(text) RETURNS timestamptz
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$ SELECT $1::timestamptz $$;
+
+CREATE INDEX IF NOT EXISTS idx_telegram_canal_data
+    ON telegram (((source->>'channel_id')::bigint), telegram_ts(source->>'timestamp'));

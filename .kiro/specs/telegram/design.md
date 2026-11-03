@@ -77,7 +77,7 @@ Pontos de ligação com a `core`:
 - `importacao_canais` — lê CSV (`import_csv`) ou XLSX (`import_xlsx`), normaliza
   usernames (remove `https://t.me/`, `@`, caixa), cria/reaproveita `Canal`,
   associa categorias (respeitando permissão) e adiciona à `Lista`. Montada na
-  URLconf da `core` (`telegram/importacao_canais/`).
+  URLconf da `core` (`telegram/canais/importar/`).
 
 ### 4. Sincronização (`management/commands/sync_channels.py`)
 
