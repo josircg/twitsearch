@@ -1,10 +1,10 @@
-import re
-
 from django.conf import settings
-from django.test import SimpleTestCase, override_settings
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase, override_settings
 
 from core.hash_projeto import hash_projeto, token_projeto
-from core.models import Projeto
+from core.models import Projeto, Rede
+from telegram.models import DS_TELEGRAM
 
 GESTAO = 'https://gestao.exemplo.br'
 
@@ -27,26 +27,40 @@ class HashProjetoTests(SimpleTestCase):
             self.assertNotEqual(base, hash_projeto(7, 'telegram'))
 
 
-class UrlResultadoTests(SimpleTestCase):
+class UrlResultadoTests(TestCase):
 
-    def projeto(self, prefix='telegram'):
-        return Projeto(pk=7, nome='P', prefix=prefix)
+    @classmethod
+    def setUpTestData(cls):
+        cls.telegram = Rede.objects.create(nome='Telegram')
+        cls.twitter = Rede.objects.create(nome='Twitter')
+        cls.user = User.objects.create_user('ana', password='x')
+
+    def projeto(self, rede=None, prefix=''):
+        projeto = Projeto.objects.create(nome='P', objetivo='x', usuario=self.user, prefix=prefix)
+        projeto.redes.add(rede or self.telegram)
+        return projeto
 
     @override_settings(GESTAO_URL=GESTAO, PROJETO_HASH_KEY='chave-a')
-    def test_url_completa(self):
-        url = self.projeto().url_resultado
-        self.assertEqual(url, f'{GESTAO}/dashboard?hash={token_projeto(7, "telegram")}&ds=telegram')
-        self.assertRegex(url, r'hash=7-[0-9a-f]{32}&ds=telegram$')
+    def test_url_completa_com_ds_telegram(self):
+        projeto = self.projeto()
+        url = projeto.url_resultado
+        self.assertEqual(DS_TELEGRAM, 'telegram')
+        self.assertEqual(url, f'{GESTAO}/dashboard?hash={token_projeto(projeto.pk, "telegram")}&ds=telegram')
+        self.assertRegex(url, rf'hash={projeto.pk}-[0-9a-f]{{32}}&ds=telegram$')
+
+    @override_settings(GESTAO_URL=GESTAO, PROJETO_HASH_KEY='chave-a')
+    def test_prefixo_nao_altera_o_link(self):
+        projeto = self.projeto(prefix='vtrack-telegram-test')
+        self.assertEqual(projeto.url_resultado,
+                         f'{GESTAO}/dashboard?hash={token_projeto(projeto.pk, "telegram")}&ds=telegram')
 
     @override_settings(GESTAO_URL=GESTAO + '/', PROJETO_HASH_KEY='chave-a')
     def test_barra_final_do_gestao_url_e_ignorada(self):
         self.assertTrue(self.projeto().url_resultado.startswith(f'{GESTAO}/dashboard?'))
 
     @override_settings(GESTAO_URL=GESTAO, PROJETO_HASH_KEY='chave-a')
-    def test_parametros_codificados(self):
-        url = self.projeto(prefix='a b&c').url_resultado
-        self.assertTrue(url.endswith('&ds=a+b%26c'))
-        self.assertEqual(len(re.findall(r'\?hash=', url)), 1)
+    def test_none_para_projeto_sem_rede_telegram(self):
+        self.assertIsNone(self.projeto(rede=self.twitter, prefix='twitter').url_resultado)
 
     @override_settings(GESTAO_URL='', PROJETO_HASH_KEY='chave-a')
     def test_none_sem_gestao_url(self):
@@ -55,10 +69,6 @@ class UrlResultadoTests(SimpleTestCase):
     @override_settings(GESTAO_URL=GESTAO, PROJETO_HASH_KEY='')
     def test_none_sem_chave(self):
         self.assertIsNone(self.projeto().url_resultado)
-
-    @override_settings(GESTAO_URL=GESTAO, PROJETO_HASH_KEY='chave-a')
-    def test_none_sem_prefixo(self):
-        self.assertIsNone(self.projeto(prefix='').url_resultado)
 
     def test_none_quando_settings_nao_define_as_chaves(self):
         # o local.py não é versionado e pode não ter GESTAO_URL/PROJETO_HASH_KEY

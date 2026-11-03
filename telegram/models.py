@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# dataset (slug do DataSource no Gestão) dos projetos criados pelo formulário Telegram
-PREFIXO_TELEGRAM = 'vtrack-telegram'
+# dataset (slug do DataSource no Gestão) aberto pelo link "Resultado"; não depende do Projeto.prefix
+DS_TELEGRAM = 'telegram'
 
 
 class Categoria(models.Model):

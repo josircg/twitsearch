@@ -6,9 +6,9 @@ Funcionalidade que cruza dois sistemas:
 - **Capitu** (este repositório, `twitsearch`): cadastra projetos e termos e controla os usuários. Há **um** ambiente.
 - **Gestão Minerva** (repositório irmão `gestao-minerva`): mostra o resultado das buscas (dashboard, dataset, alertas e registros), lendo do OpenSearch. Há **vários** ambientes, cada um com seu `local.py` e seu cadastro de `DataSource`.
 
-Hoje o Gestão abre um dataset inteiro, escolhido por `?ds=<slug>` (ex.: `ds=vtrack-telegram`). O acesso depende do usuário logado no Gestão pertencer a um grupo do `DataSource`. Alguns usuários do Capitu não terão acesso ao dataset inteiro: devem ver **apenas o próprio projeto**.
+Hoje o Gestão abre um dataset inteiro, escolhido por `?ds=<slug>` (ex.: `ds=telegram`). O acesso depende do usuário logado no Gestão pertencer a um grupo do `DataSource`. Alguns usuários do Capitu não terão acesso ao dataset inteiro: devem ver **apenas o próprio projeto**.
 
-O Gestão não acessa o controle de usuários do Capitu. Por isso, o Capitu gera um link para o dashboard no formato `?hash={projeto.id}-{hash}&ds={projeto.prefix}`, e o Gestão valida o hash. **Quem tem o link vê o resultado daquele projeto, naquele dataset, e só dele, sem login.** Não há chamada entre os sistemas.
+O Gestão não acessa o controle de usuários do Capitu. Por isso, o Capitu gera um link para o dashboard no formato `?hash={projeto.id}-{hash}&ds=telegram`, e o Gestão valida o hash. **Quem tem o link vê o resultado daquele projeto, naquele dataset, e só dele, sem login.** Não há chamada entre os sistemas.
 
 ### Como o `ds` funciona hoje no Gestão
 - `?ds=<slug>` só é lido em `dashboards` e `alerts_view`. Essas views chamam `set_opensearch_index`, que grava `session['opensearch_index']`.
@@ -19,7 +19,7 @@ O acesso por projeto SHALL seguir o mesmo mecanismo: ser gravado **uma vez** na 
 
 ### Premissas
 - Nos documentos do OpenSearch, `monitoramento_id` = `Projeto.id`, `monitoramento_nome` = `Projeto.nome` e `busca_id` = `Termo.id` do Capitu.
-- **`Projeto.prefix` = slug do `DataSource` no Gestão.** O prefixo é enviado ao pipeline de ingestão como `projeto_index` (`/api/termos/<rede_id>`). Para projetos Telegram, ele SHALL ser `vtrack-telegram`, que é o slug do `DataSource` do Telegram no Gestão (req. 3).
+- **O dataset do link é fixo: `telegram`** (constante `DS_TELEGRAM`), o slug do `DataSource` do Telegram no Gestão. Ele **não** vem de `Projeto.prefix` (req. 3).
 
 ## Requisitos — Capitu
 
@@ -27,29 +27,29 @@ O acesso por projeto SHALL seguir o mesmo mecanismo: ser gravado **uma vez** na 
 **User story:** Como sistema, quero gerar para cada projeto um token que só o Capitu e o Gestão saibam calcular.
 
 Critérios de aceite:
-1. O token SHALL ter o formato `{projeto.id}-{hash}`, com `hash` = HMAC-SHA256 de `"projeto:{projeto.id}:{ds}"`, onde `ds` = `projeto.prefix`, usando a chave secreta `PROJETO_HASH_KEY`, em hexadecimal e truncado em 32 caracteres.
-2. O `ds` entra no cálculo do hash. Assim, trocar `ds=vtrack-telegram` por outro dataset invalida o link, e o token não serve para ler um dataset de outra origem, onde `monitoramento_id` pode significar outra coisa.
+1. O token SHALL ter o formato `{projeto.id}-{hash}`, com `hash` = HMAC-SHA256 de `"projeto:{projeto.id}:{ds}"`, onde `ds` = `DS_TELEGRAM` (`'telegram'`), usando a chave secreta `PROJETO_HASH_KEY`, em hexadecimal e truncado em 32 caracteres.
+2. O `ds` entra no cálculo do hash. Assim, trocar `ds=telegram` por outro dataset invalida o link, e o token não serve para ler um dataset de outra origem, onde `monitoramento_id` pode significar outra coisa.
 3. A chave `PROJETO_HASH_KEY` SHALL ser configurada em `local.py`, com o mesmo valor, no Capitu e em todo ambiente do Gestão que aceitar o link (req. 10). Ela SHALL NOT trafegar em URL e é distinta de `AUTH_KEYS`/`CAPITU_KEY`.
-4. O token SHALL ser determinístico: o mesmo projeto e prefixo geram sempre o mesmo token enquanto a chave não mudar.
+4. O token SHALL ser determinístico: o mesmo projeto gera sempre o mesmo token enquanto a chave não mudar.
 
 ### 2. Link "Resultado"
 Critérios de aceite:
-1. `Projeto.url_resultado` SHALL retornar `{GESTAO_URL}/dashboard?hash={token}&ds={prefix}`, com os parâmetros codificados (`urlencode`).
-2. `url_resultado` SHALL retornar `None` WHEN qualquer um destes estiver vazio: `GESTAO_URL`, `PROJETO_HASH_KEY` ou `projeto.prefix`.
+1. `Projeto.url_resultado` SHALL retornar `{GESTAO_URL}/dashboard?hash={token}&ds=telegram`, com os parâmetros codificados (`urlencode`).
+2. `url_resultado` SHALL retornar `None` WHEN `GESTAO_URL` ou `PROJETO_HASH_KEY` estiver vazio, ou WHEN o projeto não tiver a rede Telegram.
 3. A tabela de projetos de `/painel/` SHALL ganhar a coluna **Resultado**, entre Nome e Status, exibida quando `GESTAO_URL` e `PROJETO_HASH_KEY` estão configurados.
-4. Cada linha SHALL exibir um link "Ver resultado" para `url_resultado`, que abre em nova aba (`target="_blank"`, `rel="noopener"`). WHEN `url_resultado` é `None` (projeto sem prefixo) THEN a célula SHALL exibir "—".
+4. Cada linha SHALL exibir um link "Ver resultado" para `url_resultado`, que abre em nova aba (`target="_blank"`, `rel="noopener"`). WHEN `url_resultado` é `None` (projeto sem a rede Telegram) THEN a célula SHALL exibir "—".
 5. O link SHALL aparecer em projetos de qualquer status. Projetos ainda sem dados mostram o dashboard vazio (ver Pendências, item 1).
 6. (Opcional) O admin de `Projeto` SHALL exibir o mesmo link em `list_display`, para a equipe interna.
 
-### 3. Prefixo `vtrack-telegram` nos projetos Telegram
-**User story:** Como sistema, quero que todo projeto Telegram já nasça com o dataset correto, para que o link "Resultado" funcione sem configuração manual.
+### 3. Dataset fixo `telegram`, sem usar o prefixo
+**User story:** Como sistema, quero que o link "Resultado" abra sempre o dataset do Telegram, sem depender de um campo que é preenchido à mão.
 
 Critérios de aceite:
-1. Ao criar o projeto em `/telegram/projetos/novo/` (`telegram_project`), o sistema SHALL gravar `Projeto.prefix = 'vtrack-telegram'`, sempre e sem campo no formulário.
-2. A edição em `editar_projeto` SHALL NOT alterar o prefixo. Ela continua gravando só `nome`, `objetivo` e `lista_canais`.
-3. O valor SHALL vir de uma constante única (`PREFIXO_TELEGRAM = 'vtrack-telegram'`), e não de literais espalhados.
-4. Projetos já existentes SHALL NOT ser alterados automaticamente (sem migração de dados). O prefixo deles é preenchido manualmente no admin, e até lá a coluna "Resultado" exibe "—" (req. 2.4).
-5. A criação pelo formulário SHALL NOT disparar o registro no catálogo `catalogo-vtrack`, que hoje só existe no `ProjetoAdminForm.save` do admin.
+1. O `ds` do link e do hash SHALL vir de uma constante única, `DS_TELEGRAM = 'telegram'` (`telegram/models.py`), e não de literais espalhados.
+2. O link SHALL NOT usar `Projeto.prefix`. Um prefixo preenchido no admin (ex.: `vtrack-telegram-test`) não altera o link.
+3. O formulário `/telegram/projetos/novo/` (`telegram_project`) SHALL NOT gravar `Projeto.prefix`. O campo continua existindo no admin para outros usos, mas fica fora desta funcionalidade.
+4. A edição em `editar_projeto` SHALL NOT alterar o prefixo. Ela continua gravando só `nome`, `objetivo` e `lista_canais`.
+5. O link SHALL aparecer só para projetos com a rede Telegram. Projetos de outras redes exibem "—" (req. 2.4).
 
 ## Requisitos — Gestão
 
@@ -143,8 +143,9 @@ Critérios de aceite:
 
 ## Fora de escopo
 - Qualquer API ou chamada entre Capitu e Gestão para esta funcionalidade.
-- Prefixo automático para projetos existentes ou de outras redes (Twitter/YouTube). O prefixo é preenchido manualmente no admin.
-- Filtrar o painel por rede. Ele continua listando todos os projetos do usuário (spec `painel-projetos`, req. 4.1), e a coluna "Resultado" mostra o link só para os que têm prefixo.
+- Usar `Projeto.prefix` para escolher o dataset do link, ou gravar prefixo pelo formulário Telegram.
+- Link "Resultado" para projetos de outras redes (Twitter/YouTube).
+- Filtrar o painel por rede. Ele continua listando todos os projetos do usuário (spec `painel-projetos`, req. 4.1), e a coluna "Resultado" mostra o link só para os projetos Telegram.
 - Revogar o link de um projeto específico (ver Decisões, item 4).
 - Criar usuários no Gestão a partir do Capitu, ou sincronizar usuários entre os dois.
 - Alterar o pipeline de ingestão (Mage/vtrack) ou o mapeamento dos documentos no OpenSearch.
@@ -152,11 +153,11 @@ Critérios de aceite:
 ## Pendências
 1. **Pré-requisito para projetos Telegram.** A pendência P1 de `telegram-projeto` continua aberta: a coleta não associa as mensagens a termos e projetos, e `export_telegram` não filtra por termo. Enquanto isso não for resolvido, provavelmente não haverá documentos com o `monitoramento_id` desses projetos, e o link "Resultado" abrirá um dashboard vazio.
 2. **Valores fixos no Gestão.** `monitoramento_id: 86` (`opensearch_query.py`) e `'19'` (`dashboards.html`) devem ser revistos no fluxo normal. Esta entrega apenas garante que o acesso por projeto não chegue a eles.
-3. **`projeto_index = 'vtrack-telegram'` no pipeline.** Com o prefixo preenchido, `/api/termos/4` passa a enviar `projeto_index = 'vtrack-telegram'`. Falta confirmar com quem mantém o pipeline que esse valor grava os documentos no índice lido pelo `DataSource` `vtrack-telegram` (ou que é ignorado para Telegram).
+3. **`DataSource` `telegram` em cada ambiente.** O Gestão responde 404 ao link se o ambiente não tiver um `DataSource` com slug `telegram`. Ele deve existir e apontar para o índice onde ficam os documentos do Telegram.
 
 ## Decisões
 1. **Ambiente de destino:** único. O link "Resultado" sempre aponta para o `GESTAO_URL` configurado no Capitu (req. 10.1).
 2. **Ações de escrita no dataset:** bloqueadas pelo link. Arquivar e aplicar tag continuam restritos a usuários logados (req. 7.5).
-3. **Prefixo:** só os projetos criados pelo formulário Telegram recebem `vtrack-telegram` automaticamente. Os demais são preenchidos manualmente no admin (req. 3.4).
+3. **Dataset do link:** fixo em `telegram` (`DS_TELEGRAM`), sem usar `Projeto.prefix`. Antes o link usava o prefixo; um prefixo preenchido à mão em produção (`vtrack-telegram-test`) apontava para um dataset inexistente no Gestão e dava 404 (req. 3).
 4. **Revogação:** fica fora de escopo. Hoje só é possível trocando a chave em todos os ambientes (req. 10.4), o que derruba todos os links.
 5. **Exportação CSV:** bloqueada pelo link (req. 8). O link serve só para visualizar.

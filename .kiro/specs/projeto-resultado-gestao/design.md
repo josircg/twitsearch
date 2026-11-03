@@ -4,12 +4,12 @@
 ```
 Capitu (1 ambiente)                       Gestão (N ambientes)
 GESTAO_URL, PROJETO_HASH_KEY              PROJETO_HASH_KEY (mesmo valor)
-Projeto.prefix = 'vtrack-telegram'
+DS_TELEGRAM = 'telegram'
 
-/painel/ ──"Ver resultado"──▶  {GESTAO_URL}/dashboard?hash={id}-{hmac(id, ds)}&ds=vtrack-telegram
+/painel/ ──"Ver resultado"──▶  {GESTAO_URL}/dashboard?hash={id}-{hmac(id, ds)}&ds=telegram
                                  │ 1. valida HMAC do par (id, ds), sem rede
                                  │ 2. session['projeto_acesso'] = id
-                                 │    session['opensearch_index'] = 'vtrack-telegram'  (sem checar grupo)
+                                 │    session['opensearch_index'] = 'telegram'  (sem checar grupo)
                                  │ 3. 302 → /dashboard  (hash some da URL)
                                  ▼
                               /dashboard ─▶ /dataset?page=2 ─▶ /visualization/<id> ─▶ /alerts
@@ -17,7 +17,7 @@ Projeto.prefix = 'vtrack-telegram'
                                monitoramento_id = id forçado no cliente OpenSearch)
 ```
 
-O `ds` vem do `Projeto.prefix` e entra no HMAC. Por isso o Gestão não precisa de cadastro extra para saber quais datasets aceitam o link: só o par (projeto, ds) assinado pelo Capitu é aceito.
+O `ds` é fixo (`DS_TELEGRAM = 'telegram'`), não vem do `Projeto.prefix`, e entra no HMAC. Por isso o Gestão não precisa de cadastro extra para saber quais datasets aceitam o link: só o par (projeto, ds) assinado pelo Capitu é aceito.
 
 ## Capitu (`twitsearch`)
 
@@ -25,11 +25,11 @@ O `ds` vem do `Projeto.prefix` e entra no HMAC. Por isso o Gestão não precisa 
 |---|---|
 | `core/hash_projeto.py` (novo) | `hash_projeto(projeto_id, ds)` e `token_projeto(projeto_id, ds)` |
 | `core/models.py` | Propriedade `Projeto.url_resultado` (sem migração de esquema) |
-| `telegram/models.py` | Constante `PREFIXO_TELEGRAM = 'vtrack-telegram'` |
-| `telegram/views.py` | `telegram_project`: `Projeto.objects.create(..., prefix=PREFIXO_TELEGRAM)`. `editar_projeto` fica como está (`update_fields` sem `prefix`) |
+| `telegram/models.py` | Constante `DS_TELEGRAM = 'telegram'`: dataset do link "Resultado" |
+| `telegram/views.py` | `telegram_project` **não** grava `prefix`. `editar_projeto` fica como está (`update_fields` sem `prefix`) |
 | `templates/painel.html` | Coluna "Resultado" condicional (`{% if mostrar_resultado %}`); "—" quando `url_resultado` é `None` |
 | `core/views.py` | `painel` passa `mostrar_resultado = bool(GESTAO_URL and PROJETO_HASH_KEY)` |
-| `core/admin.py` | (Opcional) `link_resultado` em `ProjetoAdmin.list_display` |
+| `core/admin.py` | (Opcional) `link_resultado` em `ProjetoAdmin.list_display`, com `prefetch_related('redes')` no `get_queryset` |
 | `doc/local.py` | Exemplo de `GESTAO_URL` e `PROJETO_HASH_KEY` |
 
 ```python
@@ -50,15 +50,20 @@ def token_projeto(projeto_id, ds):
 # core/models.py — Projeto
 @property
 def url_resultado(self):
+    # só projetos Telegram; o ds é sempre DS_TELEGRAM (redes vêm do prefetch no painel e no admin)
     gestao_url = getattr(settings, 'GESTAO_URL', '')
-    if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '') and self.prefix):
+    if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '')):
         return None
-    params = urlencode({'hash': token_projeto(self.pk, self.prefix), 'ds': self.prefix})
+    if not any(rede.nome.lower() == 'telegram' for rede in self.redes.all()):
+        return None
+    params = urlencode({'hash': token_projeto(self.pk, DS_TELEGRAM), 'ds': DS_TELEGRAM})
     return f'{gestao_url.rstrip("/")}/dashboard?{params}'
 ```
 
-### Projetos existentes
-Não há migração de dados. O painel lista todos os projetos do usuário, de qualquer rede. Os que não têm prefixo, inclusive projetos Telegram antigos, exibem "—" na coluna "Resultado" até o prefixo ser preenchido manualmente no admin.
+### Por que o `ds` não vem do prefixo
+Na primeira versão o link usava `Projeto.prefix`, gravado como `vtrack-telegram` pelo formulário ou preenchido à mão no admin. Em produção, um projeto com o prefixo `vtrack-telegram-test` gerou um link para um dataset que não existe no Gestão, e a entrada respondeu 404. O `ds` passou a ser a constante `DS_TELEGRAM`, e o formulário deixou de gravar o prefixo.
+
+O painel continua listando todos os projetos do usuário. Os projetos Telegram, inclusive os antigos, ganham o link sem nenhum ajuste. Os de outras redes exibem "—". O painel já carrega as redes com `prefetch_related`, então o teste de rede não gera consultas extras.
 
 ## Gestão (`gestao-minerva`)
 
@@ -184,24 +189,24 @@ Só `dashboards` trata `?hash=`. Nas outras views, `login_or_projeto_required` i
 - **O `ds` entra no HMAC.** Isso fixa o dataset no link e dispensa um cadastro extra no Gestão para dizer quais datasets aceitam projetos do Capitu. O formato visível continua `{id}-{hash}`.
 - **A entrada é pelo próprio `/dashboard`**, como o `?ds=` atual, e redireciona para tirar o `hash` da URL.
 - **Sem API entre os sistemas.** O token traz o `projeto.id`, que é o `monitoramento_id`. O nome vem de `monitoramento_nome` nos documentos.
-- **O prefixo é gravado na criação, e não na edição.** Um prefixo ajustado depois no admin não é sobrescrito ao editar o projeto pela tela do usuário.
+- **O `ds` é uma constante, não o prefixo.** Um campo preenchido à mão não pode quebrar o link. O formulário não grava `prefix`, e a edição não o altera.
 - **A sessão anônima** do Django guarda o acesso. Não é criado usuário. `request.user` continua `AnonymousUser`. Por isso `list_results_view` precisa tratar `can_archive_record` sem `request.user.groups` (fica `False`).
 
 ## Testes
 
 ### Capitu
-- `token_projeto(7, 'vtrack-telegram')` tem o formato `7-<32 hex>` e é estável. Com outro `ds` ou outra chave, o hash muda.
-- `url_resultado` = `{GESTAO_URL}/dashboard?hash=7-…&ds=vtrack-telegram`. É `None` sem `GESTAO_URL`, sem `PROJETO_HASH_KEY` ou com `prefix` vazio.
-- `telegram_project` (POST válido) cria o projeto com `prefix='vtrack-telegram'`. `editar_projeto` não altera o prefixo, nem um prefixo trocado no admin.
-- Painel: a coluna "Resultado" aparece com a configuração completa. Projeto Telegram criado pelo formulário → link com `target="_blank"`. Projeto Twitter sem prefixo → "—". Projeto Twitter com prefixo preenchido no admin → link com o `ds` desse prefixo. Sem configuração, a coluna não aparece.
+- `token_projeto(7, 'telegram')` tem o formato `7-<32 hex>` e é estável. Com outro `ds` ou outra chave, o hash muda.
+- `url_resultado` = `{GESTAO_URL}/dashboard?hash=7-…&ds=telegram` para projeto Telegram, mesmo com prefixo preenchido (ex.: `vtrack-telegram-test`). É `None` sem `GESTAO_URL`, sem `PROJETO_HASH_KEY` ou para projeto sem a rede Telegram.
+- `telegram_project` (POST válido) cria o projeto com `prefix` vazio. `editar_projeto` não altera o prefixo, nem um prefixo trocado no admin.
+- Painel: a coluna "Resultado" aparece com a configuração completa. Projeto Telegram (com ou sem prefixo) → link com `target="_blank"` e `ds=telegram`. Projetos Twitter, com ou sem prefixo → "—". Com a coluna ligada, o painel continua com 4 consultas. Sem configuração, a coluna não aparece.
 
 ### Gestão (`dashboards/tests.py`, OpenSearch mockado)
-- `GET /dashboard?hash=<válido>&ds=vtrack-telegram` anônimo → 302 para `/dashboard`, sessão com `projeto_acesso = 7` e `opensearch_index = 'vtrack-telegram'`, sem checar grupo.
-- Hash alterado, id trocado, `ds` trocado (`ds=gestao` com o hash de `vtrack-telegram`) ou `ds` ausente → 403, sessão inalterada.
+- `GET /dashboard?hash=<válido>&ds=telegram` anônimo → 302 para `/dashboard`, sessão com `projeto_acesso = 7` e `opensearch_index = 'telegram'`, sem checar grupo.
+- Hash alterado, id trocado, `ds` trocado (`ds=gestao` com o hash de `telegram`) ou `ds` ausente → 403, sessão inalterada.
 - Hash válido para um `ds` sem `DataSource` no ambiente → 404.
 - Sem `PROJETO_HASH_KEY` → o `hash` é ignorado e o anônimo vai para o login.
-- **Persistência:** depois da entrada, `GET /dataset?page=2`, `GET /dataset?rede=x`, `GET /alerts` e `GET /visualization/<id>` (sem `hash`, `ds` ou `monitoramento_id`) funcionam como anônimo e consultam o índice `vtrack-telegram` com `monitoramento_id = 7`.
-- `GET /dashboard?ds=gestao` (sem `hash`) no modo projeto → ignorado, continua `vtrack-telegram`.
+- **Persistência:** depois da entrada, `GET /dataset?page=2`, `GET /dataset?rede=x`, `GET /alerts` e `GET /visualization/<id>` (sem `hash`, `ds` ou `monitoramento_id`) funcionam como anônimo e consultam o índice `telegram` com `monitoramento_id = 7`.
+- `GET /dashboard?ds=gestao` (sem `hash`) no modo projeto → ignorado, continua `telegram`.
 - Dashboard com `?monitoramento_id=99` → a consulta tem `monitoramento_id = 7`.
 - **Todo** corpo enviado ao client mockado (`search`, `count` e cada consulta do `msearch`) no dashboard, no dataset e em alertas contém `{'term': {'monitoramento_id': 7}}`, inclusive com `busca_id` de outro projeto.
 - O HTML do dashboard e o de alertas não contêm nome nem id de outro projeto.

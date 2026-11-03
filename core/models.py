@@ -10,7 +10,7 @@ from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
 from core.hash_projeto import token_projeto
-from telegram.models import Lista
+from telegram.models import Lista, DS_TELEGRAM
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
 PROC_PREMIUM = 'A'      # Importação Premium/Básica (antiga Academic)
@@ -111,10 +111,13 @@ class Projeto(models.Model):
 
     @property
     def url_resultado(self):
+        # só projetos Telegram; o ds é sempre DS_TELEGRAM (redes vêm do prefetch no painel e no admin)
         gestao_url = getattr(settings, 'GESTAO_URL', '')
-        if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '') and self.prefix):
+        if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '')):
             return None
-        params = urlencode({'hash': token_projeto(self.pk, self.prefix), 'ds': self.prefix})
+        if not any(rede.nome.lower() == 'telegram' for rede in self.redes.all()):
+            return None
+        params = urlencode({'hash': token_projeto(self.pk, DS_TELEGRAM), 'ds': DS_TELEGRAM})
         return f'{gestao_url.rstrip("/")}/dashboard?{params}'
 
     @property
