@@ -1,0 +1,31 @@
+{% load i18n %}
+{# Inline tabular somente leitura: não renderiza inputs hidden (id/fk) por linha, #}
+{# evitando estourar DATA_UPLOAD_MAX_NUMBER_FIELDS em listas com muitos canais. #}
+<div class="inline-group" id="{{ inline_admin_formset.formset.prefix }}-group">
+  <div class="tabular inline-related {% if forloop.last %}last-related{% endif %}">
+{{ inline_admin_formset.formset.management_form }}
+<fieldset class="module">
+   <h2>{{ inline_admin_formset.opts.verbose_name_plural|capfirst }}</h2>
+   <table>
+     <thead><tr>
+     {% for field in inline_admin_formset.fields %}
+       <th class="column-{{ field.name }}">{{ field.label|capfirst }}</th>
+     {% endfor %}
+     </tr></thead>
+     <tbody>
+     {% for inline_admin_form in inline_admin_formset %}
+        <tr class="form-row">
+        {% for fieldset in inline_admin_form %}
+          {% for line in fieldset %}
+            {% for field in line %}
+              <td class="field-{{ field.field.name }}"><p>{{ field.contents }}</p></td>
+            {% endfor %}
+          {% endfor %}
+        {% endfor %}
+        </tr>
+     {% endfor %}
+     </tbody>
+   </table>
+</fieldset>
+  </div>
+</div>

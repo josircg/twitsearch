@@ -1,6 +1,9 @@
 from typing import Any
 
 from django.contrib import admin, messages
+from django.forms.models import BaseInlineFormSet
+from django.urls import reverse
+from django.utils.html import format_html
 
 from core.models import TermoStatus
 from .models import Canal, Lista, APIKeys, Categoria
@@ -30,17 +33,62 @@ class CanalAdmin(PowerModelAdmin):
         return
 
 
-class CanalTabularInline(PowerTabularInline):
+class ReadOnlyInlineFormSet(BaseInlineFormSet):
+    """Formset que ignora o POST: é só exibição, nunca valida nem grava nada."""
+
+    def __init__(self, data=None, files=None, *args, **kwargs):
+        super().__init__(None, None, *args, **kwargs)
+
+    def is_valid(self):
+        return True
+
+
+class CanalReadOnlyInline(PowerTabularInline):
+    """Lista os canais da lista somente para leitura.
+
+    Usa um template próprio sem os inputs hidden por linha (id/fk) que o
+    inline padrão do Django renderiza, pois eles estouram
+    DATA_UPLOAD_MAX_NUMBER_FIELDS em listas com muitos canais.
+    """
     model = Lista.canais.through
-    autocomplete_fields = ['canal']
+    formset = ReadOnlyInlineFormSet
+    template = 'admin/telegram/canais_readonly_inline.html'
+    verbose_name_plural = 'Canais'
     extra = 0
+    fields = ('username', 'titulo', 'status')
+    readonly_fields = ('username', 'titulo', 'status')
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('canal').order_by('canal__username')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description='Canal')
+    def username(self, obj):
+        return format_html('<a href="{}">{}</a>',
+                           reverse('admin:telegram_canal_change', args=(obj.canal_id,)), obj.canal.username)
+
+    @admin.display(description='Título')
+    def titulo(self, obj):
+        return obj.canal.titulo or ''
+
+    @admin.display(description='Status')
+    def status(self, obj):
+        return obj.canal.get_status_display()
 
 
 @admin.register(Lista)
 class ListaAdmin(PowerModelAdmin):
     list_display = ('nome', 'publica', 'tot_canais', 'canais_ativos')
     fields = ('nome', 'publica',)
-    inlines = (CanalTabularInline,)
+    inlines = (CanalReadOnlyInline,)
 
     def save_model(self, request, obj, form, change):
         obj.dono = request.user
