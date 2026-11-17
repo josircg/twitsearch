@@ -37,7 +37,19 @@ def index(request):
     return render(request, 'home.html', context={'hello': 'world'})
 
 
-@login_required(login_url='/admin/login/')
+def admin_login(request):
+    """Substitui /admin/login/: manda para o login próprio, preservando o ?next=."""
+    if request.user.is_authenticated and not request.user.is_staff:
+        # sem isso, /admin/ -> login -> next=/admin/ entraria em loop para quem não é staff
+        messages.error(request, 'Sua conta não tem acesso à administração.')
+        return redirect('painel')
+    url = reverse('login')
+    if request.GET:
+        url += '?' + request.GET.urlencode()
+    return redirect(url)
+
+
+@login_required
 def painel(request):
     projetos = list(Projeto.objects.filter(usuario=request.user).order_by('nome').prefetch_related('redes'))
     for projeto in projetos:

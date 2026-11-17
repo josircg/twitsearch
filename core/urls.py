@@ -1,3 +1,4 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path, re_path
 from django.views.generic import RedirectView
 
@@ -14,6 +15,15 @@ urlpatterns = [
     re_path(r'^$', index),
     re_path(r'^visao/$', visao),
     path('painel/', painel, name='painel'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True),
+         name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('senha/redefinir/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('senha/redefinir/enviado/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('senha/redefinir/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(),
+         name='password_reset_confirm'),
+    path('senha/redefinir/concluido/', auth_views.PasswordResetCompleteView.as_view(),
+         name='password_reset_complete'),
     re_path(r'^solicita_busca/(?P<termo_id>\d+)/$', solicita_busca, name='solicita_busca'),
     re_path(r'^estatistica/(?P<project_id>\d+)/$', stats, name='core_projeto_stats'),
     re_path(r'^estatistica/(?P<project_id>\d+)/(?P<termo_id>\d+)/$', stats, name='core_projeto_stats'),
