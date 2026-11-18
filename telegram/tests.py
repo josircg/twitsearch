@@ -19,11 +19,12 @@ from django.utils.html import escape
 from core.models import Projeto, Rede, Termo, TermoStatus
 from telegram.datalake import PaginaMensagens, busca_mensagens, formata_mensagem, paginas_visiveis, periodo_canal
 from telegram.forms import FiltroMensagensForm, listas_visiveis
-from telegram.models import Canal, Lista, PREFIXO_TELEGRAM
+from telegram.models import Canal, Lista, DS_TELEGRAM
 from telegram.templatetags.telegram_tags import destaca, milhar
+from twitsearch.test_credentials import CHAVE_HASH, SENHA_USUARIO
 
 
-RESULTADO = dict(GESTAO_URL='https://gestao.exemplo.br/', PROJETO_HASH_KEY='chave-de-teste')
+RESULTADO = dict(GESTAO_URL='https://gestao.exemplo.br/', PROJETO_HASH_KEY=CHAVE_HASH)
 
 
 class TelegramProjectTests(TestCase):
@@ -31,8 +32,8 @@ class TelegramProjectTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.rede = Rede.objects.create(nome='Telegram')
-        cls.user = User.objects.create_user('ana', password='x')
-        cls.outro = User.objects.create_user('bia', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.outro = User.objects.create_user('bia', password=SENHA_USUARIO)
         cls.publica = Lista.objects.create(nome='Publica', dono=cls.outro, publica=True)
         cls.propria = Lista.objects.create(nome='Propria', dono=cls.user)
         cls.alheia = Lista.objects.create(nome='Alheia', dono=cls.outro)
@@ -51,7 +52,7 @@ class TelegramProjectTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(reverse('telegram_project')), self.client.post(reverse('telegram_project'), self.dados())):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_get_lista_publicas_e_proprias(self):
@@ -73,10 +74,9 @@ class TelegramProjectTests(TestCase):
         mensagens = [str(m) for m in self.client.get('/painel/').context['messages']]
         self.assertIn(projeto.url_resumo, mensagens[0])
 
-    def test_post_valido_grava_prefixo_telegram(self):
+    def test_post_valido_nao_grava_prefixo(self):
         self.client.post(reverse('telegram_project'), self.dados())
-        self.assertEqual(Projeto.objects.get().prefix, PREFIXO_TELEGRAM)
-        self.assertEqual(PREFIXO_TELEGRAM, 'vtrack-telegram')
+        self.assertEqual(Projeto.objects.get().prefix, '')
 
     @override_settings(**RESULTADO)
     def test_painel_link_resultado_do_projeto_criado_pelo_formulario(self):
@@ -85,7 +85,7 @@ class TelegramProjectTests(TestCase):
         html = self.client.get('/painel/').content.decode()
         self.assertIn('<th scope="col">Resultado</th>', html)
         self.assertIn(f'href="{escape(projeto.url_resultado)}" target="_blank" rel="noopener">Ver resultado</a>', html)
-        self.assertIn('ds=vtrack-telegram', projeto.url_resultado)
+        self.assertTrue(projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
 
     def test_data_final_anterior_rejeitada(self):
         resposta = self.client.post(reverse('telegram_project'), self.dados(dt_final='2024-12-31'))
@@ -136,8 +136,8 @@ class EditarProjetoTests(TestCase):
     def setUpTestData(cls):
         cls.rede = Rede.objects.create(nome='Telegram')
         cls.twitter = Rede.objects.create(nome='Twitter')
-        cls.user = User.objects.create_user('ana', password='x')
-        cls.outro = User.objects.create_user('bia', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.outro = User.objects.create_user('bia', password=SENHA_USUARIO)
         cls.publica = Lista.objects.create(nome='Publica', dono=cls.outro, publica=True)
         cls.alheia = Lista.objects.create(nome='Alheia', dono=cls.outro)
         cls.alheia2 = Lista.objects.create(nome='Alheia 2', dono=cls.outro)
@@ -180,7 +180,7 @@ class EditarProjetoTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(self.url), self.client.post(self.url, self.dados())):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.projeto.refresh_from_db()
         self.assertEqual(self.projeto.nome, 'Proj')
 
@@ -259,14 +259,14 @@ class EditarProjetoTests(TestCase):
         self.cria_termo('a')
         self.assertContains(self.client.get(self.url), 'value="2025-01-01"')
 
-    def test_importar_lista_leva_o_projeto_e_pede_confirmacao(self):
+    def test_adicionar_lista_leva_o_projeto_e_pede_confirmacao(self):
         resposta = self.client.get(self.url)
-        self.assertContains(resposta, f'href="{reverse("importar_lista")}?projeto={self.projeto.pk}"')
+        self.assertContains(resposta, f'href="{reverse("adicionar_lista")}?projeto={self.projeto.pk}"')
         self.assertContains(resposta, 'data-confirma-saida')
 
-    def test_criacao_importar_lista_sem_projeto(self):
+    def test_criacao_adicionar_lista_sem_projeto(self):
         resposta = self.client.get(reverse('telegram_project'))
-        self.assertContains(resposta, f'href="{reverse("importar_lista")}"')
+        self.assertContains(resposta, f'href="{reverse("adicionar_lista")}"')
         self.assertNotContains(resposta, 'data-confirma-saida')
         self.assertContains(resposta, 'js/telegram_project.js')
 
@@ -477,9 +477,7 @@ class EditarProjetoTests(TestCase):
     # coluna Resultado do painel
 
     def test_painel_sem_configuracao_nao_mostra_coluna(self):
-        self.projeto.prefix = PREFIXO_TELEGRAM
-        self.projeto.save(update_fields=['prefix'])
-        for config in ({}, {'GESTAO_URL': 'https://gestao.exemplo.br'}, {'PROJETO_HASH_KEY': 'chave'}):
+        for config in ({}, {'GESTAO_URL': 'https://gestao.exemplo.br'}, {'PROJETO_HASH_KEY': CHAVE_HASH}):
             with self.subTest(config=config), override_settings(**{'GESTAO_URL': '', 'PROJETO_HASH_KEY': '', **config}):
                 resposta = self.client.get('/painel/')
                 self.assertFalse(resposta.context['mostrar_resultado'])
@@ -488,7 +486,8 @@ class EditarProjetoTests(TestCase):
 
     @override_settings(**RESULTADO)
     def test_painel_coluna_com_link_e_traco(self):
-        self.projeto.prefix = PREFIXO_TELEGRAM
+        # o link depende só da rede Telegram; o prefixo não interfere
+        self.projeto.prefix = 'vtrack-telegram-test'
         self.projeto.save(update_fields=['prefix'])
         twitter_sem = self.cria_projeto(rede=self.twitter, nome='Twitter sem')
         twitter_com = self.cria_projeto(rede=self.twitter, nome='Twitter com')
@@ -499,14 +498,14 @@ class EditarProjetoTests(TestCase):
         self.assertTrue(resposta.context['mostrar_resultado'])
         self.assertLess(html.index('>Nome<'), html.index('>Resultado<'))
         self.assertLess(html.index('>Resultado<'), html.index('>Status<'))
-        for projeto, ds in ((self.projeto, 'vtrack-telegram'), (twitter_com, 'twitter')):
-            link = (f'<a class="pn-resultado" href="{escape(projeto.url_resultado)}" '
-                    f'target="_blank" rel="noopener">Ver resultado</a>')
-            self.assertIn(link, html)
-            self.assertIn(f'ds={ds}', projeto.url_resultado)
+        link = (f'<a class="pn-resultado" href="{escape(self.projeto.url_resultado)}" '
+                f'target="_blank" rel="noopener">Ver resultado</a>')
+        self.assertIn(link, html)
+        self.assertTrue(self.projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
         self.assertIsNone(twitter_sem.url_resultado)
-        self.assertEqual(html.count('Ver resultado'), 2)
-        self.assertEqual(html.count('<td>—</td>'), 1)
+        self.assertIsNone(twitter_com.url_resultado)
+        self.assertEqual(html.count('Ver resultado'), 1)
+        self.assertEqual(html.count('<td>—</td>'), 2)
 
     @override_settings(**RESULTADO)
     def test_painel_com_resultado_sem_n_mais_um(self):
@@ -540,16 +539,16 @@ class EditarProjetoTests(TestCase):
         self.assertNotIn(reverse('editar_projeto', args=[twitter.pk]), html)
 
 
-class ImportarListaTests(TestCase):
+class AdicionarListaTests(TestCase):
 
     @property
     def URL(self):
-        return reverse('importar_lista')
+        return reverse('adicionar_lista')
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user('ana', password='x')
-        cls.outro = User.objects.create_user('bia', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.outro = User.objects.create_user('bia', password=SENHA_USUARIO)
         cls.rede = Rede.objects.create(nome='Telegram')
         cls.twitter = Rede.objects.create(nome='Twitter')
         cls.projeto = cls.cria_projeto(cls.user, cls.rede)
@@ -581,13 +580,14 @@ class ImportarListaTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(self.URL), self.envia(self.csv('@canal_um'))):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.assertEqual(Lista.objects.count(), 0)
 
     def test_get_exibe_hint(self):
         resposta = self.client.get(self.URL)
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, 'apenas uma coluna')
+        self.assertContains(resposta, 'uma única coluna')
+        self.assertContains(resposta, 'Sem arquivo, a lista é criada vazia.')
 
     def test_csv_cria_lista_canais_e_redireciona(self):
         conteudo = 'username\nhttps://t.me/Canal_Um\n@canal_dois\ncanal_tres\n\nt.me/canal_um/123\n'
@@ -698,8 +698,129 @@ class ImportarListaTests(TestCase):
                 self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={Lista.objects.get().pk}',
                                      fetch_redirect_response=False)
 
-    def test_botao_do_projeto_aponta_para_importar_lista(self):
+    def test_botao_do_projeto_aponta_para_adicionar_lista(self):
         self.assertContains(self.client.get(reverse('telegram_project')), f'href="{self.URL}"')
+
+    def envia_sem_arquivo(self, url=None, nome='Minha lista', publica='False', **extra):
+        return self.client.post(url or self.URL, {'nome': nome, 'publica': publica, **extra})
+
+    def test_botao_de_envio_e_gravar(self):
+        resposta = self.client.get(self.URL)
+        self.assertContains(resposta, '<button type="submit" class="btn-start">Gravar</button>', html=True)
+
+    def test_ordem_dos_campos_do_formulario(self):
+        self.assertEqual(list(self.client.get(self.URL).context['form'].fields),
+                         ['nome', 'descricao', 'publica', 'arquivo'])
+
+    def test_sem_arquivo_cria_lista_vazia_com_descricao_e_visibilidade(self):
+        resposta = self.envia_sem_arquivo(descricao='  Canais de teste.\nSegunda linha.  ', publica='True')
+        lista = Lista.objects.get()
+        self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={lista.pk}', fetch_redirect_response=False)
+        self.assertEqual(lista.nome, 'Minha lista')
+        self.assertEqual(lista.descricao, 'Canais de teste.\nSegunda linha.')
+        self.assertEqual(lista.dono, self.user)
+        self.assertTrue(lista.publica)
+        self.assertEqual(lista.canais.count(), 0)
+        self.assertEqual(Canal.objects.count(), 0)
+        mensagens = [str(m) for m in get_messages(resposta.wsgi_request)]
+        self.assertEqual(mensagens, ['Lista "Minha lista" criada, ainda sem canais.'])
+
+    def test_sem_arquivo_e_sem_descricao_grava_descricao_vazia(self):
+        self.envia_sem_arquivo()
+        self.assertEqual(Lista.objects.get().descricao, '')
+
+    def test_sem_arquivo_respeita_as_validacoes_do_formulario(self):
+        Lista.objects.create(nome='Repetida', dono=self.user)
+        casos = {
+            'nome repetido': {'nome': 'Repetida', 'publica': 'False'},
+            'sem nome': {'nome': '', 'publica': 'False'},
+            'sem visibilidade': {'nome': 'Outra'},
+        }
+        for rotulo, dados in casos.items():
+            with self.subTest(caso=rotulo):
+                resposta = self.client.post(self.URL, dados)
+                self.assertEqual(resposta.status_code, 200)
+                self.assertTrue(resposta.context['form'].errors)
+                self.assertEqual(Lista.objects.count(), 1)
+
+    def test_com_arquivo_grava_a_descricao(self):
+        resposta = self.envia(self.csv('@canal_um\n@canal_dois'), descricao='Lista de estudo')
+        lista = Lista.objects.get()
+        self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={lista.pk}', fetch_redirect_response=False)
+        self.assertEqual(lista.descricao, 'Lista de estudo')
+        self.assertEqual(lista.canais.count(), 2)
+        self.assertIn('Lista "Minha lista" criada', str(list(get_messages(resposta.wsgi_request))[0]))
+
+    def test_arquivo_sem_canal_valido_nao_cria_lista_mesmo_com_descricao(self):
+        resposta = self.envia(self.csv('12345\n+abc\n'), descricao='Vai falhar')
+        self.assertEqual(resposta.status_code, 200)
+        self.assertIn('arquivo', resposta.context['form'].errors)
+        self.assertEqual(Lista.objects.count(), 0)
+
+    def test_origem_listas_volta_para_a_tela_de_listas(self):
+        resposta = self.client.get(f'{self.URL}?origem=listas')
+        self.assertEqual(resposta.context['voltar_url'], reverse('lista_canais'))
+        self.assertEqual(resposta.context['voltar_rotulo'], 'Listas de Canais')
+        self.assertContains(resposta, f'href="{reverse("lista_canais")}">Voltar')
+
+    def test_origem_listas_redireciona_para_a_tela_de_listas_com_a_nova_lista(self):
+        url = f'{self.URL}?origem=listas'
+        envios = {
+            'sem arquivo': lambda: self.envia_sem_arquivo(url, nome='Sem arquivo'),
+            'com arquivo': lambda: self.client.post(url, {'nome': 'Com arquivo', 'publica': 'False',
+                                                          'arquivo': self.csv('@canal_um')}),
+        }
+        for rotulo, envia in envios.items():
+            with self.subTest(caso=rotulo):
+                resposta = envia()
+                lista = Lista.objects.latest('pk')
+                self.assertRedirects(resposta, f'/telegram/listas/?lista={lista.pk}', fetch_redirect_response=False)
+
+    def test_projeto_vence_origem(self):
+        editar = reverse('editar_projeto', args=[self.projeto.pk])
+        url = f'{self.URL}?projeto={self.projeto.pk}&origem=listas'
+        resposta = self.client.get(url)
+        self.assertEqual(resposta.context['voltar_url'], editar)
+        self.assertEqual(resposta.context['voltar_rotulo'], 'Editar projeto')
+        resposta = self.envia_sem_arquivo(url)
+        self.assertRedirects(resposta, f'{editar}?lista={Lista.objects.get().pk}', fetch_redirect_response=False)
+
+    def test_projeto_invalido_com_origem_listas_usa_a_origem(self):
+        alheio = self.cria_projeto(self.outro, self.rede)
+        resposta = self.client.get(f'{self.URL}?projeto={alheio.pk}&origem=listas')
+        self.assertEqual(resposta.context['voltar_url'], reverse('lista_canais'))
+        self.assertEqual(resposta.context['voltar_rotulo'], 'Listas de Canais')
+
+    def test_origem_invalida_cai_no_padrao(self):
+        for valor in ('xyz', '', 'LISTAS', 'telegram_project'):
+            with self.subTest(origem=valor):
+                Lista.objects.all().delete()
+                url = f'{self.URL}?origem={valor}'
+                resposta = self.client.get(url)
+                self.assertEqual(resposta.context['voltar_url'], reverse('telegram_project'))
+                self.assertEqual(resposta.context['voltar_rotulo'], 'Nova coleta Telegram')
+                resposta = self.envia_sem_arquivo(url)
+                self.assertRedirects(resposta, f'{reverse("telegram_project")}?lista={Lista.objects.get().pk}',
+                                     fetch_redirect_response=False)
+
+    def test_link_de_volta_do_topo_renderiza_o_rotulo(self):
+        casos = {
+            'padrão': (self.URL, 'Nova coleta Telegram', reverse('telegram_project')),
+            'listas': (f'{self.URL}?origem=listas', 'Listas de Canais', reverse('lista_canais')),
+            'projeto': (f'{self.URL}?projeto={self.projeto.pk}', 'Editar projeto',
+                        reverse('editar_projeto', args=[self.projeto.pk])),
+        }
+        for nome, (url, rotulo, destino) in casos.items():
+            with self.subTest(origem=nome):
+                html = self.client.get(url).content.decode()
+                topo = html.split('<nav class="tp-voltar"', 1)[1].split('</nav>', 1)[0]
+                self.assertIn(f'href="{destino}"', topo)
+                self.assertIn(rotulo, topo)
+                self.assertEqual(topo.count('<a '), 1)
+
+    def test_get_com_origem_listas_nao_cria_nada(self):
+        self.client.get(f'{self.URL}?origem=listas')
+        self.assertEqual(Lista.objects.count(), 0)
 
 
 class TituloTipografiaTests(TestCase):
@@ -707,7 +828,7 @@ class TituloTipografiaTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user('ana', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
         cls.rede = Rede.objects.create(nome='Telegram')
         cls.projeto = Projeto.objects.create(nome='Proj', objetivo='Estudo', usuario=cls.user)
         cls.projeto.redes.add(cls.rede)
@@ -719,7 +840,7 @@ class TituloTipografiaTests(TestCase):
         telas = {
             'criação': (reverse('telegram_project'), 'Nova coleta Telegram'),
             'edição': (reverse('editar_projeto', args=[self.projeto.pk]), 'Editar projeto'),
-            'importação': (reverse('importar_lista'), 'Importar lista de canais'),
+            'adição': (reverse('adicionar_lista'), 'Adicionar lista de canais'),
         }
         for nome, (url, titulo) in telas.items():
             with self.subTest(tela=nome):
@@ -728,9 +849,14 @@ class TituloTipografiaTests(TestCase):
                 self.assertContains(self.client.get(url), f'<h1 class="tp-titulo">{titulo}</h1>', html=True)
                 self.assertNotIn('<h4', html)
 
+    def test_botao_de_envio_da_adicao_e_gravar(self):
+        resposta = self.client.get(reverse('adicionar_lista'))
+        self.assertContains(resposta, '<button type="submit" class="btn-start">Gravar</button>', html=True)
+        self.assertNotContains(resposta, 'Importar lista')
+
     def test_erro_de_publica_usa_tp_erro(self):
         arquivo = SimpleUploadedFile('canais.csv', b'@canal_um', content_type='text/csv')
-        resposta = self.client.post(reverse('importar_lista'), {'nome': 'Minha lista', 'arquivo': arquivo})
+        resposta = self.client.post(reverse('adicionar_lista'), {'nome': 'Minha lista', 'arquivo': arquivo})
         self.assertEqual(resposta.status_code, 200)
         self.assertTrue(resposta.context['form'].errors['publica'])
         self.assertContains(resposta, '<div class="text-danger tp-erro">')
@@ -760,7 +886,8 @@ class RotasAntigasTests(TestCase):
     ROTAS = [
         ('/telegram_project/', 'telegram_project', [], '/telegram/projetos/novo/'),
         ('/telegram_project/5/', 'editar_projeto', [5], '/telegram/projetos/5/editar/'),
-        ('/telegram_project/importar_lista/', 'importar_lista', [], '/telegram/listas/importar/'),
+        ('/telegram_project/importar_lista/', 'adicionar_lista', [], '/telegram/listas/adicionar/'),
+        ('/telegram/listas/importar/', 'adicionar_lista', [], '/telegram/listas/adicionar/'),
         ('/telegram/lista_canais/', 'lista_canais', [], '/telegram/listas/'),
         ('/telegram/canal/37/', 'canal_mensagens', [37], '/telegram/canais/37/'),
         ('/telegram/importacao_canais/', 'importacao_canais', [], '/telegram/canais/importar/'),
@@ -793,8 +920,8 @@ class RotasAntigasTests(TestCase):
                              fetch_redirect_response=False)
 
     def test_importar_nao_e_confundida_com_pk(self):
-        # /telegram/listas/importar/ e /telegram/canais/importar/ têm rota própria (login, não 404)
-        for nome in ('importacao_canais', 'importar_lista'):
+        # /telegram/listas/adicionar/ e /telegram/canais/importar/ têm rota própria (login, não 404)
+        for nome in ('importacao_canais', 'adicionar_lista'):
             self.assertIn(self.client.get(reverse(nome)).status_code, (200, 302))
 
     def test_status_do_termo_mantem_o_kwarg(self):
@@ -815,18 +942,35 @@ class ListasVisiveisTests(TestCase):
         self.assertEqual([lista.nome for lista in listas_visiveis(ana)], ['A propria', 'B publica'])
 
 
+class ListaDescricaoTests(TestCase):
+
+    def test_descricao_padrao_e_vazia(self):
+        dono = User.objects.create_user('ana', password=SENHA_USUARIO)
+        lista = Lista.objects.create(nome='Sem descricao', dono=dono)
+        lista.refresh_from_db()
+        self.assertEqual(lista.descricao, '')
+        campo = Lista._meta.get_field('descricao')
+        self.assertTrue(campo.blank)
+        self.assertEqual(campo.verbose_name, 'Descrição')
+
+    def test_admin_expoe_descricao_depois_de_nome_e_publica(self):
+        from telegram.admin import ListaAdmin
+        self.assertIn('descricao', ListaAdmin.fields)
+        self.assertEqual(tuple(ListaAdmin.fields), ('nome', 'publica', 'descricao'))
+
+
 class ListaCanaisViewTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user('ana', password='x')
-        cls.outro = User.objects.create_user('bia', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.outro = User.objects.create_user('bia', password=SENHA_USUARIO)
         cls.publica = Lista.objects.create(nome='Publica', dono=cls.outro, publica=True)
         cls.propria = Lista.objects.create(nome='Propria', dono=cls.user)
         cls.alheia = Lista.objects.create(nome='Alheia', dono=cls.outro)
-        cls.c1 = Canal.objects.create(username='c1', num_participantes=10)
-        cls.c2 = Canal.objects.create(username='c2', num_participantes=30)
-        cls.c3 = Canal.objects.create(username='c3', num_participantes=30)
+        cls.c1 = Canal.objects.create(username='c1', num_participantes=10, num_mensagens=500)
+        cls.c2 = Canal.objects.create(username='c2', num_participantes=30, num_mensagens=100)
+        cls.c3 = Canal.objects.create(username='c3', num_participantes=30, num_mensagens=100)
         cls.secreto = Canal.objects.create(username='secreto', num_participantes=99)
         cls.publica.canais.add(cls.c1, cls.c2)
         cls.propria.canais.add(cls.c2, cls.c3)
@@ -840,7 +984,7 @@ class ListaCanaisViewTests(TestCase):
         for url in (reverse('lista_canais'), reverse('canal_mensagens', args=[1])):
             resposta = self.client.get(url)
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
 
     def test_rotas(self):
         self.assertEqual(reverse('lista_canais'), '/telegram/listas/')
@@ -854,7 +998,7 @@ class ListaCanaisViewTests(TestCase):
         self.assertEqual(listas['Publica']['total'], 2)
         self.assertTrue(listas['Publica']['publica'])
         self.assertTrue(resposta.context['tem_listas'])
-        self.assertEqual(resposta.context['importar_url'], reverse('importar_lista'))
+        self.assertEqual(resposta.context['adicionar_url'], reverse('adicionar_lista') + '?origem=listas')
         self.assertEqual(resposta.context['limpar_url'], reverse('lista_canais'))
 
     def test_sem_selecao_nao_ha_grid(self):
@@ -866,7 +1010,7 @@ class ListaCanaisViewTests(TestCase):
         self.assertEqual(resposta.context['selecionadas'], [])
 
     def test_sem_listas_visiveis(self):
-        self.client.force_login(User.objects.create_user('nova', password='x'))
+        self.client.force_login(User.objects.create_user('nova', password=SENHA_USUARIO))
         Lista.objects.filter(publica=True).update(publica=False)
         resposta = self.client.get(reverse('lista_canais'))
         self.assertEqual(resposta.status_code, 200)
@@ -882,9 +1026,17 @@ class ListaCanaisViewTests(TestCase):
     def test_canal_em_duas_listas_aparece_uma_vez(self):
         resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}&lista={self.propria.pk}')
         usernames = [c.username for c in resposta.context['page_obj']]
-        self.assertEqual(usernames, ['c2', 'c3', 'c1'])  # participantes desc, depois username
+        # mensagens desc (c1 vence mesmo com menos participantes); empate total cai no username
+        self.assertEqual(usernames, ['c1', 'c2', 'c3'])
         self.assertEqual(resposta.context['total_canais'], 3)
         self.assertEqual(len(resposta.context['selecionadas']), 2)
+
+    def test_empate_de_mensagens_desempata_por_participantes_e_depois_username(self):
+        self.publica.canais.add(Canal.objects.create(username='d1', num_participantes=50, num_mensagens=100),
+                                Canal.objects.create(username='d0', num_participantes=30, num_mensagens=100))
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}&lista={self.propria.pk}')
+        usernames = [c.username for c in resposta.context['page_obj']]
+        self.assertEqual(usernames, ['c1', 'd1', 'c2', 'c3', 'd0'])
 
     def test_toggle_urls(self):
         resposta = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}')
@@ -923,14 +1075,103 @@ class ListaCanaisViewTests(TestCase):
         self.assertContains(resposta, 'Mostrando <strong>1–2</strong> de 2', html=False)
         self.assertNotContains(resposta, 'Ir para a página')
 
+    def test_botao_adicionar_lista_com_origem(self):
+        resposta = self.client.get(reverse('lista_canais'))
+        self.assertContains(resposta, f'href="{reverse("adicionar_lista")}?origem=listas"')
+        self.assertContains(resposta, 'Adicionar lista')
+        self.assertNotContains(resposta, 'Importar lista')
+
+    def test_sem_listas_oferece_adicionar_uma_lista(self):
+        self.client.force_login(User.objects.create_user('nova', password=SENHA_USUARIO))
+        Lista.objects.filter(publica=True).update(publica=False)
+        resposta = self.client.get(reverse('lista_canais'))
+        self.assertContains(resposta, f'<a href="{reverse("adicionar_lista")}?origem=listas">Adicionar uma lista</a>',
+                            html=True)
+
+    def test_lista_sem_canais_nao_sugere_importar_arquivo(self):
+        vazia = Lista.objects.create(nome='Vazia', dono=self.user)
+        resposta = self.client.get(f'{reverse("lista_canais")}?lista={vazia.pk}')
+        self.assertContains(resposta, 'As listas selecionadas ainda não têm canais. Fale com o administrador')
+        self.assertNotContains(resposta, 'importe um arquivo')
+
+    def test_dica_da_lista_com_descricao(self):
+        Lista.objects.filter(pk=self.propria.pk).update(descricao='Canais de política')
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        dica = f'dica-lista-{self.propria.pk}'
+        self.assertIn(f'aria-describedby="{dica}"', html)
+        self.assertIn(f'<span class="tc-dica" role="tooltip" id="{dica}">Canais de política</span>', html)
+
+    def test_dica_fica_fora_do_link_da_tag(self):
+        Lista.objects.filter(pk=self.propria.pk).update(descricao='Canais de política')
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        link = html.split(f'aria-describedby="dica-lista-{self.propria.pk}"', 1)[1].split('</a>', 1)[0]
+        self.assertNotIn('tc-dica', link)
+
+    def test_tag_sem_descricao_nao_tem_dica_nem_aria_describedby(self):
+        Lista.objects.filter(pk=self.propria.pk).update(descricao='Canais de política')
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        self.assertNotIn(f'dica-lista-{self.publica.pk}', html)
+        self.assertEqual(html.count('aria-describedby'), 1)
+        self.assertEqual(html.count('role="tooltip"'), 1)
+
+    def test_sem_nenhuma_descricao_nao_ha_dica(self):
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        for trecho in ('aria-describedby', 'role="tooltip"', 'class="tc-dica"', 'dica-lista-'):
+            with self.subTest(trecho=trecho):
+                self.assertNotIn(trecho, html)
+
+    def test_descricao_so_com_espacos_conta_como_sem_descricao(self):
+        Lista.objects.filter(pk=self.publica.pk).update(descricao='   \n\t ')
+        resposta = self.client.get(reverse('lista_canais'))
+        itens = {i['id']: i for i in resposta.context['listas']}
+        self.assertEqual(itens[self.publica.pk]['descricao'], '')
+        html = resposta.content.decode()
+        self.assertNotIn(f'dica-lista-{self.publica.pk}', html)
+        self.assertNotIn('aria-describedby', html)
+        self.assertNotIn('role="tooltip"', html)
+
+    def test_descricao_aparece_somente_dentro_da_dica(self):
+        texto = 'Descricao-unica-9f3a'
+        Lista.objects.filter(pk=self.propria.pk).update(descricao=texto)
+        for url in (reverse('lista_canais'), f'{reverse("lista_canais")}?lista={self.propria.pk}'):
+            with self.subTest(url=url):
+                html = self.client.get(url).content.decode()
+                self.assertEqual(html.count(texto), 1)
+                self.assertIn(f'role="tooltip" id="dica-lista-{self.propria.pk}">{texto}</span>', html)
+
+    def test_descricao_e_escapada_na_dica(self):
+        Lista.objects.filter(pk=self.propria.pk).update(descricao='<b>negrito</b>')
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        self.assertNotIn('<b>negrito</b>', html)
+        self.assertIn('&lt;b&gt;negrito&lt;/b&gt;', html)
+
+    def test_limpar_selecao_fica_na_legenda_e_nao_ha_linha_de_topo(self):
+        url = f'{reverse("lista_canais")}?lista={self.publica.pk}'
+        html = self.client.get(url).content.decode()
+        self.assertNotIn('tc-listas-topo', html)
+        legenda = html.split('<div class="tc-legenda">', 1)[1].split('</div>', 1)[0]
+        self.assertIn(f'<a class="tc-link" href="{reverse("lista_canais")}">Limpar seleção</a>', legenda)
+        self.assertEqual(html.count('Limpar seleção'), 1)
+        self.assertIn('role="group" aria-label="Listas de canais"', html)
+
+    def test_sem_selecao_nao_ha_limpar_selecao_nem_linha_de_topo(self):
+        html = self.client.get(reverse('lista_canais')).content.decode()
+        self.assertNotIn('tc-listas-topo', html)
+        self.assertNotIn('Limpar seleção', html)
+
+    def test_texto_e_caption_dizem_ordenados_por_mensagens(self):
+        html = self.client.get(f'{reverse("lista_canais")}?lista={self.publica.pk}').content.decode()
+        self.assertEqual(html.count('ordenados por mensagens coletadas'), 2)  # texto do total e <caption>
+        self.assertNotIn('ordenados por participantes', html)
+
 
 @mock.patch('telegram.views.busca_mensagens')
 class CanalMensagensViewTests(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = User.objects.create_user('ana', password='x')
-        cls.outro = User.objects.create_user('bia', password='x')
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.outro = User.objects.create_user('bia', password=SENHA_USUARIO)
         cls.publica = Lista.objects.create(nome='Publica', dono=cls.outro, publica=True)
         cls.alheia = Lista.objects.create(nome='Alheia', dono=cls.outro)
         cls.canal = Canal.objects.create(username='canal', id_numerico=1001)

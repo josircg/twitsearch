@@ -28,9 +28,9 @@
                     <label class="form-label" for="{{ form.lista.id_for_label }}">{{ form.lista.label }}</label>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         <div class="lista-select">{{ form.lista }}</div>
-                        <a class="btn-import" href="{% url 'importar_lista' %}{% if projeto %}?projeto={{ projeto.pk }}{% endif %}"{% if projeto %} data-confirma-saida{% endif %} title="Importar minha própria lista">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-                            Importar lista
+                        <a class="btn-import" href="{% url 'adicionar_lista' %}{% if projeto %}?projeto={{ projeto.pk }}{% endif %}"{% if projeto %} data-confirma-saida{% endif %} title="Adicionar uma nova lista">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                            Adicionar lista
                         </a>
                     </div>
                     {% if form.lista.errors %}<div class="text-danger tp-erro" id="erro_lista">{% for error in form.lista.errors %}{{ error }}{% if not forloop.last %} {% endif %}{% endfor %}</div>{% endif %}

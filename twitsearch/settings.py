@@ -154,3 +154,8 @@ AWS_PROFILE = None
 
 # Indica que a API do Twitter vai recuperar o contexto dos tweets (o que limita o número máximo de registros)
 FULL_CONTEXT = False
+
+# Login próprio (templates/login.html): rotas nomeadas em core/urls.py
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'painel'
+LOGOUT_REDIRECT_URL = '/'

@@ -100,6 +100,10 @@ class ProjetoAdmin(PowerModelAdmin):
     inlines = [TermoInline]
     form = ProjetoAdminForm
 
+    def get_queryset(self, request):
+        # link_resultado consulta as redes de cada projeto
+        return super().get_queryset(request).prefetch_related('redes')
+
     def link_resultado(self, obj):
         url = obj.url_resultado
         if not url:

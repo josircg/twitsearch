@@ -42,6 +42,10 @@ Para criar o secret key da sua instalação, use:
 > python manage.py migrate
 > python manage.py collectstatic
 
+Para rodar os testes, crie também o arquivo de credenciais de teste (não versionado):
+> cp doc/test_credentials.py twitsearch/test_credentials.py
+> python manage.py test
+
 9. Caso queira instalar o twitsearch em servidor externo, recomendamos que utilize o servidor NGINX e o supervisord
 * Copie o arquivo /configs/nginx.conf para /etc/nginx/sites-available
 * Copie supervisor.conf para a pasta /etc/supervisor/conf.d/

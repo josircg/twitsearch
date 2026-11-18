@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="{% static '/css/bootstrap.min.css' %}" rel="stylesheet">
+        <link href="{% static '/css/style.css' %}" rel="stylesheet">
+        <title>Entrar | Capitu</title>
+    </head>
+
+    <body>
+    <section id="login">
+        <main class="lg-main">
+            <form class="lg-card" method="post" action="{% url 'login' %}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="lg-cabecalho">
+                    <a class="lg-logo" href="/" aria-label="Capitu — página inicial">
+                        <img src="{% static '/img/logo.svg' %}" alt="Capitu" width="153" height="44">
+                    </a>
+                    <div class="lg-titulos">
+                        <h1>Acesse sua conta</h1>
+                        <p>Use as credenciais fornecidas pela equipe Capitu.</p>
+                    </div>
+                </div>
+
+                {% if form.non_field_errors %}
+                <div class="lg-alerta" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+                    <span>{% for e in form.non_field_errors %}{{ e }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+                </div>
+                {% endif %}
+
+                <div class="lg-campos">
+                    <div class="lg-grupo">
+                        <label for="id_username">Usuário</label>
+                        <input class="lg-campo{% if form.username.errors %} lg-campo-erro{% endif %}" id="id_username" name="username" type="text" value="{{ form.username.value|default:'' }}" autocomplete="username" autofocus required{% if form.username.errors %} aria-invalid="true"{% endif %}>
+                        {% for e in form.username.errors %}<p class="lg-erro-campo">{{ e }}</p>{% endfor %}
+                    </div>
+
+                    <div class="lg-grupo">
+                        <div class="lg-linha">
+                            <label for="id_password">Senha</label>
+                            <a class="lg-esqueci" href="{% url 'password_reset' %}">Esqueci a senha</a>
+                        </div>
+                        <div class="lg-senha">
+                            <input class="lg-campo{% if form.errors %} lg-campo-erro{% endif %}" id="id_password" name="password" type="password" autocomplete="current-password" required{% if form.errors %} aria-invalid="true"{% endif %}>
+                            <button class="lg-olho" type="button" id="lg-toggle-senha" aria-label="Mostrar senha" aria-pressed="false">
+                                <svg class="lg-ico-mostrar" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                <svg class="lg-ico-ocultar" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><path d="M1 1l22 22"></path></svg>
+                            </button>
+                        </div>
+                        {% for e in form.password.errors %}<p class="lg-erro-campo">{{ e }}</p>{% endfor %}
+                    </div>
+                </div>
+
+                <button class="lg-entrar" type="submit">Entrar</button>
+
+                <p class="lg-contato">Ainda não tem acesso? <a href="mailto:capitu@ibict.br?subject=Capitu">Entre em contato</a></p>
+            </form>
+
+            <a class="lg-voltar" href="/">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                Voltar para a página inicial
+            </a>
+        </main>
+
+        <footer class="lg-rodape">
+            <img src="{% static '/img/logo-ibict.svg' %}" alt="Ibict" height="32">
+            <p>Uso exclusivo da comunidade acadêmica</p>
+        </footer>
+    </section>
+
+    <script>
+        (function () {
+            var botao = document.getElementById('lg-toggle-senha');
+            var campo = document.getElementById('id_password');
+            if (!botao || !campo) { return; }
+            var mostrar = botao.querySelector('.lg-ico-mostrar');
+            var ocultar = botao.querySelector('.lg-ico-ocultar');
+            botao.addEventListener('click', function () {
+                var visivel = campo.type === 'password';
+                campo.type = visivel ? 'text' : 'password';
+                botao.setAttribute('aria-label', visivel ? 'Ocultar senha' : 'Mostrar senha');
+                botao.setAttribute('aria-pressed', visivel ? 'true' : 'false');
+                // SVGElement não tem a propriedade .hidden; usa o atributo
+                mostrar.toggleAttribute('hidden', visivel);
+                ocultar.toggleAttribute('hidden', !visivel);
+            });
+        })();
+    </script>
+    </body>
+</html>

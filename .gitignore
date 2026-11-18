@@ -24,3 +24,4 @@ deploy.log
 .deploy.lock
 .env
 /static/
+twitsearch/test_credentials.py

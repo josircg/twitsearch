@@ -1,10 +1,11 @@
+from django.contrib.auth import views as auth_views
 from django.urls import path, re_path
 from django.views.generic import RedirectView
 
 from core.views import visao, stats, index, solicitar_csv, backup_json, exclui_json,\
     nuvem, create_graph, gerar_gephi, solicita_busca, painel, get_source, importacao_arquivo, status_coleta
 
-from telegram.views import canal_mensagens, importacao_canais, importar_lista, lista_canais, telegram_project, \
+from telegram.views import canal_mensagens, importacao_canais, adicionar_lista, lista_canais, telegram_project, \
     editar_projeto
 
 from core.api import (redes, termos, projetos, termos_by_id, processo, canais_telegram,
@@ -14,6 +15,15 @@ urlpatterns = [
     re_path(r'^$', index),
     re_path(r'^visao/$', visao),
     path('painel/', painel, name='painel'),
+    path('login/', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True),
+         name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('senha/redefinir/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('senha/redefinir/enviado/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
+    path('senha/redefinir/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(),
+         name='password_reset_confirm'),
+    path('senha/redefinir/concluido/', auth_views.PasswordResetCompleteView.as_view(),
+         name='password_reset_complete'),
     re_path(r'^solicita_busca/(?P<termo_id>\d+)/$', solicita_busca, name='solicita_busca'),
     re_path(r'^estatistica/(?P<project_id>\d+)/$', stats, name='core_projeto_stats'),
     re_path(r'^estatistica/(?P<project_id>\d+)/(?P<termo_id>\d+)/$', stats, name='core_projeto_stats'),
@@ -29,14 +39,15 @@ urlpatterns = [
     path('telegram/projetos/novo/', telegram_project, name='telegram_project'),
     path('telegram/projetos/<int:pk>/editar/', editar_projeto, name='editar_projeto'),
     path('telegram/listas/', lista_canais, name='lista_canais'),
-    path('telegram/listas/importar/', importar_lista, name='importar_lista'),
+    path('telegram/listas/adicionar/', adicionar_lista, name='adicionar_lista'),
     path('telegram/canais/importar/', importacao_canais, name='importacao_canais'),
     path('telegram/canais/<int:pk>/', canal_mensagens, name='canal_mensagens'),
     path('termos/<int:termo_id>/status/', status_coleta, name='status_coleta'),
     # rotas antigas (redirecionam com 301 para as novas, preservando a query string)
     re_path(r'^importacao_arquivo/$', RedirectView.as_view(pattern_name='importacao_arquivo', permanent=True, query_string=True)),
     path('telegram_project/', RedirectView.as_view(pattern_name='telegram_project', permanent=True, query_string=True)),
-    path('telegram_project/importar_lista/', RedirectView.as_view(pattern_name='importar_lista', permanent=True, query_string=True)),
+    path('telegram/listas/importar/', RedirectView.as_view(pattern_name='adicionar_lista', permanent=True, query_string=True)),
+    path('telegram_project/importar_lista/', RedirectView.as_view(pattern_name='adicionar_lista', permanent=True, query_string=True)),
     path('telegram_project/<int:pk>/', RedirectView.as_view(pattern_name='editar_projeto', permanent=True, query_string=True)),
     path('telegram/lista_canais/', RedirectView.as_view(pattern_name='lista_canais', permanent=True, query_string=True)),
     path('telegram/importacao_canais/', RedirectView.as_view(pattern_name='importacao_canais', permanent=True, query_string=True)),
