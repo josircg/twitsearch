@@ -119,7 +119,7 @@ def sincroniza_termos(projeto, termos, dtinicio, dtfinal, rede):
         TermoStatus.objects.create(termo=termo, rede=rede)
 
 
-@login_required(login_url='/admin/login/')
+@login_required
 def telegram_project(request):
     rede = Rede.objects.filter(nome__iexact='Telegram').first()
     if request.method == 'POST':
@@ -156,7 +156,7 @@ def projeto_editavel(user, pk):
     return Projeto.objects.filter(usuario=user, redes__nome__iexact='Telegram', pk=pk).distinct().first()
 
 
-@login_required(login_url='/admin/login/')
+@login_required
 def editar_projeto(request, pk):
     projeto = projeto_editavel(request.user, pk)
     if projeto is None:
@@ -193,7 +193,7 @@ def editar_projeto(request, pk):
     return render(request, 'telegram_project.html', {'form': form, 'projeto': projeto})
 
 
-@login_required(login_url='/admin/login/')
+@login_required
 def importar_lista(request):
     # ?projeto=<pk> (vindo da edição) é ignorado se não for um projeto editável pelo usuário
     projeto = projeto_editavel(request.user, request.GET.get('projeto'))
@@ -289,7 +289,7 @@ def query_sem_page(request):
     return params.urlencode()
 
 
-@login_required(login_url='/admin/login/')
+@login_required
 def lista_canais(request):
     visiveis = listas_visiveis(request.user).annotate(total=Count('canais'))
     # ids inválidos ou de listas privadas alheias são descartados silenciosamente
@@ -327,7 +327,7 @@ def lista_canais(request):
     })
 
 
-@login_required(login_url='/admin/login/')
+@login_required
 def canal_mensagens(request, pk):
     canal = get_object_or_404(Canal.objects.filter(lista__in=listas_visiveis(request.user)).distinct(), pk=pk)
 

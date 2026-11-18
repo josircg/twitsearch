@@ -51,7 +51,7 @@ class TelegramProjectTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(reverse('telegram_project')), self.client.post(reverse('telegram_project'), self.dados())):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.assertEqual(Projeto.objects.count(), 0)
 
     def test_get_lista_publicas_e_proprias(self):
@@ -179,7 +179,7 @@ class EditarProjetoTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(self.url), self.client.post(self.url, self.dados())):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.projeto.refresh_from_db()
         self.assertEqual(self.projeto.nome, 'Proj')
 
@@ -579,7 +579,7 @@ class ImportarListaTests(TestCase):
         self.client.logout()
         for resposta in (self.client.get(self.URL), self.envia(self.csv('@canal_um'))):
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
         self.assertEqual(Lista.objects.count(), 0)
 
     def test_get_exibe_hint(self):
@@ -838,7 +838,7 @@ class ListaCanaisViewTests(TestCase):
         for url in (reverse('lista_canais'), reverse('canal_mensagens', args=[1])):
             resposta = self.client.get(url)
             self.assertEqual(resposta.status_code, 302)
-            self.assertTrue(resposta.url.startswith('/admin/login/'))
+            self.assertTrue(resposta.url.startswith('/login/'))
 
     def test_rotas(self):
         self.assertEqual(reverse('lista_canais'), '/telegram/listas/')

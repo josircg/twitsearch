@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
 from core.hash_projeto import hash_projeto, token_projeto
 from core.models import Projeto, Rede
@@ -77,3 +78,59 @@ class UrlResultadoTests(TestCase):
                 if hasattr(settings, nome):
                     delattr(settings, nome)
             self.assertIsNone(self.projeto().url_resultado)
+
+
+class LoginTests(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('ana', password='segredo-123')
+
+    def test_anonimo_no_painel_vai_para_o_login(self):
+        resposta = self.client.get('/painel/')
+        self.assertRedirects(resposta, '/login/?next=/painel/')
+
+    def test_get_login_usa_o_template_proprio(self):
+        resposta = self.client.get('/login/')
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTemplateUsed(resposta, 'login.html')
+
+    def test_login_valido_vai_para_o_painel(self):
+        resposta = self.client.post('/login/', {'username': 'ana', 'password': 'segredo-123'})
+        self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
+
+    def test_login_valido_respeita_o_next(self):
+        resposta = self.client.post('/login/', {
+            'username': 'ana', 'password': 'segredo-123', 'next': '/telegram/listas/',
+        })
+        self.assertRedirects(resposta, '/telegram/listas/', fetch_redirect_response=False)
+
+    def test_credenciais_invalidas_mostram_erro(self):
+        resposta = self.client.post('/login/', {'username': 'ana', 'password': 'errada'})
+        self.assertEqual(resposta.status_code, 200)
+        self.assertTrue(resposta.context['form'].non_field_errors())
+
+    def test_autenticado_no_login_vai_para_o_painel(self):
+        self.client.force_login(self.user)
+        resposta = self.client.get('/login/')
+        self.assertRedirects(resposta, '/painel/', fetch_redirect_response=False)
+
+    def test_admin_anonimo_vai_para_o_login_proprio(self):
+        resposta = self.client.get('/admin/', follow=True)
+        self.assertRedirects(resposta, '/login/?next=/admin/')
+        self.assertTemplateUsed(resposta, 'login.html')
+
+    def test_login_pelo_admin_volta_para_o_admin(self):
+        User.objects.create_user('staff', password='segredo-123', is_staff=True)
+        resposta = self.client.post('/login/', {'username': 'staff', 'password': 'segredo-123', 'next': '/admin/'})
+        self.assertRedirects(resposta, '/admin/', fetch_redirect_response=False)
+
+    def test_admin_sem_staff_vai_para_o_painel_sem_loop(self):
+        self.client.force_login(self.user)
+        resposta = self.client.get('/admin/', follow=True)
+        self.assertRedirects(resposta, '/painel/')
+        self.assertContains(resposta, 'Sua conta não tem acesso à administração.')
+
+    def test_pagina_de_redefinir_senha_abre(self):
+        resposta = self.client.get(reverse('password_reset'))
+        self.assertEqual(resposta.status_code, 200)
