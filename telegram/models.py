@@ -72,6 +72,7 @@ class APIKeys(models.Model):
 
 class Lista(models.Model):
     nome = models.CharField(max_length=100)
+    descricao = models.TextField('Descrição', blank=True)
     dono = models.ForeignKey(User, on_delete=models.PROTECT)
     publica = models.BooleanField('Qualquer usuário pode utilizá-la', default=False)
     canais = models.ManyToManyField(Canal, blank=True)

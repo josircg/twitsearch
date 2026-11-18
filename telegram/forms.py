@@ -94,17 +94,21 @@ class FiltroMensagensForm(forms.Form):
         return cleaned
 
 
-class ImportListaForm(forms.Form):
+class AdicionarListaForm(forms.Form):
     nome = forms.CharField(label='Nome da lista', max_length=100)
+    descricao = forms.CharField(
+        label='Descrição (opcional)', required=False, strip=True,
+        widget=forms.Textarea(attrs={'rows': 3}),
+        help_text='Aparece como dica sobre a lista na tela de Listas de Canais.')
     publica = forms.TypedChoiceField(
         label='Visibilidade', coerce=lambda valor: valor == 'True', initial='False',
         choices=(('False', 'Privada (somente eu posso usar)'), ('True', 'Pública (qualquer usuário pode usar)')),
         widget=forms.RadioSelect)
     arquivo = forms.FileField(
-        label='Arquivo (CSV ou Excel)',
+        label='Arquivo de canais (opcional)', required=False,
         widget=forms.ClearableFileInput(attrs={'accept': '.csv,.xlsx'}),
-        help_text='O arquivo deve conter apenas uma coluna, com a URL (https://t.me/canal) '
-                  'ou o identificador (@canal) de cada canal.')
+        help_text='CSV ou Excel com uma única coluna: a URL (https://t.me/canal) ou o identificador '
+                  '(@canal) de cada canal. Sem arquivo, a lista é criada vazia.')
 
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -119,8 +123,8 @@ class ImportListaForm(forms.Form):
         return nome
 
     def clean_arquivo(self):
-        arquivo = self.cleaned_data['arquivo']
-        if not arquivo.name.lower().endswith(('.csv', '.xlsx')):
+        arquivo = self.cleaned_data.get('arquivo')
+        if arquivo and not arquivo.name.lower().endswith(('.csv', '.xlsx')):
             raise forms.ValidationError('Envie um arquivo .csv ou .xlsx.')
         return arquivo
 

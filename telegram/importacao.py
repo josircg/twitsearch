@@ -37,7 +37,7 @@ def le_primeira_coluna(arquivo) -> list:
     return valores
 
 
-def importa_lista(usuario, nome: str, publica: bool, valores: list) -> dict:
+def importa_lista(usuario, nome: str, publica: bool, valores: list, descricao: str = '') -> dict:
     """Cria a lista e seus canais de forma atômica. Retorna os totais da importação."""
     usernames = []
     ignorados = 0
@@ -52,7 +52,7 @@ def importa_lista(usuario, nome: str, publica: bool, valores: list) -> dict:
         raise ValueError('Nenhum canal válido foi encontrado no arquivo.')
 
     with transaction.atomic():
-        lista = Lista.objects.create(nome=nome, dono=usuario, publica=publica)
+        lista = Lista.objects.create(nome=nome, descricao=descricao, dono=usuario, publica=publica)
         novos = 0
         for username in usernames:
             canal, criado = Canal.objects.get_or_create(username=username)

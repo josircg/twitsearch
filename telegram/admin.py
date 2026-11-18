@@ -87,7 +87,7 @@ class CanalReadOnlyInline(PowerTabularInline):
 @admin.register(Lista)
 class ListaAdmin(PowerModelAdmin):
     list_display = ('nome', 'publica', 'tot_canais', 'canais_ativos')
-    fields = ('nome', 'publica',)
+    fields = ('nome', 'publica', 'descricao')
     inlines = (CanalReadOnlyInline,)
 
     def save_model(self, request, obj, form, change):

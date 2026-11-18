@@ -728,14 +728,6 @@ header {
   margin-bottom: 24px;
   padding: 20px 24px;
 }
-#telegram-canais .tc-listas-topo {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
 #telegram-canais .tc-rotulo {
   color: var(--medium-gray);
   font-size: 13px;
@@ -796,6 +788,7 @@ header {
   color: #FFF;
 }
 #telegram-canais .tc-legenda {
+  align-items: center;
   color: var(--medium-gray);
   display: flex;
   flex-wrap: wrap;
@@ -807,6 +800,75 @@ header {
   align-items: center;
   display: inline-flex;
   gap: 6px;
+}
+#telegram-canais .tc-legenda .tc-link {
+  margin-left: auto;
+}
+
+/*
+ * Dica com a descrição da lista. O clamp de 4 linhas (overflow: hidden) fica em
+ * .tc-dica e cortaria a seta se ela fosse um ::after da própria dica; por isso a
+ * seta é o ::after do .tc-tag-item (só nos itens que têm .tc-dica) e aparece junto.
+ */
+#telegram-canais .tc-tag-item {
+  display: inline-flex;
+  position: relative;
+}
+#telegram-canais .tc-dica {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  background: #1E1D30;
+  border-radius: 10px;
+  bottom: calc(100% + 10px);
+  box-shadow: 0 6px 18px rgba(30, 29, 48, 0.25);
+  box-sizing: border-box;
+  color: #FFF;
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 400;
+  left: 0;
+  line-height: 1.5;
+  max-width: 320px;
+  opacity: 0;
+  overflow: hidden;
+  padding: 10px 14px;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.12s;
+  visibility: hidden;
+  white-space: pre-line;
+  width: max-content;
+  z-index: 20;
+}
+#telegram-canais .tc-tag-item:has(.tc-dica)::after {
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #1E1D30;
+  bottom: calc(100% + 4px);
+  content: "";
+  height: 0;
+  left: 16px;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  transition: opacity 0.12s;
+  visibility: hidden;
+  width: 0;
+  z-index: 20;
+}
+#telegram-canais .tc-tag-item:not(.dica-oculta):hover .tc-dica,
+#telegram-canais .tc-tag-item:not(.dica-oculta):focus-within .tc-dica,
+#telegram-canais .tc-tag-item:not(.dica-oculta):hover:has(.tc-dica)::after,
+#telegram-canais .tc-tag-item:not(.dica-oculta):focus-within:has(.tc-dica)::after {
+  opacity: 1;
+  visibility: visible;
+}
+@media (hover: none) {
+  #telegram-canais .tc-dica,
+  #telegram-canais .tc-tag-item:has(.tc-dica)::after,
+  #telegram-canais .tc-legenda .tc-legenda-dica {
+    display: none;
+  }
 }
 
 /* Estados vazios */
@@ -894,7 +956,7 @@ header {
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  padding: 14px 20px;
+  padding: 10px 16px;
   text-align: left;
   text-transform: uppercase;
   white-space: nowrap;
@@ -906,7 +968,7 @@ header {
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--tc-separador);
-  padding: 14px 20px;
+  padding: 8px 16px;
   vertical-align: top;
 }
 #telegram-canais .tc-grid tbody tr:hover td {
@@ -931,7 +993,6 @@ header {
 #telegram-canais .tc-canal-titulo {
   color: var(--medium-gray);
   font-size: 13px;
-  margin-top: 2px;
 }
 #telegram-canais .tc-status {
   background: #FFF1E6;
@@ -950,7 +1011,7 @@ header {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   display: -webkit-box;
-  line-height: 1.5;
+  line-height: 1.4;
   overflow: hidden;
 }
 #telegram-canais .tc-msgs-link {
@@ -1446,7 +1507,8 @@ header {
   pointer-events: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  #telegram-canais * {
+  #telegram-canais *,
+  #telegram-canais .tc-dica {
     transition: none !important;
   }
 }
@@ -1752,9 +1814,6 @@ header {
     display: inline-flex;
     min-height: 44px;
     padding: 0 4px;
-  }
-  #telegram-canais .tc-listas-topo {
-    margin-bottom: 4px;
   }
   #telegram-canais .tc-grid .tc-canal-link {
     margin: -8px 0;

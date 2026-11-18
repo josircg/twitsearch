@@ -1,16 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Importar lista de canais{% endblock %}
+{% block title %}Adicionar lista de canais{% endblock %}
 
 {% block fluid-content %}
     <section id="telegram-project">
         <div class="container pt-5 pb-5" style="max-width: 820px;">
-            <h1 class="tp-titulo">Importar lista de canais</h1>
+            <nav class="tp-voltar" aria-label="Trilha">
+                <a href="{{ voltar_url }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 18l-6-6 6-6"/></svg>
+                    {{ voltar_rotulo }}
+                </a>
+            </nav>
+            <h1 class="tp-titulo">Adicionar lista de canais</h1>
             {% for message in messages %}
                 <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %}">{{ message }}</div>
             {% endfor %}
             <form method="post" enctype="multipart/form-data" class="form-card">
                 {% csrf_token %}
                 <div class="mb-3">{% include "_telegram_field.html" with field=form.nome %}</div>
+                <div class="mb-3">{% include "_telegram_field.html" with field=form.descricao %}</div>
                 <div class="mb-3">
                     <label class="form-label">{{ form.publica.label }}</label>
                     {% for radio in form.publica %}
@@ -22,7 +29,7 @@
                     {% for error in form.publica.errors %}<div class="text-danger tp-erro">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="mb-4">{% include "_telegram_field.html" with field=form.arquivo %}</div>
-                <button type="submit" class="btn-start">Importar lista</button>
+                <button type="submit" class="btn-start">Gravar</button>
                 <a class="btn-cancel ms-3 text-decoration-none" href="{{ voltar_url }}">Voltar</a>
             </form>
         </div>
