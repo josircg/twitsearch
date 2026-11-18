@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.test import RequestFactory, SimpleTestCase, override_settings
 
 from utils import deploy
+from twitsearch.test_credentials import TOKEN_GIT
 
 
 def _request(factory, method='post', staff=True):
@@ -96,19 +97,19 @@ class SystemUpdateViewTest(SimpleTestCase):
 
     @mock.patch('utils.deploy.os_run', return_value='ok')
     def test_credencial_vai_no_env_e_nao_aparece_no_log(self, run):
-        request = _staff_request_post(self.factory, {'git_user': 'u', 'git_token': 'segredo123'})
-        with mock.patch('utils.deploy.os_run', return_value='pull com segredo123 ok') as run:
+        request = _staff_request_post(self.factory, {'git_user': 'u', 'git_token': TOKEN_GIT})
+        with mock.patch('utils.deploy.os_run', return_value=f'pull com {TOKEN_GIT} ok') as run:
             response = deploy.system_update_git(request)
         env = run.call_args[1]['env']
-        self.assertEqual((env['GIT_USER'], env['GIT_TOKEN']), ('u', 'segredo123'))
-        self.assertNotIn('segredo123', response.content.decode())
+        self.assertEqual((env['GIT_USER'], env['GIT_TOKEN']), ('u', TOKEN_GIT))
+        self.assertNotIn(TOKEN_GIT, response.content.decode())
 
     @mock.patch('utils.deploy.os_run', return_value='ok')
     def test_system_update_ignora_credencial_do_post(self, run):
-        request = _staff_request_post(self.factory, {'git_user': 'u', 'git_token': 'segredo123'})
+        request = _staff_request_post(self.factory, {'git_user': 'u', 'git_token': TOKEN_GIT})
         deploy.system_update(request)
         env = run.call_args[1]['env']
-        self.assertNotEqual(env.get('GIT_TOKEN'), 'segredo123')
+        self.assertNotEqual(env.get('GIT_TOKEN'), TOKEN_GIT)
 
     @mock.patch('utils.deploy.os_run', return_value='ok')
     def test_system_update_git_exige_token(self, run):

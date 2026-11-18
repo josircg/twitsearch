@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load telegram_tags %}
+{% load static telegram_tags %}
 {% block title %}Listas de Canais{% endblock %}
 
 {% block fluid-content %}
@@ -19,42 +19,45 @@
                     <h1>Listas de Canais</h1>
                     <p>Selecione uma ou mais listas para ver os canais monitorados.</p>
                 </div>
-                <a class="tc-btn-outline" href="{{ importar_url }}">
-                    <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>
-                    Importar lista
+                <a class="tc-btn-outline" href="{{ adicionar_url }}">
+                    <svg class="ico" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+                    Adicionar lista
                 </a>
             </div>
 
             <div class="tc-card tc-listas">
                 {% if tem_listas %}
-                    <div class="tc-listas-topo">
-                        <span class="tc-rotulo">Listas</span>
+                    <div class="tc-tags" role="group" aria-label="Listas de canais">
+                        {% for l in listas %}
+                            <span class="tc-tag-item">
+                                <a href="{{ l.url }}" class="tc-tag{% if l.selecionada %} selecionada{% endif %}" aria-pressed="{% if l.selecionada %}true{% else %}false{% endif %}"{% if l.descricao %} aria-describedby="dica-lista-{{ l.id }}"{% endif %}>
+                                    {% if l.selecionada %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg>{% endif %}
+                                    {{ l.nome }}
+                                    <span class="tc-badge">
+                                        {% if l.publica %}
+                                            <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Pública" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+                                        {% else %}
+                                            <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Privada" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+                                        {% endif %}
+                                        {{ l.total|milhar }}
+                                    </span>
+                                </a>
+                                {% if l.descricao %}
+                                    <span class="tc-dica" role="tooltip" id="dica-lista-{{ l.id }}">{{ l.descricao }}</span>
+                                {% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                    <div class="tc-legenda">
+                        <span aria-hidden="true"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Pública</span>
+                        <span aria-hidden="true"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privada (só você vê)</span>
+                        <span class="tc-legenda-dica" aria-hidden="true"><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Passe o mouse sobre uma lista para ver a descrição</span>
                         {% if selecionadas %}
                             <a class="tc-link" href="{{ limpar_url }}">Limpar seleção</a>
                         {% endif %}
                     </div>
-                    <div class="tc-tags" role="group" aria-label="Listas de canais">
-                        {% for l in listas %}
-                            <a href="{{ l.url }}" class="tc-tag{% if l.selecionada %} selecionada{% endif %}" aria-pressed="{% if l.selecionada %}true{% else %}false{% endif %}">
-                                {% if l.selecionada %}<svg class="ico" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true" focusable="false"><path d="M5 12l5 5L20 7"/></svg>{% endif %}
-                                {{ l.nome }}
-                                <span class="tc-badge">
-                                    {% if l.publica %}
-                                        <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Pública" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
-                                    {% else %}
-                                        <svg class="ico" width="12" height="12" viewBox="0 0 24 24" role="img" aria-label="Privada" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
-                                    {% endif %}
-                                    {{ l.total|milhar }}
-                                </span>
-                            </a>
-                        {% endfor %}
-                    </div>
-                    <div class="tc-legenda" aria-hidden="true">
-                        <span><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Pública</span>
-                        <span><svg class="ico" width="12" height="12" viewBox="0 0 24 24" focusable="false"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Privada (só você vê)</span>
-                    </div>
                 {% else %}
-                    <p class="tc-sem-listas">Você ainda não tem listas de canais. <a href="{{ importar_url }}">Importar uma lista</a></p>
+                    <p class="tc-sem-listas">Você ainda não tem listas de canais. <a href="{{ adicionar_url }}">Adicionar uma lista</a></p>
                 {% endif %}
             </div>
 
@@ -68,15 +71,15 @@
                 {% elif total_canais == 0 %}
                     <div class="tc-vazio tc-vazio-solido">
                         <p class="tc-vazio-titulo">Nenhum canal nas listas selecionadas</p>
-                        <p>Adicione canais à lista pelo admin ou <a href="{{ importar_url }}">importe um arquivo</a>.</p>
+                        <p>As listas selecionadas ainda não têm canais. Fale com o administrador para incluí-los.</p>
                     </div>
                 {% else %}
-                    <p class="tc-total" aria-live="polite"><strong>{{ total_canais|milhar }} cana{{ total_canais|pluralize:"l,is" }}</strong> <span>em {{ selecionadas|length }} lista{{ selecionadas|length|pluralize }} · ordenados por participantes</span></p>
+                    <p class="tc-total" aria-live="polite"><strong>{{ total_canais|milhar }} cana{{ total_canais|pluralize:"l,is" }}</strong> <span>em {{ selecionadas|length }} lista{{ selecionadas|length|pluralize }} · ordenados por mensagens coletadas</span></p>
 
                     <div class="tc-card tc-tabela">
                         <div class="tc-scroll">
                             <table class="tc-grid">
-                                <caption class="visually-hidden">Canais das listas selecionadas, ordenados por participantes</caption>
+                                <caption class="visually-hidden">Canais das listas selecionadas, ordenados por mensagens coletadas</caption>
                                 <thead>
                                     <tr>
                                         <th scope="col" class="col-canal">Canal</th>
@@ -115,3 +118,7 @@
         </div>
     </section>
 {% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/lista_canais.js' %}" defer></script>
+{% endblock scripts %}

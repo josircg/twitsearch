@@ -21,7 +21,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from .datalake import PaginaMensagens, busca_mensagens, paginas_visiveis, periodo_canal
-from .forms import FiltroMensagensForm, ImportForm, ImportListaForm, TelegramProjectForm, listas_visiveis
+from .forms import AdicionarListaForm, FiltroMensagensForm, ImportForm, TelegramProjectForm, listas_visiveis
 from .importacao import MAX_LINHAS, importa_lista, le_primeira_coluna
 from .models import Canal, Lista, Categoria
 from core import log_message
@@ -193,20 +193,35 @@ def editar_projeto(request, pk):
     return render(request, 'telegram_project.html', {'form': form, 'projeto': projeto})
 
 
+# destinos possíveis de "Voltar" além do projeto: ?origem=<chave> -> (rota, rótulo)
+ORIGENS = {'listas': ('lista_canais', 'Listas de Canais')}
+
+
 @login_required
-def importar_lista(request):
-    # ?projeto=<pk> (vindo da edição) é ignorado se não for um projeto editável pelo usuário
+def adicionar_lista(request):
+    # ?projeto=<pk> (vindo da edição) é ignorado se não for um projeto editável pelo usuário;
+    # tem prioridade sobre ?origem=, e uma origem desconhecida cai no padrão
     projeto = projeto_editavel(request.user, request.GET.get('projeto'))
-    voltar_url = reverse('editar_projeto', args=[projeto.pk]) if projeto else reverse('telegram_project')
+    if projeto:
+        voltar_url, voltar_rotulo = reverse('editar_projeto', args=[projeto.pk]), 'Editar projeto'
+    else:
+        rota, voltar_rotulo = ORIGENS.get(request.GET.get('origem'), ('telegram_project', 'Nova coleta Telegram'))
+        voltar_url = reverse(rota)
     if request.method == 'POST':
-        form = ImportListaForm(request.POST, request.FILES, user=request.user)
+        form = AdicionarListaForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
+            dados = form.cleaned_data
+            if not dados['arquivo']:
+                lista = Lista.objects.create(nome=dados['nome'], descricao=dados['descricao'],
+                                             dono=request.user, publica=dados['publica'])
+                messages.success(request, f'Lista "{lista.nome}" criada, ainda sem canais.')
+                return redirect(f'{voltar_url}?lista={lista.pk}')
             try:
-                valores = le_primeira_coluna(form.cleaned_data['arquivo'])
+                valores = le_primeira_coluna(dados['arquivo'])
                 if len(valores) > MAX_LINHAS:
                     raise ValueError(f'O arquivo deve ter no máximo {MAX_LINHAS} linhas.')
-                resultado = importa_lista(request.user, form.cleaned_data['nome'],
-                                          form.cleaned_data['publica'], valores)
+                resultado = importa_lista(request.user, dados['nome'], dados['publica'], valores,
+                                          descricao=dados['descricao'])
             except ValueError as e:
                 form.add_error('arquivo', str(e))
             except Exception:
@@ -218,9 +233,10 @@ def importar_lista(request):
                                           f'{resultado["ignorados"]} ignoradas (inválidas).')
                 return redirect(f'{voltar_url}?lista={resultado["lista"].pk}')
     else:
-        form = ImportListaForm(user=request.user)
+        form = AdicionarListaForm(user=request.user)
 
-    return render(request, 'importar_lista.html', {'form': form, 'voltar_url': voltar_url})
+    return render(request, 'adicionar_lista.html',
+                  {'form': form, 'voltar_url': voltar_url, 'voltar_rotulo': voltar_rotulo})
 
 
 def importacao_canais(request):
@@ -308,12 +324,13 @@ def lista_canais(request):
         return f'{reverse("lista_canais")}?{urlencode([("lista", i) for i in novos])}'
 
     itens = [{'id': lista.pk, 'nome': lista.nome, 'publica': lista.publica, 'total': lista.total,
-              'selecionada': lista.pk in ids, 'url': url_toggle(lista.pk)} for lista in listas]
+              'selecionada': lista.pk in ids, 'url': url_toggle(lista.pk),
+              'descricao': lista.descricao.strip()} for lista in listas]
     selecionadas = [lista for lista in listas if lista.pk in ids]
 
     page_obj, total_canais, paginas, voltar_qs = None, 0, [], ''
     if selecionadas:
-        canais = Canal.objects.filter(lista__in=selecionadas).distinct().order_by('-num_participantes', 'username')
+        canais = Canal.objects.filter(lista__in=selecionadas).distinct().order_by('-num_mensagens', '-num_participantes', 'username')
         page_obj = Paginator(canais, 50).get_page(request.GET.get('page'))
         total_canais = page_obj.paginator.count
         paginas = paginas_visiveis(page_obj.number, page_obj.paginator.num_pages)
@@ -321,7 +338,7 @@ def lista_canais(request):
 
     return render(request, 'lista_canais.html', {
         'listas': itens, 'tem_listas': bool(listas), 'selecionadas': selecionadas,
-        'limpar_url': reverse('lista_canais'), 'importar_url': reverse('importar_lista'),
+        'limpar_url': reverse('lista_canais'), 'adicionar_url': reverse('adicionar_lista') + '?origem=listas',
         'page_obj': page_obj, 'total_canais': total_canais, 'paginas': paginas,
         'query_sem_page': query_sem_page(request), 'voltar_qs': voltar_qs,
     })
