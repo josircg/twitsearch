@@ -15,7 +15,7 @@
      <header class="sticky-top shadow">
         <nav class="navbar navbar-expand-lg">
             <div class="container">
-            <a class="navbar-brand" href="#">
+            <a class="navbar-brand" href="{% url 'index' %}">
                 <img width="143" height="48" src="{% static '/img/logo.svg' %}" class="custom-logo" alt="Capitu-logo" decoding="async">
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
@@ -24,10 +24,10 @@
             </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto text-center">
-                        <li class="nav-item"><a href="#main" class="nav-link">Início</a></li>
-                        <li class="nav-item"><a href="#como-funciona" class="nav-link">Como funciona</a></li>
-                        <li class="nav-item"><a href="#acesso" class="nav-link">Como ter acesso</a></li>
-                        <li class="nav-item"><a href="#institucional" class="nav-link">Institucional</a></li>
+                        <li class="nav-item"><a href="{% url 'index' %}" class="nav-link">Início</a></li>
+                        <li class="nav-item"><a href="{% url 'index' %}#como-funciona" class="nav-link">Como funciona</a></li>
+                        <li class="nav-item"><a href="{% url 'index' %}#acesso" class="nav-link">Como ter acesso</a></li>
+                        <li class="nav-item"><a href="{% url 'index' %}#institucional" class="nav-link">Institucional</a></li>
                         <li class="nav-item btn-blue"><a href="{% url 'login' %}">Acessar Sistema</a></li>
                     </ul>
                 </div>

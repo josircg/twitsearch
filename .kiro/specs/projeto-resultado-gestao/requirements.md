@@ -20,6 +20,7 @@ O acesso por projeto SHALL seguir o mesmo mecanismo: ser gravado **uma vez** na 
 ### Premissas
 - Nos documentos do OpenSearch, `monitoramento_id` = `Projeto.id`, `monitoramento_nome` = `Projeto.nome` e `busca_id` = `Termo.id` do Capitu.
 - **O dataset do link é fixo: `telegram`** (constante `DS_TELEGRAM`), o slug do `DataSource` do Telegram no Gestão. Ele **não** vem de `Projeto.prefix` (req. 3).
+  > **Alterado pela spec `telegram-lista-canais-ajustes` (issue #40):** o `ds` continua fixo, e o índice passa a vir de `Projeto.prefix` (parâmetro `idx`).
 
 ## Requisitos — Capitu
 
@@ -28,6 +29,7 @@ O acesso por projeto SHALL seguir o mesmo mecanismo: ser gravado **uma vez** na 
 
 Critérios de aceite:
 1. O token SHALL ter o formato `{projeto.id}-{hash}`, com `hash` = HMAC-SHA256 de `"projeto:{projeto.id}:{ds}"`, onde `ds` = `DS_TELEGRAM` (`'telegram'`), usando a chave secreta `PROJETO_HASH_KEY`, em hexadecimal e truncado em 32 caracteres.
+   > **Alterado pela spec `telegram-lista-canais-ajustes` (req. 3.3, issue #40):** com índice, o hash é de `"projeto:{id}:{ds}:{idx}"`; sem índice, a fórmula acima continua valendo.
 2. O `ds` entra no cálculo do hash. Assim, trocar `ds=telegram` por outro dataset invalida o link, e o token não serve para ler um dataset de outra origem, onde `monitoramento_id` pode significar outra coisa.
 3. A chave `PROJETO_HASH_KEY` SHALL ser configurada em `local.py`, com o mesmo valor, no Capitu e em todo ambiente do Gestão que aceitar o link (req. 10). Ela SHALL NOT trafegar em URL e é distinta de `AUTH_KEYS`/`CAPITU_KEY`.
 4. O token SHALL ser determinístico: o mesmo projeto gera sempre o mesmo token enquanto a chave não mudar.
@@ -47,7 +49,9 @@ Critérios de aceite:
 Critérios de aceite:
 1. O `ds` do link e do hash SHALL vir de uma constante única, `DS_TELEGRAM = 'telegram'` (`telegram/models.py`), e não de literais espalhados.
 2. O link SHALL NOT usar `Projeto.prefix`. Um prefixo preenchido no admin (ex.: `vtrack-telegram-test`) não altera o link.
+   > **Revogado pela spec `telegram-lista-canais-ajustes` (req. 3.1, issue #40):** o `ds` continua `telegram`, mas um prefixo válido vai no parâmetro `idx` e no hash, e o Gestão consulta `{idx}-*`.
 3. O formulário `/telegram/projetos/novo/` (`telegram_project`) SHALL NOT gravar `Projeto.prefix`. O campo continua existindo no admin para outros usos, mas fica fora desta funcionalidade.
+   > **Revogado pela spec `telegram-lista-canais-ajustes` (req. 3.6, issue #40):** a criação grava `prefix = 'telegram'` (`PREFIXO_TELEGRAM`).
 4. A edição em `editar_projeto` SHALL NOT alterar o prefixo. Ela continua gravando só `nome`, `objetivo` e `lista_canais`.
 5. O link SHALL aparecer só para projetos com a rede Telegram. Projetos de outras redes exibem "—" (req. 2.4).
 

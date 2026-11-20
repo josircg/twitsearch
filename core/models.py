@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from core import clean_pontuation, stopwords, log_message
-from core.hash_projeto import token_projeto
+from core.hash_projeto import indice_valido, token_projeto
 from telegram.models import Lista, DS_TELEGRAM
 
 PROC_IMPORTACAO = 'I'   # Importação via busca regular
@@ -111,13 +111,19 @@ class Projeto(models.Model):
 
     @property
     def url_resultado(self):
-        # só projetos Telegram; o ds é sempre DS_TELEGRAM (redes vêm do prefetch no painel e no admin)
+        # só projetos Telegram (redes vêm do prefetch no painel e no admin). O ds é sempre DS_TELEGRAM
+        # (escolhe o DataSource/conexão no Gestão); o índice lido é o do prefixo, quando ele é válido
         gestao_url = getattr(settings, 'GESTAO_URL', '')
         if not (gestao_url and getattr(settings, 'PROJETO_HASH_KEY', '')):
             return None
         if not any(rede.nome.lower() == 'telegram' for rede in self.redes.all()):
             return None
-        params = urlencode({'hash': token_projeto(self.pk, DS_TELEGRAM), 'ds': DS_TELEGRAM})
+        if indice_valido(self.prefix):
+            params = urlencode({'hash': token_projeto(self.pk, DS_TELEGRAM, self.prefix),
+                                'ds': DS_TELEGRAM, 'idx': self.prefix})
+        else:
+            # sem prefixo (ou prefixo antigo fora da regra): o Gestão usa o índice do DataSource
+            params = urlencode({'hash': token_projeto(self.pk, DS_TELEGRAM), 'ds': DS_TELEGRAM})
         return f'{gestao_url.rstrip("/")}/dashboard?{params}'
 
     @property

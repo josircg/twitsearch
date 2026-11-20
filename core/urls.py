@@ -12,7 +12,7 @@ from core.api import (redes, termos, projetos, termos_by_id, processo, canais_te
                       processo_rede_get, processo_rede_set)
 
 urlpatterns = [
-    re_path(r'^$', index),
+    re_path(r'^$', index, name='index'),
     re_path(r'^visao/$', visao),
     path('painel/', painel, name='painel'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html', redirect_authenticated_user=True),

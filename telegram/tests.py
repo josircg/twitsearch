@@ -1,6 +1,7 @@
 import zoneinfo
 
 from datetime import date, datetime, timezone
+from html.parser import HTMLParser
 from io import BytesIO
 from unittest import mock
 from urllib.parse import parse_qs, urlencode
@@ -19,7 +20,7 @@ from django.utils.html import escape
 from core.models import Projeto, Rede, Termo, TermoStatus
 from telegram.datalake import PaginaMensagens, busca_mensagens, formata_mensagem, paginas_visiveis, periodo_canal
 from telegram.forms import FiltroMensagensForm, listas_visiveis
-from telegram.models import Canal, Lista, DS_TELEGRAM
+from telegram.models import Canal, Lista, DS_TELEGRAM, PREFIXO_TELEGRAM
 from telegram.templatetags.telegram_tags import destaca, milhar
 from twitsearch.test_credentials import CHAVE_HASH, SENHA_USUARIO
 
@@ -74,9 +75,11 @@ class TelegramProjectTests(TestCase):
         mensagens = [str(m) for m in self.client.get('/painel/').context['messages']]
         self.assertIn(projeto.url_resumo, mensagens[0])
 
-    def test_post_valido_nao_grava_prefixo(self):
+    def test_post_valido_grava_prefixo_telegram(self):
+        # issue #40: o projeto nasce gravando no índice 'telegram-*' e o link "Resultado" leva idx=telegram
         self.client.post(reverse('telegram_project'), self.dados())
-        self.assertEqual(Projeto.objects.get().prefix, '')
+        self.assertEqual(Projeto.objects.get().prefix, PREFIXO_TELEGRAM)
+        self.assertEqual(PREFIXO_TELEGRAM, 'telegram')
 
     @override_settings(**RESULTADO)
     def test_painel_link_resultado_do_projeto_criado_pelo_formulario(self):
@@ -85,7 +88,7 @@ class TelegramProjectTests(TestCase):
         html = self.client.get('/painel/').content.decode()
         self.assertIn('<th scope="col">Resultado</th>', html)
         self.assertIn(f'href="{escape(projeto.url_resultado)}" target="_blank" rel="noopener">Ver resultado</a>', html)
-        self.assertTrue(projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
+        self.assertTrue(projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}&idx={PREFIXO_TELEGRAM}'))
 
     def test_data_final_anterior_rejeitada(self):
         resposta = self.client.post(reverse('telegram_project'), self.dados(dt_final='2024-12-31'))
@@ -486,7 +489,7 @@ class EditarProjetoTests(TestCase):
 
     @override_settings(**RESULTADO)
     def test_painel_coluna_com_link_e_traco(self):
-        # o link depende só da rede Telegram; o prefixo não interfere
+        # o link depende da rede Telegram; um prefixo válido vai no idx (issue #40)
         self.projeto.prefix = 'vtrack-telegram-test'
         self.projeto.save(update_fields=['prefix'])
         twitter_sem = self.cria_projeto(rede=self.twitter, nome='Twitter sem')
@@ -501,7 +504,7 @@ class EditarProjetoTests(TestCase):
         link = (f'<a class="pn-resultado" href="{escape(self.projeto.url_resultado)}" '
                 f'target="_blank" rel="noopener">Ver resultado</a>')
         self.assertIn(link, html)
-        self.assertTrue(self.projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}'))
+        self.assertTrue(self.projeto.url_resultado.endswith(f'&ds={DS_TELEGRAM}&idx=vtrack-telegram-test'))
         self.assertIsNone(twitter_sem.url_resultado)
         self.assertIsNone(twitter_com.url_resultado)
         self.assertEqual(html.count('Ver resultado'), 1)
@@ -1516,3 +1519,203 @@ class TemplateTagsTests(SimpleTestCase):
         saida = Template('{% load telegram_tags %}{{ t|destaca:q }}|{{ n|milhar }}').render(
             Context({'t': '<i>x</i> vacina', 'q': 'vacina', 'n': 12345}))
         self.assertEqual(saida, '&lt;i&gt;x&lt;/i&gt; <mark>vacina</mark>|12.345')
+
+
+class _ColetaLinks(HTMLParser):
+    """Coleta os <a> (atributos, texto, tags internas, se estão aninhados e se estão dentro de <nav>)."""
+
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self._abertos = []
+        self._nav = 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'nav':
+            self._nav += 1
+        if tag == 'a':
+            link = {'attrs': dict(attrs), 'texto': [], 'tags': [], 'aninhado': bool(self._abertos),
+                    'em_nav': self._nav > 0}
+            self.links.append(link)
+            self._abertos.append(link)
+        elif self._abertos:
+            self._abertos[-1]['tags'].append(tag)
+
+    def handle_endtag(self, tag):
+        if tag == 'nav':
+            self._nav -= 1
+        if tag == 'a' and self._abertos:
+            self._abertos.pop()
+
+    def handle_data(self, data):
+        for link in self._abertos:
+            link['texto'].append(data)
+
+
+def coleta_links(html):
+    parser = _ColetaLinks()
+    parser.feed(html)
+    for link in parser.links:
+        link['texto'] = ' '.join(''.join(link['texto']).split())
+    return parser.links
+
+
+class MenuSuperiorTests(TestCase):
+    """Req. 1 de telegram-lista-canais-ajustes: o menu leva à página inicial em qualquer tela."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+
+    def links_do_nav(self, url):
+        resposta = self.client.get(url)
+        self.assertEqual(resposta.status_code, 200)
+        return [l for l in coleta_links(resposta.content.decode()) if l['em_nav']]
+
+    def test_rota_index_nomeada(self):
+        self.assertEqual(reverse('index'), '/')
+
+    def test_links_do_menu_fora_da_home(self):
+        for url in ('/painel/', reverse('lista_canais')):
+            with self.subTest(url=url):
+                links = self.links_do_nav(url)
+                hrefs = {l['texto'] or 'logo': l['attrs'].get('href') for l in links}
+                self.assertEqual(hrefs['logo'], '/')
+                self.assertEqual(hrefs['Início'], '/')
+                self.assertEqual(hrefs['Como funciona'], '/#como-funciona')
+                self.assertEqual(hrefs['Como ter acesso'], '/#acesso')
+                self.assertEqual(hrefs['Institucional'], '/#institucional')
+                self.assertEqual(hrefs['Acessar Sistema'], reverse('login'))
+                self.assertFalse([l for l in links if l['attrs'].get('href', '').startswith('#')])
+
+    def test_links_do_menu_na_home(self):
+        links = self.links_do_nav('/')
+        self.assertIn('/#como-funciona', [l['attrs'].get('href') for l in links])
+        self.assertFalse([l for l in links if l['attrs'].get('href', '').startswith('#')])
+
+    def test_main_continua_no_base(self):
+        self.assertContains(self.client.get('/painel/'), 'id="main"')
+
+
+class LinkDoCanalGridTests(TestCase):
+    """Req. 2 (grid): o título leva às mensagens e o logo leva ao Telegram."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.lista = Lista.objects.create(nome='Minha', dono=cls.user)
+        cls.outra = Lista.objects.create(nome='Outra', dono=cls.user)
+        cls.canal = Canal.objects.create(username='meucanal', titulo='Notícias do Brasil', num_mensagens=7)
+        cls.inativo = Canal.objects.create(username='parado', titulo='Canal parado', status='I')
+        cls.lista.canais.add(cls.canal, cls.inativo)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        self.url = f'{reverse("lista_canais")}?lista={self.lista.pk}&lista={self.outra.pk}'
+        resposta = self.client.get(self.url)
+        self.assertEqual(resposta.status_code, 200)
+        self.voltar_qs = resposta.context['voltar_qs']
+        self.html = resposta.content.decode()
+        self.links = coleta_links(self.html)
+        self.href_msgs = f'{reverse("canal_mensagens", args=[self.canal.pk])}?{self.voltar_qs}'
+
+    def link_msgs(self, links=None):
+        return [l for l in (links or self.links)
+                if '@meucanal' in l['texto'] and 'tc-canal-msgs' in l['attrs'].get('class', '')]
+
+    def test_usuario_e_titulo_formam_um_link_para_as_mensagens(self):
+        msgs = self.link_msgs()
+        self.assertEqual(len(msgs), 1)
+        self.assertEqual(msgs[0]['attrs']['href'], self.href_msgs)
+        self.assertNotIn('target', msgs[0]['attrs'])
+        self.assertEqual(msgs[0]['texto'], '@meucanal Notícias do Brasil')
+
+    def test_numero_de_mensagens_usa_o_mesmo_voltar(self):
+        numero = [l for l in self.links if 'tc-msgs-link' in l['attrs'].get('class', '')
+                  and l['attrs']['href'] == self.href_msgs]
+        self.assertEqual(len(numero), 1)
+
+    def test_link_do_telegram_so_com_icone(self):
+        tg = [l for l in self.links if l['attrs'].get('href') == 'https://t.me/meucanal']
+        self.assertEqual(len(tg), 1)
+        attrs = tg[0]['attrs']
+        self.assertEqual(attrs['target'], '_blank')
+        self.assertEqual(attrs['rel'], 'noopener')
+        self.assertEqual(attrs['aria-label'], 'Abrir @meucanal no Telegram (nova aba)')
+        self.assertEqual(attrs['title'], 'Abrir no Telegram')
+        self.assertEqual(attrs['class'], 'tc-tg')
+        self.assertEqual(tg[0]['texto'], '')
+        self.assertIn('svg', tg[0]['tags'])
+
+    def test_nenhum_link_do_telegram_contem_o_usuario_como_texto(self):
+        links_tg = [l for l in self.links if l['attrs'].get('href', '').startswith('https://t.me/')]
+        self.assertTrue(links_tg)
+        for link in links_tg:
+            self.assertNotIn('@', link['texto'])
+
+    def test_links_nao_sao_aninhados(self):
+        self.assertFalse([l for l in self.links if l['aninhado']])
+
+    def test_icone_generico_saiu_e_logo_do_telegram_entrou(self):
+        self.assertNotIn('M14 4h6v6M20 4l-9 9', self.html)
+        self.assertNotIn('tc-canal-link', self.html)
+        self.assertIn('class="ico ico-tg" width="16" height="16"', self.html)
+
+    def test_selo_de_status_continua_abaixo_do_link(self):
+        self.assertEqual(self.html.count('class="tc-status"'), 1)
+        self.assertLess(self.html.index('@parado'), self.html.index('class="tc-status"'))
+
+    def test_canal_sem_titulo_so_tem_usuario(self):
+        Canal.objects.filter(pk=self.canal.pk).update(titulo='')
+        resposta = self.client.get(self.url)
+        msgs = self.link_msgs(coleta_links(resposta.content.decode()))
+        self.assertEqual(msgs[0]['texto'], '@meucanal')
+
+
+@mock.patch('telegram.views.busca_mensagens')
+class IconeTelegramPaginaDoCanalTests(TestCase):
+    """Req. 2.7: o cabeçalho e as mensagens do canal usam o logo do Telegram."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user('ana', password=SENHA_USUARIO)
+        cls.lista = Lista.objects.create(nome='Minha', dono=cls.user)
+        cls.canal = Canal.objects.create(username='canal', id_numerico=1001)
+        cls.lista.canais.add(cls.canal)
+
+    def setUp(self):
+        self.client.force_login(self.user)
+        mock.patch('telegram.views.periodo_canal', return_value=()).start()
+        self.addCleanup(mock.patch.stopall)
+
+    def pagina(self, busca):
+        busca.return_value = (2, [{'message_id': i, 'texto': f'msg {i}', 'data': None, 'views': 1, 'forwards': 0,
+                                   'midia': None, 'url': f'https://t.me/canal/{i}'} for i in (1, 2)])
+        resposta = self.client.get(reverse('canal_mensagens', args=[self.canal.pk]))
+        self.assertEqual(resposta.status_code, 200)
+        return resposta.content.decode()
+
+    def test_cabecalho_continua_para_o_telegram_com_o_logo(self, busca):
+        html = self.pagina(busca)
+        cab = [l for l in coleta_links(html) if 'tc-canal-link' in l['attrs'].get('class', '')]
+        self.assertEqual(len(cab), 1)
+        self.assertEqual(cab[0]['attrs']['href'], 'https://t.me/canal')
+        self.assertEqual(cab[0]['attrs']['target'], '_blank')
+        self.assertEqual(cab[0]['texto'], '@canal')
+        self.assertIn('svg', cab[0]['tags'])
+        self.assertIn('class="ico ico-tg" width="13" height="13"', html)
+
+    def test_cada_mensagem_tem_o_logo(self, busca):
+        html = self.pagina(busca)
+        por_msg = [l for l in coleta_links(html) if 'tc-m-link' in l['attrs'].get('class', '')]
+        self.assertEqual([l['attrs']['href'] for l in por_msg], ['https://t.me/canal/1', 'https://t.me/canal/2'])
+        for link in por_msg:
+            self.assertEqual(link['attrs']['aria-label'], 'Abrir no Telegram')
+            self.assertIn('svg', link['tags'])
+        self.assertEqual(html.count('class="ico ico-tg tc-m-ico" width="12" height="12"'), 2)
+
+    def test_icone_generico_saiu_da_pagina_do_canal(self, busca):
+        self.assertNotIn('M14 4h6v6M20 4l-9 9', self.pagina(busca))

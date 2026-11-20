@@ -92,10 +92,15 @@
                                     {% for c in page_obj %}
                                         <tr>
                                             <td class="col-canal">
-                                                <a class="tc-canal-link" href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" aria-label="@{{ c.username }} (abre no Telegram, em nova aba)">@{{ c.username }}
-                                                    <svg class="ico" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
-                                                </a>
-                                                {% if c.titulo %}<div class="tc-canal-titulo">{{ c.titulo }}</div>{% endif %}
+                                                <div class="tc-canal-linha">
+                                                    <a class="tc-canal-msgs" href="{% url 'canal_mensagens' c.pk %}{% if voltar_qs %}?{{ voltar_qs }}{% endif %}">
+                                                        <span class="tc-canal-user">@{{ c.username }}</span>
+                                                        {% if c.titulo %}<span class="tc-canal-titulo">{{ c.titulo }}</span>{% endif %}
+                                                    </a>
+                                                    <a class="tc-tg" href="https://t.me/{{ c.username }}" target="_blank" rel="noopener" aria-label="Abrir @{{ c.username }} no Telegram (nova aba)" title="Abrir no Telegram">
+                                                        {% include "_icone_telegram.html" with tam=16 %}
+                                                    </a>
+                                                </div>
                                                 {% if c.status != "A" %}<span class="tc-status">{{ c.get_status_display }}</span>{% endif %}
                                             </td>
                                             <td class="col-desc">{% if c.sobre %}<span title="{{ c.sobre }}">{{ c.sobre }}</span>{% else %}<span title="Sem descrição">—</span>{% endif %}</td>
