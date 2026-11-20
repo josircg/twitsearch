@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# dataset (slug do DataSource no Gestão) aberto pelo link "Resultado"; não depende do Projeto.prefix
+# dataset (slug do DataSource no Gestão) aberto pelo link "Resultado". Ele escolhe a conexão;
+# o índice consultado vem do Projeto.prefix, enviado no parâmetro idx (ver Projeto.url_resultado)
+
+# prefixo do índice (Projeto.prefix) gravado nos projetos criados por /telegram/projetos/novo/;
+# o consumidor grava em '{prefixo}-{ano}-{mês}-1'. O admin pode trocá-lo depois
+PREFIXO_TELEGRAM = 'telegram'
 DS_TELEGRAM = 'telegram'
 
 

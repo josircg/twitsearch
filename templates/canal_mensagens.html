@@ -15,7 +15,7 @@
                     <div class="tc-canal-nome">
                         <h1>{% if canal.titulo %}{{ canal.titulo }}{% else %}@{{ canal.username }}{% endif %}</h1>
                         <a class="tc-canal-link" href="https://t.me/{{ canal.username }}" target="_blank" rel="noopener" aria-label="@{{ canal.username }} (abre no Telegram, em nova aba)">@{{ canal.username }}
-                            <svg class="ico" width="13" height="13" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>
+                            {% include "_icone_telegram.html" with tam=13 %}
                         </a>
                         {% if canal.status != "A" %}<span class="tc-status tc-status-inline">{{ canal.get_status_display }}</span>{% endif %}
                     </div>
@@ -123,7 +123,7 @@
                                         </span>
                                         {% if m.url %}
                                             <a class="tc-m tc-m-link" href="{{ m.url }}" target="_blank" rel="noopener" aria-label="Abrir no Telegram" title="Abrir no Telegram">
-                                                <svg class="ico tc-m-ico" width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="tc-m-txt" aria-hidden="true">Telegram ↗</span>
+                                                {% include "_icone_telegram.html" with tam=12 cls="tc-m-ico" %}<span class="tc-m-txt" aria-hidden="true">Telegram ↗</span>
                                             </a>
                                         {% endif %}
                                     </div>
